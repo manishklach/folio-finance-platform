@@ -44,28 +44,48 @@ AI suggestions never post automatically. The server validates account IDs, amoun
 
 ## Run
 
-Requires Node.js 22.5 or newer. No package installation is needed.
+Folio pins Node.js in [`.nvmrc`](.nvmrc). From a fresh clone:
 
-```powershell
-cd C:\Users\ManishKL\Documents\Playground\codex-ledger
+```sh
+git clone https://github.com/manishklach/folio-saas-accounting.git
+cd folio-saas-accounting
+nvm install
+nvm use
+npm ci
+cp .env.example .env
 npm start
 ```
 
+The `.env` copy is optional for the default local configuration. Windows users who do not use a
+POSIX shell can copy `.env.example` to `.env` with File Explorer or PowerShell.
+
 Open <http://127.0.0.1:4310>.
 
-To enable OpenAI-generated drafts:
+To enable OpenAI-generated drafts, set these values in `.env` or in your shell environment:
 
-```powershell
-$env:OPENAI_API_KEY = "your-api-key"
-$env:OPENAI_MODEL = "gpt-5.6" # optional
+```sh
+cp .env.example .env
+# Edit .env and set OPENAI_API_KEY. OPENAI_MODEL is optional.
 npm start
 ```
 
 Without an API key, the same interface uses a deliberately narrow deterministic classifier for common revenue, payroll, cloud, software, marketing, prepaid, cash, and payable transactions.
 
+## Development
+
+```sh
+npm run lint
+npm test
+npm run dev
+```
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the architecture, accounting invariants, and change
+workflow. See [`ROADMAP.md`](ROADMAP.md) for the ordered path from this engineering MVP to a
+production financial system.
+
 ## Test
 
-```powershell
+```sh
 npm test
 ```
 
