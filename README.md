@@ -128,3 +128,7 @@ The automated suite covers ledger balance and period controls, ASC 606 allocatio
 This is an engineering system, not a CPA opinion or a substitute for professional judgment. Authentication, authorization, tenant isolation, encrypted-secret integration, backups, migrations, idempotency, attachment evidence, fiscal calendars, close controls, and audit trails are implemented. Real financial use still requires configuration to the entity's facts, valuation/tax evidence, a formal security review, deployment approval, and validation by a qualified accountant. ASC conclusions depend on the facts of each arrangement; the engines enforce calculations and retain accountable judgments but cannot determine whether source facts are complete or correct.
 
 The OpenAI integration follows the official Responses API pattern: the model returns a schema-constrained proposal, while application code performs validation and controls posting.
+
+## License
+
+Folio is proprietary software. Copyright © 2026 ManishKL. All rights reserved. See [`LICENSE`](LICENSE).
