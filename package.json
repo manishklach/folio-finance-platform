@@ -1,0 +1,15 @@
+{
+  "name": "codex-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Audit-oriented double-entry accounting MVP with AI-assisted journal drafting",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

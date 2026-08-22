@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Folio — accounting, in focus</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/saas.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">F</span><span>Folio</span></div>
+      <div class="workspace"><span class="workspace-avatar">N</span><div><strong>Northstar Labs</strong><small>USD · Accrual</small></div><span class="chevron">⌄</span></div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span>Overview</button>
+        <button class="nav-item" data-view="journals"><span>⇄</span>Journal</button>
+        <button class="nav-item" data-view="revenue"><span>◫</span>Revenue recognition</button>
+        <button class="nav-item" data-view="metrics"><span>↗</span>SaaS metrics</button>
+        <button class="nav-item" data-view="accounts"><span>≡</span>Chart of accounts</button>
+        <button class="nav-item" data-view="reports"><span>⌁</span>Reports</button>
+        <button class="nav-item" data-view="operations"><span>◇</span>Policy subledgers</button>
+        <button class="nav-item" data-view="entities"><span>◎</span>Entities & FX</button>
+        <button class="nav-item" data-view="audit"><span>✓</span>Audit trail</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="close-card"><div><span class="pulse"></span>August close</div><strong>82%</strong><div class="progress"><i></i></div><small>3 tasks remaining</small></div>
+        <div class="user"><span class="avatar">MK</span><div><strong>Manish</strong><small>Administrator</small></div><button>•••</button></div>
+      </div>
+    </aside>
+
+    <main>
+      <header><div><p class="eyebrow" id="eyebrow">FINANCE OVERVIEW</p><h1 id="page-title">Good morning, Manish.</h1></div><div class="header-actions"><button class="icon-btn" aria-label="Notifications">◌</button><button class="primary" id="new-entry">＋ New entry</button></div></header>
+      <section id="view" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <div class="overlay" id="entry-overlay" hidden>
+    <section class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <div class="drawer-head"><div><p class="eyebrow">AI-ASSISTED WORKFLOW</p><h2 id="drawer-title">Draft a journal entry</h2></div><button class="close-btn" data-close>×</button></div>
+      <div class="guardrail"><span>✦</span><div><strong>AI drafts. You approve.</strong><p>Folio never posts an AI suggestion automatically. Every entry must balance and pass ledger controls.</p></div></div>
+      <label class="field"><span>Describe the transaction</span><textarea id="ai-description" rows="4" placeholder="e.g. Paid $4,800 for an annual Datadog subscription from operating cash"></textarea></label>
+      <div class="examples"><span>Try:</span><button>Received $12,000 subscription revenue</button><button>Paid $2,400 for AWS hosting</button></div>
+      <button class="primary wide" id="generate-draft">✦ Generate draft</button>
+      <div id="draft-result"></div>
+    </section>
+  </div>
+  <div class="overlay" id="contract-overlay" hidden>
+    <section class="drawer" role="dialog" aria-modal="true" aria-labelledby="contract-title">
+      <div class="drawer-head"><div><p class="eyebrow">ASC 606 CONTRACT INTAKE</p><h2 id="contract-title">Create customer contract</h2></div><button class="close-btn" data-contract-close>×</button></div>
+      <div class="guardrail"><span>§</span><div><strong>Deterministic allocation</strong><p>The transaction price is allocated by relative standalone selling price. Variable consideration is constrained before allocation.</p></div></div>
+      <form id="contract-form" class="contract-form">
+        <label class="field"><span>Customer</span><select name="customer_id" required></select></label>
+        <label class="field"><span>Contract number</span><input name="contract_number" required placeholder="ACME-2026-002"></label>
+        <div class="form-pair"><label class="field"><span>Start date</span><input type="date" name="start_date" required></label><label class="field"><span>End date</span><input type="date" name="end_date" required></label></div>
+        <div class="form-pair"><label class="field"><span>Transaction price ($)</span><input type="number" name="price" min="1" step=".01" required></label><label class="field"><span>Initial invoice ($)</span><input type="number" name="invoice" min="0" step=".01"></label></div>
+        <div class="form-pair"><label class="field"><span>Recognition method</span><select name="method"><option value="straight_line">Straight line</option><option value="point_in_time">Point in time</option><option value="usage">Usage</option><option value="milestone">Milestone</option></select></label><label class="field"><span>Standalone selling price ($)</span><input type="number" name="ssp" min="1" step=".01" required></label></div>
+        <div class="form-pair"><label class="field"><span>Variable consideration ($)</span><input type="number" name="variable" min="0" step=".01" value="0"></label><label class="field"><span>Constraint included (%)</span><input type="number" name="constraint" min="0" max="100" value="100"></label></div>
+        <label class="field"><span>Performance obligation</span><input name="obligation" required placeholder="Annual platform access"></label>
+        <label class="field"><span>Incremental commission ($)</span><input type="number" name="commission" min="0" step=".01" value="0"></label>
+        <button class="primary wide" type="submit">Create schedules and post billing</button>
+      </form>
+    </section>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
