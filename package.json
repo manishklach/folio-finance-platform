@@ -1,8 +1,8 @@
 {
   "name": "codex-ledger",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Audit-oriented double-entry accounting MVP with AI-assisted journal drafting",
+  "description": "Audit-oriented SaaS accounting platform with ASC 606, receivables, SaaS metrics, and AI-assisted journal drafting",
   "type": "module",
   "scripts": {
     "start": "node server.js",

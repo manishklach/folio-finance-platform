@@ -28,6 +28,13 @@ A working accounting-system MVP built around a deterministic double-entry ledger
 - ASC 350-40 internal-use software stage decisions and amortization
 - ASC 985-20 external software feasibility decisions
 - Customer, product, contract, invoice, usage, and subscription subledgers
+- Invoice lifecycle with due dates, open/overdue/partial/paid/disputed/void status, and reversing journals
+- Customer receipts, unapplied cash, invoice-level cash application, payment voids, and customer refunds
+- Credit memos split between deferred revenue and contra-revenue based on recognition to date
+- Approved AR write-offs, dispute opening/resolution, and collection activity with next-action queues
+- AR aging in current, 1–30, 31–60, 61–90, and 90+ day buckets
+- Customer and contract-level billed, credited, net billed, recognized, unbilled, deferred, and outstanding reconciliation
+- General-ledger-to-AR-subledger and unapplied-cash reconciliation with visible exceptions
 - ARR, MRR, NRR, GRR, churn, expansion, contraction, bookings, billings, and ACV
 - Gross margin, CAC, LTV, burn multiple, magic number, and Rule of 40
 - Operating, investing, and financing cash-flow classification
@@ -61,6 +68,21 @@ Without an API key, the same interface uses a deliberately narrow deterministic 
 ```powershell
 npm test
 ```
+
+The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals.
+
+## Receivables API
+
+- `GET /api/receivables?as_of=YYYY-MM-DD` — invoice register, aging, payments, collections, disputes, customer/contract rollups, and GL reconciliations
+- `POST /api/invoices` — create and post an invoice
+- `POST /api/receivables/payments` — receive cash, optionally applying it to an invoice
+- `POST /api/receivables/applications` — apply existing unapplied cash
+- `POST /api/receivables/credits` — post a credit memo
+- `POST /api/receivables/write-offs` — post an approved AR write-off
+- `POST /api/receivables/refunds` — refund applied or unapplied customer cash
+- `POST /api/receivables/disputes` and `/disputes/resolve` — manage invoice disputes
+- `POST /api/receivables/collections` and `/collections/complete` — manage collection follow-ups
+- `POST /api/invoices/:id/void` and `/api/receivables/payments/:id/void` — post controlled reversals while preserving audit history
 
 ## Important scope boundary
 

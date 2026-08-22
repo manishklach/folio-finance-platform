@@ -16,6 +16,7 @@
         <button class="nav-item active" data-view="dashboard"><span>⌂</span>Overview</button>
         <button class="nav-item" data-view="journals"><span>⇄</span>Journal</button>
         <button class="nav-item" data-view="revenue"><span>◫</span>Revenue recognition</button>
+        <button class="nav-item" data-view="receivables"><span>▤</span>Receivables</button>
         <button class="nav-item" data-view="metrics"><span>↗</span>SaaS metrics</button>
         <button class="nav-item" data-view="accounts"><span>≡</span>Chart of accounts</button>
         <button class="nav-item" data-view="reports"><span>⌁</span>Reports</button>
@@ -60,6 +61,12 @@
         <label class="field"><span>Incremental commission ($)</span><input type="number" name="commission" min="0" step=".01" value="0"></label>
         <button class="primary wide" type="submit">Create schedules and post billing</button>
       </form>
+    </section>
+  </div>
+  <div class="overlay" id="ar-overlay" hidden>
+    <section class="drawer" role="dialog" aria-modal="true" aria-labelledby="ar-form-title">
+      <div class="drawer-head"><div><p class="eyebrow">RECEIVABLES WORKFLOW</p><h2 id="ar-form-title">Record activity</h2></div><button class="close-btn" data-ar-close>×</button></div>
+      <div id="ar-form-body"></div>
     </section>
   </div>
   <div class="toast" id="toast" hidden></div>
