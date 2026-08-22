@@ -9,6 +9,7 @@ const modules = {
   "Receivables & Collections": "/api/receivables",
   Reports: "/api/saas/overview",
   "Close & Controls": "/api/reconciliation-exceptions",
+  "GAAP Compliance": "/api/gaap/overview",
   "Admin & Users": "/api/ai/history",
 };
 
@@ -36,7 +37,13 @@ function App() {
   const visible = Object.keys(modules).filter(
     (name) =>
       auth.role !== "read_only" ||
-      ["Accounts", "Contracts & Revenue", "Receivables & Collections", "Reports"].includes(name),
+      [
+        "Accounts",
+        "Contracts & Revenue",
+        "Receivables & Collections",
+        "Reports",
+        "GAAP Compliance",
+      ].includes(name),
   );
   return (
     <section className="module-console" aria-label="Accounting modules">
@@ -67,7 +74,14 @@ function App() {
 function ReportLinks() {
   return (
     <div className="report-links" aria-label="Financial statement downloads">
-      {["trial_balance", "income_statement", "balance_sheet", "cash_flow"].flatMap((report) =>
+      {[
+        "trial_balance",
+        "income_statement",
+        "balance_sheet",
+        "cash_flow",
+        "comprehensive_income",
+        "changes_in_equity",
+      ].flatMap((report) =>
         ["pdf", "csv"].map((format) => (
           <a key={`${report}.${format}`} href={`/api/reports/${report}.${format}`}>
             {report.replaceAll("_", " ")} {format.toUpperCase()}

@@ -7789,6 +7789,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	"Receivables & Collections": "/api/receivables",
 	Reports: "/api/saas/overview",
 	"Close & Controls": "/api/reconciliation-exceptions",
+	"GAAP Compliance": "/api/gaap/overview",
 	"Admin & Users": "/api/ai/history"
 };
 function x() {
@@ -7807,7 +7808,8 @@ function x() {
 		"Accounts",
 		"Contracts & Revenue",
 		"Receivables & Collections",
-		"Reports"
+		"Reports",
+		"GAAP Compliance"
 	].includes(t));
 	return /* @__PURE__ */ (0, b.jsxs)("section", {
 		className: "module-console",
@@ -7844,7 +7846,9 @@ function S() {
 			"trial_balance",
 			"income_statement",
 			"balance_sheet",
-			"cash_flow"
+			"cash_flow",
+			"comprehensive_income",
+			"changes_in_equity"
 		].flatMap((e) => ["pdf", "csv"].map((t) => /* @__PURE__ */ (0, b.jsxs)("a", {
 			href: `/api/reports/${e}.${t}`,
 			children: [

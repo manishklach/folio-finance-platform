@@ -27,6 +27,23 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   const adminCookie = setup.response.headers.get("set-cookie").split(";")[0];
   const admin = { cookie: adminCookie, csrf: setup.body.csrf_token };
   assert.equal((await call(origin, "/api/dashboard", null, admin)).response.status, 200);
+  const assessment = await call(
+    origin,
+    "/api/gaap/assessments",
+    {
+      topic: "ASC 606",
+      assessment_key: "API-LICENSE-1",
+      as_of: "2026-08-22",
+      facts: { license: true },
+      conclusion: "Recognition over time",
+      policy_basis: "Functional IP is supported throughout the license term.",
+      disclosure: { significant_judgment: true },
+    },
+    admin,
+  );
+  assert.equal(assessment.response.status, 201);
+  const gaap = await call(origin, "/api/gaap/overview", null, admin);
+  assert.equal(gaap.body.assessments[0].assessment_key, "API-LICENSE-1");
   assert.equal(
     (
       await call(

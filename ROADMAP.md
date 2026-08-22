@@ -18,6 +18,7 @@ that engine without weakening its deterministic ledger controls.
 | 8. Testing and CI/CD                 | Complete | HTTP tests, auth isolation tests, CI gates, migration and load checks        |
 | 9. Observability and operations      | Complete | Structured logs, request IDs, health, metrics, errors, incident process      |
 | 10. Compliance engineering           | Complete | Secret mounts, SOC 2 evidence map, privacy tools and external gate templates |
+| 11. SaaS GAAP compliance engine      | Complete | Applicable Topic engines, judgments, disclosures, statements, APIs and tests |
 | Independent launch approvals         | Pending  | Third-party pen test, accountant validation, legal and deployment sign-off   |
 
 ## Dependency rules

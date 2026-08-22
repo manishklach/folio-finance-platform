@@ -40,6 +40,22 @@ A working accounting-system MVP built around a deterministic double-entry ledger
 - Operating, investing, and financing cash-flow classification
 - Multi-entity and multi-currency reporting, FX revaluation, and intercompany eliminations
 
+### U.S. GAAP compliance engine
+
+- ASC 842 lease classification, present-value measurement, ROU assets, lease liabilities, and operating/finance schedules
+- ASC 718 grant-date share-based compensation schedules for equity- and liability-classified awards
+- ASC 740 current/deferred tax provisions, temporary differences, valuation allowances, and effective tax rates
+- ASC 326 pooled lifetime credit-loss estimates with historical, forecast, and qualitative factors
+- ASC 450 loss contingency accrual and disclosure decisions
+- ASC 820 fair-value hierarchy, valuation inputs, recurring status, and remeasurement journals
+- ASC 470 effective-interest debt schedules and ASC 480 liability/equity assessments
+- ASC 805 acquisition-method residuals, identifiable net assets, goodwill, and bargain gains
+- ASC 810 VIE/primary-beneficiary, voting-interest, consolidation, and NCI assessments
+- ASC 260 basic and diluted EPS, ASC 220 OCI/AOCI, ASC 350/360 impairment, ASC 460 guarantees, ASC 205-40 going concern, and ASC 855 subsequent events
+- Effective-dated policy elections, persisted facts, conclusions, disclosures, approver identity, journal lineage, and tenant isolation across every engine table
+
+The exact supported and excluded scope is maintained in [`docs/gaap-coverage-matrix.md`](docs/gaap-coverage-matrix.md); request contracts are in [`docs/gaap-api.md`](docs/gaap-api.md).
+
 AI suggestions never post automatically. The server validates account IDs, amount shape, and debit/credit equality before saving a draft, then validates again before posting.
 
 ## Run
@@ -92,7 +108,7 @@ Operational commands include `npm run migrate`, `npm run backup`, `npm run resto
 npm test
 ```
 
-The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals.
+The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, leases, stock compensation, tax provisions, credit losses, contingencies, fair value, debt, classification, business combinations, VIEs, EPS, OCI, reporting cutoffs, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals.
 
 ## Receivables API
 
@@ -109,6 +125,6 @@ The automated suite covers ledger balance and period controls, ASC 606 allocatio
 
 ## Important scope boundary
 
-This is an engineering MVP, not production accounting software. Before real financial use it needs authentication, authorization, encrypted secrets, backups, production migrations, idempotent external connectors, attachment storage, configurable fiscal calendars, tax/localization rules, formal security review, auditor validation, and review by a qualified accountant. ASC conclusions depend on the facts of each arrangement; the included policy engines demonstrate controlled workflows and are not professional accounting advice.
+This is an engineering system, not a CPA opinion or a substitute for professional judgment. Authentication, authorization, tenant isolation, encrypted-secret integration, backups, migrations, idempotency, attachment evidence, fiscal calendars, close controls, and audit trails are implemented. Real financial use still requires configuration to the entity's facts, valuation/tax evidence, a formal security review, deployment approval, and validation by a qualified accountant. ASC conclusions depend on the facts of each arrangement; the engines enforce calculations and retain accountable judgments but cannot determine whether source facts are complete or correct.
 
 The OpenAI integration follows the official Responses API pattern: the model returns a schema-constrained proposal, while application code performs validation and controls posting.
