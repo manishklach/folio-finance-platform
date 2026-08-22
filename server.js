@@ -58,6 +58,8 @@ export function createFolioServer(options = {}) {
         const readiness = health(platform, ledgers);
         return json(res, readiness.status === "ok" ? 200 : 503, readiness);
       }
+      if (req.method === "GET" && url.pathname === "/setup/status")
+        return json(res, 200, platform.status());
       if (url.pathname === "/metrics") return json(res, 200, metricsSnapshot(metrics));
       if (url.pathname.startsWith("/webhooks/"))
         return await webhook(req, res, url, platform, ledgers, requestId);
@@ -114,10 +116,21 @@ export function createFolioServer(options = {}) {
 
 async function apiRequest(req, res, url, platform, ledgers, requestId) {
   const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
-  if (req.method === "GET" && url.pathname === "/api/setup/status")
-    return json(res, 200, platform.status());
-  if (req.method === "POST" && url.pathname === "/api/setup") {
-    const result = await platform.setup(await readJson(req), meta);
+  if (
+    req.method === "POST" &&
+    url.pathname === "/api/auth/register" &&
+    platform.status().needs_setup
+  ) {
+    const body = await readJson(req);
+    const result = await platform.setup(
+      {
+        organization_name: body.organization_name,
+        name: body.name,
+        email: body.email,
+        password: body.password,
+      },
+      meta,
+    );
     setSessionCookie(res, result.token);
     return json(res, 201, authPayload(platform, result.session, result.csrf));
   }
@@ -158,6 +171,35 @@ async function apiRequest(req, res, url, platform, ledgers, requestId) {
         res,
         201,
         await platform.invite(await readJson(req), { ...session, request_id: requestId }),
+      );
+    }
+    if (req.method === "POST" && url.pathname === "/api/auth/register") {
+      requirePermission(session, "admin");
+      const body = await readJson(req);
+      return json(
+        res,
+        201,
+        await platform.invite(
+          {
+            email: body.email,
+            name: body.name,
+            role: body.role,
+            temporary_password: body.password,
+          },
+          { ...session, request_id: requestId },
+        ),
+      );
+    }
+    const resetPasswordMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
+    if (req.method === "POST" && resetPasswordMatch) {
+      requirePermission(session, "admin");
+      return json(
+        res,
+        200,
+        await platform.resetPassword(resetPasswordMatch[1], (await readJson(req)).password, {
+          ...session,
+          request_id: requestId,
+        }),
       );
     }
     if (req.method === "POST" && url.pathname === "/api/admin/organizations") {
@@ -285,8 +327,11 @@ async function api(req, res, url, ledger, platform, session) {
   if (req.method === "GET" && url.pathname === "/api/contracts")
     return json(res, 200, ledger.listContracts());
   const contractMatch = url.pathname.match(/^\/api\/contracts\/(\d+)$/);
-  if (req.method === "GET" && contractMatch)
-    return json(res, 200, ledger.getContract(Number(contractMatch[1])) || { error: "Not found" });
+  if (req.method === "GET" && contractMatch) {
+    const contract = ledger.getContract(Number(contractMatch[1]));
+    if (!contract) throw problem("Contract not found", 404);
+    return json(res, 200, contract);
+  }
   if (req.method === "POST" && url.pathname === "/api/contracts")
     return json(res, 201, ledger.createContract(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/invoices")
@@ -467,18 +512,20 @@ async function prepareIdempotency(req, res, platform, session, route) {
 }
 function requiredPermission(method, path) {
   if (method === "GET") return "read";
+  if (/^\/api\/journals\/\d+\/post$/.test(path)) return "post";
+  if (path === "/api/close" || path.startsWith("/api/close/")) return "close";
   if (path === "/api/journals" || path === "/api/ai/draft" || path === "/api/ai/disposition")
     return "draft";
   if (path === "/api/accounts") return "admin";
-  return "post";
+  return "operate";
 }
 function requirePermission(session, permission) {
   if (!permissionsFor(session.role).includes(permission))
-    throw problem("Insufficient permission", 403);
+    throw problem(`Missing required permission: ${permission}`, 403);
 }
 function authPayload(platform, session, csrf) {
   return {
-    user: { id: session.user_id, email: session.email },
+    user: { id: session.user_id, email: session.email, name: session.name },
     organization: { id: session.org_id, name: session.org_name, slug: session.slug },
     role: session.role,
     permissions: permissionsFor(session.role),

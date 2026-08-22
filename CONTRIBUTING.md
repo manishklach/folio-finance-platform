@@ -9,6 +9,8 @@ reimplementing accounting rules.
 ```text
 server.js
   ├─ HTTP routing, JSON parsing, and static-file delivery
+  ├─ lib/platform.js
+  │    └─ users, sessions, roles, organizations, memberships, and control-plane audit
   ├─ lib/db.js
   │    ├─ SQLite schema and seeded demo ledger
   │    ├─ journal drafts, posting, periods, reports, and audit log
@@ -27,8 +29,10 @@ server.js
        └─ styles.css / saas.css
 ```
 
-`server.js` is the transport boundary. `lib/db.js` owns the base ledger, while `lib/saas.js` owns
-domain subledgers that post through the base ledger. `public/` consumes only HTTP APIs.
+`server.js` is the transport boundary. `lib/platform.js` resolves a verified organization database
+from the authenticated membership. `lib/db.js` owns that organization's base ledger, while
+`lib/saas.js` owns domain subledgers that post through the base ledger. `public/` consumes only HTTP
+APIs.
 
 ## Accounting invariants
 

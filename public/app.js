@@ -22,7 +22,7 @@ async function api(path, options) {
   const method = options?.method || "GET";
   const headers = { "Content-Type": "application/json", ...(options?.headers || {}) };
   if (state.auth?.csrf_token && method !== "GET") headers["X-CSRF-Token"] = state.auth.csrf_token;
-  if (method !== "GET" && !path.startsWith("/api/auth/") && path !== "/api/setup") {
+  if (method !== "GET" && state.auth?.csrf_token) {
     headers["Idempotency-Key"] = crypto.randomUUID();
   }
   const response = await fetch(path, {
@@ -701,7 +701,7 @@ async function bootstrap() {
     await enterApplication();
   } catch (error) {
     if (error.status !== 401) throw error;
-    const setup = await api("/api/setup/status");
+    const setup = await api("/setup/status");
     renderAuthentication(setup.needs_setup);
   }
 }
@@ -714,7 +714,10 @@ function renderAuthentication(needsSetup) {
   const organizationField = needsSetup
     ? '<label class="field"><span>Organization</span><input name="organization_name" required maxlength="120" autocomplete="organization"></label>'
     : "";
-  screen.innerHTML = `<section class="card auth-card"><div class="brand"><span class="brand-mark">F</span><span>Folio</span></div><p class="eyebrow">SECURE FINANCE WORKSPACE</p><h1>${title}</h1><p>Sessions are server-managed and every financial action retains the authenticated actor.</p><form id="auth-form" class="contract-form">${organizationField}<label class="field"><span>Email</span><input type="email" name="email" required maxlength="254" autocomplete="email"></label><label class="field"><span>Password</span><input type="password" name="password" required minlength="12" maxlength="256" autocomplete="${needsSetup ? "new-password" : "current-password"}"></label>${needsSetup ? "<small>Use at least 12 characters with uppercase, lowercase, and a number.</small>" : ""}<button class="primary wide" type="submit">${needsSetup ? "Create workspace" : "Sign in"}</button><p class="negative" id="auth-error" role="alert"></p></form></section>`;
+  const nameField = needsSetup
+    ? '<label class="field"><span>Your name</span><input name="name" required maxlength="120" autocomplete="name"></label>'
+    : "";
+  screen.innerHTML = `<section class="card auth-card"><div class="brand"><span class="brand-mark">F</span><span>Folio</span></div><p class="eyebrow">SECURE FINANCE WORKSPACE</p><h1>${title}</h1><p>Sessions are server-managed and every financial action retains the authenticated actor.</p><form id="auth-form" class="contract-form">${organizationField}${nameField}<label class="field"><span>Email</span><input type="email" name="email" required maxlength="254" autocomplete="email"></label><label class="field"><span>Password</span><input type="password" name="password" required minlength="12" maxlength="256" autocomplete="${needsSetup ? "new-password" : "current-password"}"></label>${needsSetup ? "<small>Use at least 12 characters with uppercase, lowercase, and a number.</small>" : ""}<button class="primary wide" type="submit">${needsSetup ? "Create workspace" : "Sign in"}</button><p class="negative" id="auth-error" role="alert"></p></form></section>`;
   document.body.append(screen);
   screen.querySelector("#auth-form").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -723,12 +726,14 @@ function renderAuthentication(needsSetup) {
     const payload = {
       email: fields.get("email"),
       password: fields.get("password"),
-      ...(needsSetup ? { organization_name: fields.get("organization_name") } : {}),
+      ...(needsSetup
+        ? { organization_name: fields.get("organization_name"), name: fields.get("name") }
+        : {}),
     };
     const button = form.querySelector("button");
     button.disabled = true;
     try {
-      state.auth = await api(needsSetup ? "/api/setup" : "/api/auth/login", {
+      state.auth = await api(needsSetup ? "/api/auth/register" : "/api/auth/login", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -743,7 +748,7 @@ function renderAuthentication(needsSetup) {
 
 async function enterApplication() {
   document.querySelector(".shell").hidden = false;
-  document.querySelector("#user-name").textContent = state.auth.user.email;
+  document.querySelector("#user-name").textContent = state.auth.user.name || state.auth.user.email;
   document.querySelector("#user-role").textContent = state.auth.role.replaceAll("_", " ");
   document.querySelector("#user-avatar").textContent = state.auth.user.email
     .slice(0, 2)

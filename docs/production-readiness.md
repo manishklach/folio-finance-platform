@@ -16,3 +16,5 @@
 | External launch approvals | Pending            | independent pen test and named accountant sign-off required                              |
 
 “Complete” means the repository contains and tests the engineering capability. It does not claim an external audit, certification, legal opinion, or professional accounting opinion.
+
+Authentication fast-follows intentionally excluded from the current scope are SSO/OAuth and automated password-reset email delivery. Administrators can perform a manual password reset through `POST /api/admin/users/:id/password`; that operation revokes the subject's active sessions.

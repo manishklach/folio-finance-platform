@@ -18,7 +18,7 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
     rmSync(root, { recursive: true, force: true });
   });
   assert.equal((await fetch(`${origin}/api/dashboard`)).status, 401);
-  const setup = await call(origin, "/api/setup", {
+  const setup = await call(origin, "/api/auth/register", {
     organization_name: "Alpha Cloud",
     email: "admin@example.com",
     password: "StrongPassword123",
