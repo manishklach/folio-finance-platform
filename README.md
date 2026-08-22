@@ -54,7 +54,7 @@ A working accounting-system MVP built around a deterministic double-entry ledger
 - ASC 260 basic and diluted EPS, ASC 220 OCI/AOCI, ASC 350/360 impairment, ASC 460 guarantees, ASC 205-40 going concern, and ASC 855 subsequent events
 - Effective-dated policy elections, persisted facts, conclusions, disclosures, approver identity, journal lineage, and tenant isolation across every engine table
 
-The exact supported and excluded scope is maintained in [`docs/gaap-coverage-matrix.md`](docs/gaap-coverage-matrix.md); request contracts are in [`docs/gaap-api.md`](docs/gaap-api.md).
+The exact supported and excluded scope is maintained in [`docs/gaap-coverage-matrix.md`](docs/gaap-coverage-matrix.md). The complete processing and close flow is illustrated in [`docs/gaap-system-flow.md`](docs/gaap-system-flow.md), and request contracts are in [`docs/gaap-api.md`](docs/gaap-api.md).
 
 AI suggestions never post automatically. The server validates account IDs, amount shape, and debit/credit equality before saving a draft, then validates again before posting.
 
