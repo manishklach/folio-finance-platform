@@ -13,7 +13,7 @@
 | 8 QA/CI                   | Complete           | unit/integration tests, GitHub Actions, migration and load checks                        |
 | 9 Operations              | Complete           | correlated logs, readiness, metrics, Sentry, incident runbook                            |
 | 10 Compliance engineering | Complete           | secret mounts, privacy requests/export/delete, SOC 2 evidence map                        |
-| 11 SaaS GAAP engine        | Complete           | ASC measurement subledgers, policy judgments, disclosures, six statements, cutoff tests  |
+| 11 SaaS GAAP engine       | Complete           | ASC measurement subledgers, policy judgments, disclosures, six statements, cutoff tests  |
 | External launch approvals | Pending            | independent pen test and named accountant sign-off required                              |
 
 “Complete” means the repository contains and tests the engineering capability. It does not claim an external audit, certification, legal opinion, or professional accounting opinion.
