@@ -179,13 +179,13 @@ For field-level detail, use the [GAAP API reference](gaap-api.md). For Topic sco
 
 ## Implementation traceability
 
-| Layer | Implementation | Responsibility | Primary verification |
-| --- | --- | --- | --- |
-| Tenant ledger | `lib/db.js` | Core accounts, balanced drafts, authorized posting, as-of trial balance, immutable posted records and hashes | `test/ledger.test.js`, `test/tenancy.test.js` |
-| SaaS accounting | `lib/saas.js` | ASC 606 contracts and schedules, invoices, payments, AR reconciliation, commissions, software, metrics, FX and eliminations | `test/saas.test.js` |
-| GAAP engines | `lib/gaap.js` | Topic measurement tables, policy/judgment evidence, journals, schedules, remeasurements and disclosures | `test/gaap.test.js` |
-| Close operations | `lib/operations.js` | Fiscal configuration, bank reconciliation, evidence attachments, close checklist and exception queue | `test/production.test.js` |
-| Financial reports | `lib/reports.js` | Six statement models plus CSV/PDF rendering and cutoff parameters | `test/production.test.js`, `test/gaap.test.js` |
-| Identity control plane | `lib/platform.js` | Users, organizations, roles, memberships, sessions, CSRF, idempotency and platform audit | `test/auth.test.js`, `test/api.test.js` |
-| HTTP boundary | `server.js` | Authenticated tenant binding, permissions, GAAP routes, report routes and webhook controls | `test/api.test.js`, `test/tenancy.test.js` |
-| User workspace | `frontend/main.jsx` | Role-aware modules, GAAP overview and downloadable statement links | Production build gate |
+| Layer                  | Implementation      | Responsibility                                                                                                              | Primary verification                           |
+| ---------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Tenant ledger          | `lib/db.js`         | Core accounts, balanced drafts, authorized posting, as-of trial balance, immutable posted records and hashes                | `test/ledger.test.js`, `test/tenancy.test.js`  |
+| SaaS accounting        | `lib/saas.js`       | ASC 606 contracts and schedules, invoices, payments, AR reconciliation, commissions, software, metrics, FX and eliminations | `test/saas.test.js`                            |
+| GAAP engines           | `lib/gaap.js`       | Topic measurement tables, policy/judgment evidence, journals, schedules, remeasurements and disclosures                     | `test/gaap.test.js`                            |
+| Close operations       | `lib/operations.js` | Fiscal configuration, bank reconciliation, evidence attachments, close checklist and exception queue                        | `test/production.test.js`                      |
+| Financial reports      | `lib/reports.js`    | Six statement models plus CSV/PDF rendering and cutoff parameters                                                           | `test/production.test.js`, `test/gaap.test.js` |
+| Identity control plane | `lib/platform.js`   | Users, organizations, roles, memberships, sessions, CSRF, idempotency and platform audit                                    | `test/auth.test.js`, `test/api.test.js`        |
+| HTTP boundary          | `server.js`         | Authenticated tenant binding, permissions, GAAP routes, report routes and webhook controls                                  | `test/api.test.js`, `test/tenancy.test.js`     |
+| User workspace         | `frontend/main.jsx` | Role-aware modules, GAAP overview and downloadable statement links                                                          | Production build gate                          |
