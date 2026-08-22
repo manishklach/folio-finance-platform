@@ -5,4 +5,5 @@ data/
 *.log
 node_modules/
 coverage/
+backups/
 .DS_Store

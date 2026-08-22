@@ -1,0 +1,72 @@
+.module-console {
+  margin: 32px auto;
+  max-width: 1500px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #dfe4e8;
+  border-radius: 18px;
+}
+.module-console header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.module-console nav,
+.report-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.module-console button,
+.report-links a {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff;
+  color: #1e293b;
+}
+.module-console button[aria-current="page"] {
+  background: #173f35;
+  color: #fff;
+}
+.role-chip {
+  background: #e8f3ee;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.data-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto;
+}
+.data-card dt,
+.data-details dt {
+  text-transform: capitalize;
+  color: #64748b;
+  font-size: 12px;
+}
+.data-card dd,
+.data-details dd {
+  margin: 2px 0 9px;
+  overflow-wrap: anywhere;
+}
+.data-details {
+  margin: 4px 0;
+  padding-left: 8px;
+  border-left: 2px solid #e2e8f0;
+}
+@media (max-width: 700px) {
+  .module-console {
+    padding: 14px;
+  }
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+}

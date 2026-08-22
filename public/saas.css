@@ -219,3 +219,27 @@ nav {
     grid-template-columns: 1fr;
   }
 }
+
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: #f4f6f1;
+}
+.auth-card {
+  width: min(440px, 100%);
+  padding: 32px;
+}
+.auth-card .brand {
+  margin-bottom: 28px;
+}
+.auth-card h1 {
+  font-family: Georgia, serif;
+  font-size: 30px;
+  margin: 6px 0 8px;
+}
+.auth-card > p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.5;
+}

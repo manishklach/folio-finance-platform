@@ -9,7 +9,15 @@
     "dev": "node --env-file-if-exists=.env --watch server.js",
     "test": "node --test",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "migrate": "node scripts/migrate.js",
+    "migrate:down": "node scripts/migrate.js --down",
+    "backup": "node scripts/backup.js",
+    "restore": "node scripts/restore.js",
+    "verify-integrity": "node scripts/verify-integrity.js",
+    "build": "vite build",
+    "test:load": "node scripts/load-benchmark.js",
+    "privacy": "node scripts/privacy.js"
   },
   "engines": {
     "node": "22.23.2"
@@ -19,6 +27,15 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.9.0",
     "globals": "^17.11.0",
-    "prettier": "^3.9.6"
+    "prettier": "^3.9.6",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "@sentry/node": "^10.70.0",
+    "argon2": "^0.45.1",
+    "pdfkit": "^0.19.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.4.3"
   }
 }

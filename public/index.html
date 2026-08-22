@@ -36,9 +36,11 @@
             <small>3 tasks remaining</small>
           </div>
           <div class="user">
-            <span class="avatar">MK</span>
-            <div><strong>Manish</strong><small>Administrator</small></div>
-            <button>•••</button>
+            <span class="avatar" id="user-avatar">—</span>
+            <div>
+              <strong id="user-name">Signed out</strong><small id="user-role">No session</small>
+            </div>
+            <button id="logout" aria-label="Sign out">Sign out</button>
           </div>
         </div>
       </aside>
@@ -186,5 +188,8 @@
     </div>
     <div class="toast" id="toast" hidden></div>
     <script type="module" src="/app.js"></script>
+    <div id="react-console"></div>
+    <link rel="stylesheet" href="/build/codex-ledger.css" />
+    <script type="module" src="/build/folio-app.js"></script>
   </body>
 </html>

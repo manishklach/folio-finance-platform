@@ -5,19 +5,20 @@ that engine without weakening its deterministic ledger controls.
 
 ## Delivery order
 
-| Phase                                | Status   | Outcome                                                                     |
-| ------------------------------------ | -------- | --------------------------------------------------------------------------- |
-| 0. Repository hygiene                | Complete | Portable setup, pinned tooling, lint/format gate, architecture guide        |
-| 1. Authentication and authorization  | Next     | Real users, sessions, CSRF, lockout, and server-enforced roles              |
-| 2. Multi-tenancy                     | Planned  | Organizations, memberships, tenant-scoped repositories, onboarding          |
-| 3. Migrations, backups, immutability | Planned  | Versioned migrations, restore drills, DB guards, hash verification          |
-| 4. Core ledger completeness          | Planned  | Fiscal calendars, bank reconciliation, files, tax, exports, close checklist |
-| 5. Receivables hardening             | Planned  | Idempotency, signed webhooks, concurrency controls, exception queue         |
-| 6. AI hardening                      | Planned  | Quotas, decision history, evaluation data, calibrated uncertainty           |
-| 7. Frontend rebuild                  | Planned  | Routed components, role-aware UX, full API coverage, accessibility          |
-| 8. Testing and CI/CD                 | Planned  | HTTP tests, auth isolation tests, CI gates, migration and load checks       |
-| 9. Observability and operations      | Planned  | Structured logs, request IDs, health, metrics, errors, incident process     |
-| 10. Compliance and launch            | Planned  | Secrets management, pen test, accountant validation, SOC 2 and privacy      |
+| Phase                                | Status   | Outcome                                                                      |
+| ------------------------------------ | -------- | ---------------------------------------------------------------------------- |
+| 0. Repository hygiene                | Complete | Portable setup, pinned tooling, lint/format gate, architecture guide         |
+| 1. Authentication and authorization  | Complete | Real users, sessions, CSRF, lockout, and server-enforced roles               |
+| 2. Multi-tenancy                     | Complete | Organizations, memberships, isolated tenant databases, onboarding            |
+| 3. Migrations, backups, immutability | Complete | Versioned migrations, restore drills, DB guards, hash verification           |
+| 4. Core ledger completeness          | Complete | Fiscal calendars, bank reconciliation, files, tax, exports, close checklist  |
+| 5. Receivables hardening             | Complete | Idempotency, signed webhooks, concurrency controls, exception queue          |
+| 6. AI hardening                      | Complete | Quotas, decision history, evaluation data, calibrated uncertainty            |
+| 7. Frontend rebuild                  | Complete | React modules, role-aware UX, full API coverage, accessibility               |
+| 8. Testing and CI/CD                 | Complete | HTTP tests, auth isolation tests, CI gates, migration and load checks        |
+| 9. Observability and operations      | Complete | Structured logs, request IDs, health, metrics, errors, incident process      |
+| 10. Compliance engineering           | Complete | Secret mounts, SOC 2 evidence map, privacy tools and external gate templates |
+| Independent launch approvals         | Pending  | Third-party pen test, accountant validation, legal and deployment sign-off   |
 
 ## Dependency rules
 

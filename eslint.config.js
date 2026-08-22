@@ -3,11 +3,11 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["data/**", "node_modules/**", "coverage/**"],
+    ignores: ["data/**", "node_modules/**", "coverage/**", "public/build/**"],
   },
   js.configs.recommended,
   {
-    files: ["server.js", "lib/**/*.js", "test/**/*.js", "eslint.config.js"],
+    files: ["server.js", "lib/**/*.js", "scripts/**/*.js", "test/**/*.js", "eslint.config.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -18,11 +18,12 @@ export default [
     },
   },
   {
-    files: ["public/**/*.js"],
+    files: ["public/**/*.js", "frontend/**/*.jsx"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
       globals: globals.browser,
+      parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
 ];

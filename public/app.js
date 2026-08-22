@@ -1,4 +1,5 @@
 const state = {
+  auth: null,
   accounts: [],
   journals: [],
   dashboard: null,
@@ -18,14 +19,26 @@ const shortDate = (value) =>
   new Date(`${value}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 async function api(path, options) {
+  const method = options?.method || "GET";
+  const headers = { "Content-Type": "application/json", ...(options?.headers || {}) };
+  if (state.auth?.csrf_token && method !== "GET") headers["X-CSRF-Token"] = state.auth.csrf_token;
+  if (method !== "GET" && !path.startsWith("/api/auth/") && path !== "/api/setup") {
+    headers["Idempotency-Key"] = crypto.randomUUID();
+  }
   const response = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers,
   });
   const body = await response.json();
-  if (!response.ok) throw new Error(body.error || "Request failed");
+  if (!response.ok) {
+    const error = new Error(body.error || "Request failed");
+    error.status = response.status;
+    throw error;
+  }
   return body;
 }
+
+const can = (permission) => state.auth?.permissions?.includes(permission);
 
 async function load() {
   [state.dashboard, state.accounts, state.journals, state.saas] = await Promise.all([
@@ -60,6 +73,7 @@ function render() {
       audit: renderAudit,
     })[state.currentView] || renderDashboard
   )();
+  document.querySelector("#new-entry").hidden = !can("draft");
 }
 
 function renderDashboard() {
@@ -91,7 +105,7 @@ function kpi(label, value, icon, note, neutral = false) {
 
 function journalTable(rows) {
   if (!rows.length) return `<div class="empty">No journal entries yet.</div>`;
-  return `<table class="table"><thead><tr><th>Date</th><th>Memo</th><th>Source</th><th>Status</th><th>Amount</th><th></th></tr></thead><tbody>${rows.map((j) => `<tr><td>${shortDate(j.entry_date)}</td><td><strong>${escapeHtml(j.memo)}</strong></td><td>${escapeHtml(j.source)}</td><td><span class="badge ${j.status}">${j.status}</span></td><td class="amount">${money(j.total_cents)}</td><td class="amount">${j.status === "draft" ? `<button class="post-btn" data-post="${j.id}">Review & post</button>` : ""}</td></tr>`).join("")}</tbody></table>`;
+  return `<table class="table"><thead><tr><th>Date</th><th>Memo</th><th>Source</th><th>Status</th><th>Amount</th><th></th></tr></thead><tbody>${rows.map((j) => `<tr><td>${shortDate(j.entry_date)}</td><td><strong>${escapeHtml(j.memo)}</strong></td><td>${escapeHtml(j.source)}</td><td><span class="badge ${j.status}">${j.status}</span></td><td class="amount">${money(j.total_cents)}</td><td class="amount">${j.status === "draft" && can("post") ? `<button class="post-btn" data-post="${j.id}">Review & post</button>` : ""}</td></tr>`).join("")}</tbody></table>`;
 }
 
 function renderJournals() {
@@ -116,7 +130,9 @@ function renderRevenue() {
   <article class="card panel"><div class="panel-head"><div><h3>ASC 606 control</h3><p>Contract-to-ledger reconciliation</p></div><span class="badge posted">Balanced</span></div><div class="attention-list"><div class="attention"><span class="attention-icon">1</span><div><strong>Identify contract</strong><p>${s.contracts.length} active customer arrangements</p></div><b>Complete</b></div><div class="attention"><span class="attention-icon">2</span><div><strong>Identify obligations</strong><p>${new Set(s.schedules.map((x) => x.obligation_id)).size} scheduled obligations</p></div><b>Complete</b></div><div class="attention"><span class="attention-icon">3</span><div><strong>Allocate transaction price</strong><p>Relative standalone selling price</p></div><b>Complete</b></div><div class="attention"><span class="attention-icon">4</span><div><strong>Recognize as satisfied</strong><p>Straight-line, usage, milestone and point-in-time</p></div><b>Controlled</b></div></div></article></div>
   <article class="card section-card" style="margin-top:14px"><div class="table-head"><div><h3>Customer contracts</h3><p style="font-size:10px;color:var(--muted);margin-top:4px">Billing and recognition are tracked independently</p></div><div class="action-row"><span class="badge">${s.contracts.length} contracts</span><button class="primary" id="new-contract">＋ New contract</button></div></div><table class="table"><thead><tr><th>Contract</th><th>Customer</th><th>Model</th><th>Allocated</th><th>Billed</th><th>Recognized</th><th>Status</th></tr></thead><tbody>${s.contracts.map((c) => `<tr><td class="code">${c.contract_number}</td><td><strong>${escapeHtml(c.customer_name)}</strong></td><td>${c.billing_model}</td><td class="amount">${money(c.allocated_cents)}</td><td class="amount">${money(c.billed_cents)}</td><td class="amount">${money(c.recognized_cents)}</td><td><span class="badge ${c.status === "active" ? "posted" : "draft"}">${c.status}</span></td></tr>`).join("")}</tbody></table></article>`;
   document.querySelector("#recognize-revenue").addEventListener("click", runRecognition);
-  document.querySelector("#new-contract").addEventListener("click", openContractForm);
+  document.querySelector("#new-contract").hidden = !can("post");
+  if (can("post"))
+    document.querySelector("#new-contract").addEventListener("click", openContractForm);
 }
 
 async function runRecognition() {
@@ -612,6 +628,10 @@ function renderProposal() {
   document.querySelector("#draft-result").innerHTML =
     `<article class="draft-card"><div class="draft-summary"><div><h3>${escapeHtml(p.memo)}</h3><span class="badge ${p.confidence === "high" ? "posted" : "draft"}">${p.confidence} confidence</span></div><p>${escapeHtml(p.rationale)} Generated by ${p.provider === "openai" ? "OpenAI" : "local accounting rules"}.</p></div><div class="draft-lines">${p.lines.map((l) => `<div class="draft-line"><div><strong>${account(l.account_id)?.code} · ${escapeHtml(account(l.account_id)?.name || "Unknown")}</strong><small>${escapeHtml(l.description)}</small></div><b>${l.debit_cents ? "Dr " : "Cr "}${money(l.debit_cents || l.credit_cents)}</b></div>`).join("")}</div><div class="draft-actions"><button class="secondary" id="discard-draft">Discard</button><button class="primary" id="save-draft">Save for approval</button></div></article>`;
   document.querySelector("#discard-draft").addEventListener("click", () => {
+    api("/api/ai/disposition", {
+      method: "POST",
+      body: JSON.stringify({ proposal_id: state.proposal.proposal_id, disposition: "rejected" }),
+    }).catch((error) => toast(error.message, true));
     state.proposal = null;
     document.querySelector("#draft-result").innerHTML = "";
   });
@@ -620,7 +640,7 @@ function renderProposal() {
 async function saveDraft() {
   const p = state.proposal;
   try {
-    await api("/api/journals", {
+    const journal = await api("/api/journals", {
       method: "POST",
       body: JSON.stringify({
         date: p.date,
@@ -628,6 +648,14 @@ async function saveDraft() {
         source: "ai",
         ai_rationale: p.rationale,
         lines: p.lines,
+      }),
+    });
+    await api("/api/ai/disposition", {
+      method: "POST",
+      body: JSON.stringify({
+        proposal_id: p.proposal_id,
+        disposition: "accepted",
+        journal_id: journal.id,
       }),
     });
     overlay.hidden = true;
@@ -667,6 +695,70 @@ function escapeHtml(value = "") {
   );
 }
 
-load().catch((error) => {
-  view.innerHTML = `<div class="empty">Could not load the ledger: ${escapeHtml(error.message)}</div>`;
+async function bootstrap() {
+  try {
+    state.auth = await api("/api/auth/me");
+    await enterApplication();
+  } catch (error) {
+    if (error.status !== 401) throw error;
+    const setup = await api("/api/setup/status");
+    renderAuthentication(setup.needs_setup);
+  }
+}
+
+function renderAuthentication(needsSetup) {
+  document.querySelector(".shell").hidden = true;
+  const screen = document.createElement("main");
+  screen.className = "auth-screen";
+  const title = needsSetup ? "Create your Folio workspace" : "Sign in to Folio";
+  const organizationField = needsSetup
+    ? '<label class="field"><span>Organization</span><input name="organization_name" required maxlength="120" autocomplete="organization"></label>'
+    : "";
+  screen.innerHTML = `<section class="card auth-card"><div class="brand"><span class="brand-mark">F</span><span>Folio</span></div><p class="eyebrow">SECURE FINANCE WORKSPACE</p><h1>${title}</h1><p>Sessions are server-managed and every financial action retains the authenticated actor.</p><form id="auth-form" class="contract-form">${organizationField}<label class="field"><span>Email</span><input type="email" name="email" required maxlength="254" autocomplete="email"></label><label class="field"><span>Password</span><input type="password" name="password" required minlength="12" maxlength="256" autocomplete="${needsSetup ? "new-password" : "current-password"}"></label>${needsSetup ? "<small>Use at least 12 characters with uppercase, lowercase, and a number.</small>" : ""}<button class="primary wide" type="submit">${needsSetup ? "Create workspace" : "Sign in"}</button><p class="negative" id="auth-error" role="alert"></p></form></section>`;
+  document.body.append(screen);
+  screen.querySelector("#auth-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const fields = new FormData(form);
+    const payload = {
+      email: fields.get("email"),
+      password: fields.get("password"),
+      ...(needsSetup ? { organization_name: fields.get("organization_name") } : {}),
+    };
+    const button = form.querySelector("button");
+    button.disabled = true;
+    try {
+      state.auth = await api(needsSetup ? "/api/setup" : "/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      screen.remove();
+      await enterApplication();
+    } catch (error) {
+      screen.querySelector("#auth-error").textContent = error.message;
+      button.disabled = false;
+    }
+  });
+}
+
+async function enterApplication() {
+  document.querySelector(".shell").hidden = false;
+  document.querySelector("#user-name").textContent = state.auth.user.email;
+  document.querySelector("#user-role").textContent = state.auth.role.replaceAll("_", " ");
+  document.querySelector("#user-avatar").textContent = state.auth.user.email
+    .slice(0, 2)
+    .toUpperCase();
+  await load();
+}
+
+document.querySelector("#logout").addEventListener("click", async () => {
+  try {
+    await api("/api/auth/logout", { method: "POST" });
+  } finally {
+    location.reload();
+  }
+});
+
+bootstrap().catch((error) => {
+  view.innerHTML = `<div class="empty">Could not start Folio: ${escapeHtml(error.message)}</div>`;
 });

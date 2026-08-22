@@ -1,30 +1,258 @@
 import http from "node:http";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLedger } from "./lib/db.js";
 import { ACCOUNT_TYPES } from "./lib/accounting.js";
 import { proposeJournal } from "./lib/ai.js";
+import { createPlatform, digest, permissionsFor } from "./lib/platform.js";
+import { runWithRequestContext } from "./lib/request-context.js";
+import { financialReport, reportCsv, reportPdf } from "./lib/reports.js";
+import * as Sentry from "@sentry/node";
+import { secret } from "./lib/secrets.js";
+
+const sentryDsn = secret("SENTRY_DSN");
+if (sentryDsn)
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: process.env.NODE_ENV || "development",
+    sendDefaultPii: false,
+  });
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
-const ledger = createLedger(process.env.LEDGER_DB_PATH);
-const port = Number(process.env.PORT || 4310);
+const stateMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const idempotentRoutes = new Set([
+  "/api/invoices",
+  "/api/receivables/payments",
+  "/api/receivables/credits",
+  "/api/receivables/write-offs",
+  "/api/receivables/refunds",
+]);
 
-const server = http.createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-    if (url.pathname.startsWith("/api/")) return await api(req, res, url);
-    return await staticFile(res, url.pathname);
-  } catch (error) {
-    console.error(error);
-    json(res, error.statusCode || 500, {
-      error: error.statusCode ? error.message : "Unexpected server error",
-    });
+export function createFolioServer(options = {}) {
+  const platform =
+    options.platform ||
+    createPlatform(
+      options.platformDbPath || process.env.PLATFORM_DB_PATH,
+      options.tenantDir || process.env.TENANT_DB_DIR,
+    );
+  const ledgers = new Map();
+  const metrics = {
+    started_at: new Date().toISOString(),
+    requests: 0,
+    errors: 0,
+    latency_ms: 0,
+    by_route: {},
+  };
+  const server = http.createServer(async (req, res) => {
+    const requestId = req.headers["x-request-id"] || randomUUID();
+    const started = performance.now();
+    res.setHeader("X-Request-Id", requestId);
+    securityHeaders(res);
+    metrics.requests += 1;
+    try {
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      if (url.pathname === "/healthz") {
+        const readiness = health(platform, ledgers);
+        return json(res, readiness.status === "ok" ? 200 : 503, readiness);
+      }
+      if (url.pathname === "/metrics") return json(res, 200, metricsSnapshot(metrics));
+      if (url.pathname.startsWith("/webhooks/"))
+        return await webhook(req, res, url, platform, ledgers, requestId);
+      if (url.pathname.startsWith("/api/"))
+        return await apiRequest(req, res, url, platform, ledgers, requestId);
+      return await staticFile(res, url.pathname);
+    } catch (error) {
+      metrics.errors += 1;
+      if (sentryDsn)
+        Sentry.captureException(error, {
+          tags: {
+            request_id: requestId,
+            org_id: req.folioContext?.orgId || "anonymous",
+            user_id: req.folioContext?.userId || "anonymous",
+          },
+        });
+      log("error", {
+        request_id: requestId,
+        method: req.method,
+        path: safePath(req.url),
+        error: error.statusCode ? error.message : "internal_error",
+      });
+      json(res, error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Unexpected server error",
+        request_id: requestId,
+      });
+    } finally {
+      const latency = Math.round((performance.now() - started) * 100) / 100;
+      metrics.latency_ms += latency;
+      const route = `${req.method} ${safePath(req.url)}`;
+      metrics.by_route[route] = (metrics.by_route[route] || 0) + 1;
+      log("request", {
+        request_id: requestId,
+        method: req.method,
+        path: safePath(req.url),
+        status: res.statusCode,
+        latency_ms: latency,
+        org_id: req.folioContext?.orgId || null,
+        user_id: req.folioContext?.userId || null,
+      });
+    }
+  });
+  server.requestTimeout = 15_000;
+  server.headersTimeout = 10_000;
+  server.keepAliveTimeout = 5_000;
+  server.on("clientError", (_error, socket) => socket.end("HTTP/1.1 400 Bad Request\r\n\r\n"));
+  function close(callback) {
+    for (const ledger of ledgers.values()) ledger.close();
+    platform.close();
+    server.close(callback);
   }
-});
+  return { server, platform, ledgers, close };
+}
 
-async function api(req, res, url) {
+async function apiRequest(req, res, url, platform, ledgers, requestId) {
+  const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
+  if (req.method === "GET" && url.pathname === "/api/setup/status")
+    return json(res, 200, platform.status());
+  if (req.method === "POST" && url.pathname === "/api/setup") {
+    const result = await platform.setup(await readJson(req), meta);
+    setSessionCookie(res, result.token);
+    return json(res, 201, authPayload(platform, result.session, result.csrf));
+  }
+  if (req.method === "POST" && url.pathname === "/api/auth/login") {
+    const result = await platform.login(await readJson(req), meta);
+    setSessionCookie(res, result.token);
+    return json(res, 200, authPayload(platform, result.session, result.csrf));
+  }
+  const token = parseCookies(req.headers.cookie || "").folio_session;
+  const session = platform.resolveSession(token);
+  if (!session) throw problem("Authentication required", 401);
+  const context = {
+    actor: session.email,
+    userId: session.user_id,
+    orgId: session.org_id,
+    role: session.role,
+    requestId,
+  };
+  req.folioContext = context;
+  return runWithRequestContext(context, async () => {
+    if (stateMethods.has(req.method) && !platform.verifyCsrf(session, req.headers["x-csrf-token"]))
+      throw problem("Invalid CSRF token", 403);
+    if (req.method === "GET" && url.pathname === "/api/auth/me")
+      return json(res, 200, authPayload(platform, session, platform.issueCsrf(session.id)));
+    if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+      platform.logout(session.id);
+      clearSessionCookie(res);
+      return json(res, 200, { ok: true });
+    }
+    if (req.method === "POST" && url.pathname === "/api/auth/switch-org") {
+      const result = platform.switchOrganization(session, (await readJson(req)).org_id, meta);
+      setSessionCookie(res, result.token);
+      return json(res, 200, authPayload(platform, result.session, result.csrf));
+    }
+    if (req.method === "POST" && url.pathname === "/api/admin/users") {
+      requirePermission(session, "admin");
+      return json(
+        res,
+        201,
+        await platform.invite(await readJson(req), { ...session, request_id: requestId }),
+      );
+    }
+    if (req.method === "POST" && url.pathname === "/api/admin/organizations") {
+      requirePermission(session, "admin");
+      const organization = platform.createOrganization(await readJson(req), {
+        ...session,
+        request_id: requestId,
+      });
+      tenantLedger(ledgers, { org_id: organization.id, database_path: organization.database_path });
+      return json(res, 201, organization);
+    }
+    const ledger = tenantLedger(ledgers, session);
+    requirePermission(session, requiredPermission(req.method, url.pathname));
+    if (stateMethods.has(req.method) && idempotentRoutes.has(url.pathname)) {
+      const replayed = await prepareIdempotency(req, res, platform, session, url.pathname);
+      if (replayed) return;
+    }
+    return await api(req, res, url, ledger, platform, session);
+  });
+}
+
+async function api(req, res, url, ledger, platform, session) {
+  if (req.method === "GET" && url.pathname === "/api/fiscal-config")
+    return json(res, 200, ledger.fiscalConfig());
+  if (req.method === "POST" && url.pathname === "/api/fiscal-config")
+    return json(res, 200, ledger.configureFiscal(await readJson(req)));
+  if (req.method === "GET" && url.pathname === "/api/bank-statements")
+    return json(res, 200, ledger.bankStatements());
+  if (req.method === "POST" && url.pathname === "/api/bank-statements/import")
+    return json(res, 201, ledger.importBankStatement(await readJson(req)));
+  const bankMatch = url.pathname.match(/^\/api\/bank-statements\/([^/]+)\/reconcile$/);
+  if (req.method === "POST" && bankMatch) return json(res, 200, ledger.reconcileBank(bankMatch[1]));
+  if (req.method === "GET" && url.pathname === "/api/tax-rates")
+    return json(res, 200, ledger.taxRates());
+  if (req.method === "POST" && url.pathname === "/api/tax-rates")
+    return json(res, 201, ledger.createTaxRate(await readJson(req)));
+  const attachmentList = url.pathname.match(
+    /^\/api\/attachments\/(invoice|contract|journal)\/([^/]+)$/,
+  );
+  if (req.method === "GET" && attachmentList)
+    return json(res, 200, ledger.attachments(attachmentList[1], attachmentList[2]));
+  if (req.method === "POST" && url.pathname === "/api/attachments")
+    return json(res, 201, ledger.addAttachment(await readJson(req)));
+  const attachmentFile = url.pathname.match(/^\/api\/attachments\/([^/]+)\/download$/);
+  if (req.method === "GET" && attachmentFile) {
+    const file = ledger.attachment(attachmentFile[1]);
+    res.writeHead(200, {
+      "Content-Type": file.metadata.mime_type,
+      "Content-Disposition": `attachment; filename="${file.metadata.filename.replaceAll('"', "")}"`,
+      "Cache-Control": "private, no-store",
+    });
+    return res.end(file.content);
+  }
+  const closeMatch = url.pathname.match(/^\/api\/close\/([^/]+)$/);
+  if (req.method === "GET" && closeMatch)
+    return json(res, 200, ledger.closeChecklist(closeMatch[1]));
+  if (req.method === "PATCH" && closeMatch)
+    return json(
+      res,
+      200,
+      ledger.completeCloseItem({ ...(await readJson(req)), period: closeMatch[1] }),
+    );
+  if (req.method === "POST" && url.pathname === "/api/close")
+    return json(res, 200, ledger.closePeriod((await readJson(req)).period));
+  if (req.method === "GET" && url.pathname === "/api/reconciliation-exceptions")
+    return json(
+      res,
+      200,
+      ledger.syncReconciliationExceptions(url.searchParams.get("as_of") || today()),
+    );
+  const exceptionMatch = url.pathname.match(/^\/api\/reconciliation-exceptions\/([^/]+)$/);
+  if (req.method === "PATCH" && exceptionMatch)
+    return json(
+      res,
+      200,
+      ledger.updateException({ ...(await readJson(req)), id: exceptionMatch[1] }),
+    );
+  const reportMatch = url.pathname.match(
+    /^\/api\/reports\/(trial_balance|income_statement|balance_sheet|cash_flow)\.(csv|pdf)$/,
+  );
+  if (req.method === "GET" && reportMatch) {
+    const report = financialReport(
+      ledger,
+      reportMatch[1],
+      url.searchParams.get("as_of") || today(),
+    );
+    const pdf = reportMatch[2] === "pdf";
+    const body = pdf ? await reportPdf(report) : reportCsv(report);
+    res.writeHead(200, {
+      "Content-Type": pdf ? "application/pdf" : "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${reportMatch[1]}-${report.as_of}.${reportMatch[2]}"`,
+      "Cache-Control": "private, no-store",
+    });
+    return res.end(body);
+  }
   if (req.method === "GET" && url.pathname === "/api/dashboard")
     return json(res, 200, ledger.dashboard());
   if (req.method === "GET" && url.pathname === "/api/accounts")
@@ -35,25 +263,25 @@ async function api(req, res, url) {
     return json(res, 200, ledger.trialBalance());
   if (req.method === "GET" && url.pathname === "/api/audit-log")
     return json(res, 200, ledger.auditLog());
+  if (req.method === "GET" && url.pathname === "/api/integrity")
+    return json(res, 200, ledger.verifyIntegrity());
+  if (req.method === "GET" && url.pathname === "/api/ai/history")
+    return json(res, 200, platform.aiHistory(session.org_id));
+  if (req.method === "GET" && url.pathname === "/api/admin/privacy-requests") {
+    requirePermission(session, "admin");
+    return json(res, 200, platform.privacyRequests(session.org_id));
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/privacy-requests") {
+    requirePermission(session, "admin");
+    const body = await readJson(req);
+    return json(
+      res,
+      201,
+      platform.createPrivacyRequest(session.org_id, session.user_id, body.kind),
+    );
+  }
   if (req.method === "GET" && url.pathname === "/api/saas/overview")
-    return json(res, 200, {
-      contracts: ledger.listContracts(),
-      schedules: ledger.revenueSchedules(),
-      waterfall: ledger.revenueWaterfall(),
-      deferred: ledger.deferredRollforward(),
-      rpo: ledger.rpo(),
-      metrics: ledger.metrics(),
-      cash_flow: ledger.cashFlow(),
-      consolidation: ledger.consolidation(),
-      commissions: ledger.commissions(),
-      software_projects: ledger.softwareProjects(),
-      customers: ledger.customers(),
-      products: ledger.products(),
-      entities: ledger.entities(),
-      receivables: ledger.receivables(
-        url.searchParams.get("as_of") || new Date().toISOString().slice(0, 10),
-      ),
-    });
+    return json(res, 200, overview(ledger, url));
   if (req.method === "GET" && url.pathname === "/api/contracts")
     return json(res, 200, ledger.listContracts());
   const contractMatch = url.pathname.match(/^\/api\/contracts\/(\d+)$/);
@@ -64,11 +292,7 @@ async function api(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/invoices")
     return json(res, 201, ledger.createInvoice(await readJson(req)));
   if (req.method === "GET" && url.pathname === "/api/receivables")
-    return json(
-      res,
-      200,
-      ledger.receivables(url.searchParams.get("as_of") || new Date().toISOString().slice(0, 10)),
-    );
+    return json(res, 200, ledger.receivables(url.searchParams.get("as_of") || today()));
   if (req.method === "POST" && url.pathname === "/api/receivables/payments")
     return json(res, 201, ledger.recordPayment(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/receivables/applications")
@@ -87,19 +311,19 @@ async function api(req, res, url) {
     return json(res, 201, ledger.addCollectionActivity(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/receivables/collections/complete")
     return json(res, 200, ledger.completeCollectionActivity(await readJson(req)));
-  const voidInvoiceMatch = url.pathname.match(/^\/api\/invoices\/(\d+)\/void$/);
-  if (req.method === "POST" && voidInvoiceMatch)
+  const voidInvoice = url.pathname.match(/^\/api\/invoices\/(\d+)\/void$/);
+  if (req.method === "POST" && voidInvoice)
     return json(
       res,
       200,
-      ledger.voidInvoice({ ...(await readJson(req)), invoice_id: Number(voidInvoiceMatch[1]) }),
+      ledger.voidInvoice({ ...(await readJson(req)), invoice_id: Number(voidInvoice[1]) }),
     );
-  const voidPaymentMatch = url.pathname.match(/^\/api\/receivables\/payments\/(\d+)\/void$/);
-  if (req.method === "POST" && voidPaymentMatch)
+  const voidPayment = url.pathname.match(/^\/api\/receivables\/payments\/(\d+)\/void$/);
+  if (req.method === "POST" && voidPayment)
     return json(
       res,
       200,
-      ledger.voidPayment({ ...(await readJson(req)), payment_id: Number(voidPaymentMatch[1]) }),
+      ledger.voidPayment({ ...(await readJson(req)), payment_id: Number(voidPayment[1]) }),
     );
   if (req.method === "POST" && url.pathname === "/api/revenue/recognize")
     return json(res, 200, ledger.recognizeThrough((await readJson(req)).as_of));
@@ -118,7 +342,7 @@ async function api(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/accounts") {
     const body = await readJson(req);
     if (!body.code?.trim() || !body.name?.trim() || !ACCOUNT_TYPES.includes(body.type))
-      return json(res, 400, { error: "Code, name, and a valid account type are required" });
+      throw problem("Code, name, and a valid account type are required");
     return json(res, 201, ledger.createAccount(body));
   }
   if (req.method === "POST" && url.pathname === "/api/journals")
@@ -127,32 +351,165 @@ async function api(req, res, url) {
   if (req.method === "POST" && postMatch)
     return json(res, 200, ledger.postJournal(Number(postMatch[1])));
   if (req.method === "POST" && url.pathname === "/api/ai/draft") {
-    const body = await readJson(req);
-    return json(res, 200, await proposeJournal(body.description, ledger.getAccounts()));
+    const quota = platform.aiQuota(
+      session.org_id,
+      session.user_id,
+      Number(process.env.AI_MONTHLY_DRAFT_LIMIT || 200),
+    );
+    const proposal = await proposeJournal((await readJson(req)).description, ledger.getAccounts());
+    const proposalId = platform.logAiProposal(session.org_id, session.user_id, proposal);
+    return json(res, 200, { ...proposal, proposal_id: proposalId, quota });
   }
-  return json(res, 404, { error: "Not found" });
+  if (req.method === "POST" && url.pathname === "/api/ai/disposition") {
+    const body = await readJson(req);
+    platform.decideAiProposal(
+      body.proposal_id,
+      session.org_id,
+      body.disposition,
+      body.journal_id || null,
+    );
+    return json(res, 200, { ok: true });
+  }
+  throw problem("Not found", 404);
 }
 
+function overview(ledger, url) {
+  return {
+    contracts: ledger.listContracts(),
+    schedules: ledger.revenueSchedules(),
+    waterfall: ledger.revenueWaterfall(),
+    deferred: ledger.deferredRollforward(),
+    rpo: ledger.rpo(),
+    metrics: ledger.metrics(),
+    cash_flow: ledger.cashFlow(),
+    consolidation: ledger.consolidation(),
+    commissions: ledger.commissions(),
+    software_projects: ledger.softwareProjects(),
+    customers: ledger.customers(),
+    products: ledger.products(),
+    entities: ledger.entities(),
+    receivables: ledger.receivables(url.searchParams.get("as_of") || today()),
+  };
+}
+
+async function webhook(req, res, url, platform, ledgers, requestId) {
+  if (req.method !== "POST") throw problem("Not found", 404);
+  const match = url.pathname.match(/^\/webhooks\/(stripe|payroll|expenses)\/([a-z0-9-]+)$/);
+  if (!match) throw problem("Not found", 404);
+  const [, provider, slug] = match;
+  const org = platform.organizationBySlug(slug);
+  if (!org) throw problem("Not found", 404);
+  const raw = await readBody(req, 1_000_000);
+  const signingSecret = secret(`WEBHOOK_SECRET_${provider.toUpperCase()}`);
+  if (!signingSecret) throw problem("Webhook receiver is not configured", 503);
+  const expected = createHmac("sha256", signingSecret).update(raw).digest("hex");
+  if (!constantEqual(expected, String(req.headers["x-folio-signature"] || "")))
+    throw problem("Invalid webhook signature", 401);
+  let event;
+  try {
+    event = JSON.parse(raw.toString("utf8"));
+  } catch {
+    throw problem("Invalid webhook payload");
+  }
+  if (!event.id || !event.type || !event.data)
+    throw problem("Webhook id, type, and data are required");
+  const existing = platform.webhookLookup(provider, event.id);
+  if (existing) return json(res, 200, { duplicate: true, result: existing.result });
+  const ledger = tenantLedger(ledgers, { org_id: org.id, database_path: org.database_path });
+  const result = await runWithRequestContext(
+    { actor: `webhook.${provider}`, orgId: org.id, role: "system", requestId },
+    () => applyWebhook(provider, event, ledger),
+  );
+  platform.webhookRecord(provider, event.id, org.id, digest(raw), "processed", result);
+  return json(res, 200, { duplicate: false, result });
+}
+
+function applyWebhook(provider, event, ledger) {
+  if (provider === "stripe" && event.type === "payment.received")
+    return ledger.recordPayment(event.data);
+  if (provider === "stripe" && event.type === "invoice.created")
+    return ledger.createInvoice(event.data);
+  if (provider === "payroll" && event.type === "payroll.posted") {
+    const draft = ledger.createDraft({ ...event.data, source: "payroll_webhook" });
+    return ledger.postJournal(draft.id);
+  }
+  if (provider === "expenses" && event.type === "expense.posted") {
+    const draft = ledger.createDraft({ ...event.data, source: "expense_webhook" });
+    return ledger.postJournal(draft.id);
+  }
+  throw problem("Unsupported webhook event", 422);
+}
+
+function tenantLedger(cache, session) {
+  if (!cache.has(session.org_id))
+    cache.set(
+      session.org_id,
+      createLedger(session.database_path, { seed: true, orgId: session.org_id }),
+    );
+  return cache.get(session.org_id);
+}
+async function prepareIdempotency(req, res, platform, session, route) {
+  const key = String(req.headers["idempotency-key"] || "");
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(key))
+    throw problem("A valid Idempotency-Key header is required");
+  const body = await readBody(req, 1_000_000);
+  req.bodyCache = body;
+  const requestHash = digest(body);
+  const prior = platform.idempotencyLookup(session.org_id, route, key, requestHash);
+  if (prior) {
+    json(res, prior.status, prior.body);
+    return true;
+  }
+  if (!platform.idempotencyReserve(session.org_id, route, key, requestHash))
+    throw problem("An identical request with this idempotency key is still processing", 409);
+  res.folioIdempotency = { platform, orgId: session.org_id, route, key };
+  return false;
+}
+function requiredPermission(method, path) {
+  if (method === "GET") return "read";
+  if (path === "/api/journals" || path === "/api/ai/draft" || path === "/api/ai/disposition")
+    return "draft";
+  if (path === "/api/accounts") return "admin";
+  return "post";
+}
+function requirePermission(session, permission) {
+  if (!permissionsFor(session.role).includes(permission))
+    throw problem("Insufficient permission", 403);
+}
+function authPayload(platform, session, csrf) {
+  return {
+    user: { id: session.user_id, email: session.email },
+    organization: { id: session.org_id, name: session.org_name, slug: session.slug },
+    role: session.role,
+    permissions: permissionsFor(session.role),
+    organizations: platform.listMemberships(session.user_id),
+    csrf_token: csrf,
+  };
+}
 async function readJson(req) {
+  const body = req.bodyCache || (await readBody(req, 1_000_000));
+  try {
+    return JSON.parse(body.toString("utf8") || "{}");
+  } catch {
+    throw problem("Invalid JSON");
+  }
+}
+async function readBody(req, limit) {
+  if (req.bodyCache) return req.bodyCache;
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 1_000_000) throw Object.assign(new Error("Request too large"), { statusCode: 413 });
+    if (size > limit) throw problem("Request too large", 413);
     chunks.push(chunk);
   }
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-  } catch {
-    throw Object.assign(new Error("Invalid JSON"), { statusCode: 400 });
-  }
+  return Buffer.concat(chunks);
 }
-
 async function staticFile(res, pathname) {
   const relative = pathname === "/" ? "index.html" : pathname.replace(/^\//, "");
-  const safePath = normalize(relative).replace(/^(\.\.(\/|\\|$))+/, "");
-  const filePath = join(publicDir, safePath);
-  if (!filePath.startsWith(publicDir)) return json(res, 403, { error: "Forbidden" });
+  const safe = normalize(relative).replace(/^(\.\.(\/|\\|$))+/, "");
+  const filePath = join(publicDir, safe);
+  if (!filePath.startsWith(publicDir)) throw problem("Forbidden", 403);
   try {
     const body = await readFile(filePath);
     const types = {
@@ -167,28 +524,111 @@ async function staticFile(res, pathname) {
     });
     res.end(body);
   } catch (error) {
-    if (error.code === "ENOENT") return json(res, 404, { error: "Not found" });
+    if (error.code === "ENOENT") throw problem("Not found", 404);
     throw error;
   }
 }
-
 function json(res, status, value) {
+  if (res.writableEnded) return;
+  if (res.folioIdempotency && status < 500) {
+    const item = res.folioIdempotency;
+    item.platform.idempotencyComplete(item.orgId, item.route, item.key, status, value);
+  }
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
   });
   res.end(JSON.stringify(value));
 }
-
-server.listen(port, "127.0.0.1", () =>
-  console.log(`Codex Ledger running at http://127.0.0.1:${port}`),
-);
-
-function shutdown() {
-  server.close(() => {
-    ledger.close();
-    process.exit(0);
-  });
+function securityHeaders(res) {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  );
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 }
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+function setSessionCookie(res, token) {
+  const secure =
+    process.env.SESSION_COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
+  res.setHeader(
+    "Set-Cookie",
+    `folio_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200${secure ? "; Secure" : ""}`,
+  );
+}
+function clearSessionCookie(res) {
+  res.setHeader("Set-Cookie", "folio_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
+}
+function parseCookies(value) {
+  return Object.fromEntries(
+    value
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const index = part.indexOf("=");
+        return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+      }),
+  );
+}
+function constantEqual(expected, supplied) {
+  const a = Buffer.from(expected);
+  const b = Buffer.from(supplied);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+function clientIp(req) {
+  return req.socket.remoteAddress || "unknown";
+}
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function safePath(value = "") {
+  try {
+    return new URL(value, "http://local").pathname;
+  } catch {
+    return "/invalid";
+  }
+}
+function metricsSnapshot(metrics) {
+  return {
+    ...metrics,
+    average_latency_ms: metrics.requests
+      ? Math.round((metrics.latency_ms / metrics.requests) * 100) / 100
+      : 0,
+  };
+}
+function health(platform, ledgers) {
+  try {
+    const started = performance.now();
+    platform.db.prepare("SELECT 1 ok").get();
+    return {
+      status: "ok",
+      database: "ready",
+      tenant_connections: ledgers.size,
+      database_latency_ms: Math.round((performance.now() - started) * 100) / 100,
+      time: new Date().toISOString(),
+    };
+  } catch {
+    return { status: "unhealthy", database: "unavailable" };
+  }
+}
+function log(event, fields) {
+  process.stdout.write(
+    `${JSON.stringify({ timestamp: new Date().toISOString(), event, ...fields })}\n`,
+  );
+}
+function problem(message, statusCode = 400) {
+  return Object.assign(new Error(message), { statusCode });
+}
+
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  const app = createFolioServer();
+  const port = Number(process.env.PORT || 4310);
+  app.server.listen(port, "127.0.0.1", () => log("started", { url: `http://127.0.0.1:${port}` }));
+  const shutdown = () => app.close(() => process.exit(0));
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+}

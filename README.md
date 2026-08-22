@@ -76,12 +76,15 @@ Without an API key, the same interface uses a deliberately narrow deterministic 
 ```sh
 npm run lint
 npm test
+npm run build
 npm run dev
 ```
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the architecture, accounting invariants, and change
 workflow. See [`ROADMAP.md`](ROADMAP.md) for the ordered path from this engineering MVP to a
-production financial system.
+production financial system. The completed engineering matrix and remaining independent launch gates are in [`docs/production-readiness.md`](docs/production-readiness.md) and [`docs/security-and-compliance.md`](docs/security-and-compliance.md).
+
+Operational commands include `npm run migrate`, `npm run backup`, `npm run restore -- <backup> <destination>`, `npm run verify-integrity`, `npm run test:load`, and `npm run privacy -- export|delete ...`.
 
 ## Test
 
