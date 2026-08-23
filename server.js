@@ -455,6 +455,25 @@ async function api(req, res, url, ledger, platform, session, environment) {
     return json(res, 200, ledger.configureFiscal(await readJson(req)));
   if (req.method === "GET" && url.pathname === "/api/bank-statements")
     return json(res, 200, ledger.bankStatements());
+  if (req.method === "GET" && url.pathname === "/api/bank-feed")
+    return json(res, 200, ledger.bankFeedOverview());
+  if (req.method === "POST" && url.pathname === "/api/bank-feed/accounts")
+    return json(res, 201, ledger.configureBankFeedAccount(await readJson(req)));
+  const bankFeedCandidatesMatch = url.pathname.match(
+    /^\/api\/bank-feed\/transactions\/([^/]+)\/candidates$/,
+  );
+  if (req.method === "GET" && bankFeedCandidatesMatch)
+    return json(res, 200, ledger.bankFeedCandidates(bankFeedCandidatesMatch[1]));
+  const bankFeedMatch = url.pathname.match(/^\/api\/bank-feed\/transactions\/([^/]+)\/match$/);
+  if (req.method === "POST" && bankFeedMatch)
+    return json(
+      res,
+      200,
+      ledger.matchBankFeedTransaction({
+        ...(await readJson(req)),
+        transaction_id: bankFeedMatch[1],
+      }),
+    );
   if (req.method === "POST" && url.pathname === "/api/bank-statements/import")
     return json(res, 201, ledger.importBankStatement(await readJson(req)));
   const bankMatch = url.pathname.match(/^\/api\/bank-statements\/([^/]+)\/reconcile$/);
@@ -686,6 +705,30 @@ async function api(req, res, url, ledger, platform, session, environment) {
       ledger.applyIntegrationRecord({
         ...(await readJson(req)),
         record_id: integrationApplyMatch[1],
+      }),
+    );
+  const bankFeedPreviewMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/bank-preview$/,
+  );
+  if (req.method === "POST" && bankFeedPreviewMatch)
+    return json(
+      res,
+      200,
+      ledger.previewBankFeedRecordApplication({
+        record_id: bankFeedPreviewMatch[1],
+        classify: true,
+      }),
+    );
+  const bankFeedApplyMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/bank-apply$/,
+  );
+  if (req.method === "POST" && bankFeedApplyMatch)
+    return json(
+      res,
+      200,
+      ledger.applyBankFeedRecord({
+        ...(await readJson(req)),
+        record_id: bankFeedApplyMatch[1],
       }),
     );
   if (req.method === "POST" && url.pathname === "/api/integrations/exceptions/status")

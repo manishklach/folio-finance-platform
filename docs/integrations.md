@@ -9,12 +9,12 @@ can carry live financial data.
 
 ## Initial matrix
 
-| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                                                  | Still required for live use                                                                                                          |
-| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned request/normalization adapter, full pagination restart, staged outcomes, retries, mapping preview and approved draft-journal application                                                      | Link handoff/token exchange, JWT webhook verification, native bank matching, sandbox certification and credentialed staging evidence |
-| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter, raw-body `Stripe-Signature` verification, connection-scoped secret/account binding, durable queue/inbox, native event staging, mapping preview and approved draft-journal application | OAuth/restricted-key exchange, native billing/subledger application, payout reconciliation and sandbox certification                 |
-| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries, staged outcomes, mapping preview and approved draft-journal application                                                  | OAuth lifecycle, verified events, detailed payroll receipts, native payroll subledger handoff and sandbox certification              |
-| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries, staged outcomes, mapping preview and approved draft-journal application                                                   | OAuth lifecycle, signed webhooks, association expansion, native contract handoff and sandbox certification                           |
+| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                                                  | Still required for live use                                                                                                                |
+| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned adapter, pagination restart, staged outcomes, retries, account binding, native versioned bank feed, unique posted-cash matching and close-blocking exceptions                                 | Link handoff/token exchange, JWT webhook verification, operator-assisted matching, sandbox certification and credentialed staging evidence |
+| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter, raw-body `Stripe-Signature` verification, connection-scoped secret/account binding, durable queue/inbox, native event staging, mapping preview and approved draft-journal application | OAuth/restricted-key exchange, native billing/subledger application, payout reconciliation and sandbox certification                       |
+| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries, staged outcomes, mapping preview and approved draft-journal application                                                  | OAuth lifecycle, verified events, detailed payroll receipts, native payroll subledger handoff and sandbox certification                    |
+| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries, staged outcomes, mapping preview and approved draft-journal application                                                   | OAuth lifecycle, signed webhooks, association expansion, native contract handoff and sandbox certification                                 |
 
 The provider behavior assumptions above follow the vendors' current official documentation:
 [Plaid transaction sync](https://plaid.com/docs/transactions/sync-migration/),
@@ -55,8 +55,12 @@ flowchart LR
   N --> D{Unique source version?}
   D -->|Yes| S[Stage immutable source outcome and payload hash]
   D -->|Replay| I[Count duplicate without another financial effect]
-  S --> M[Apply versioned mappings and domain validation]
-  M -->|Valid and approved| A[Create auditable Folio transaction]
+  S --> M{Native domain route?}
+  M -->|Plaid bank transaction| B[Validate account binding and source version]
+  B -->|Approved| K[Match one unique posted cash line]
+  K -->|No or multiple candidates| E
+  M -->|Generic controlled mapping| G[Validate journal-draft mapping]
+  G -->|Valid and approved| A[Create auditable Folio draft]
   M -->|Failure| E[Exception/dead-letter queue]
   A --> C[Subledger-to-GL reconciliation]
   E --> O[Owner resolves, ignores or retries]
@@ -103,8 +107,19 @@ application creates one idempotent **draft** journal; it never posts, and its ap
 blocked from posting it. Mapping changes invalidate stale
 previews, validation failures enter one record-linked exception, and removed records fail closed for a
 separate reversal policy. Applying a corrected record resolves its linked mapping exception in the same
-transaction. Provider-native invoice, payroll, bank-matching, contract and payout subledger workflows
-remain launch work and must reconcile before posting.
+transaction.
+
+Plaid bank transactions use a separate native path: an administrator binds each provider account ID
+to one active Folio cash account and three-letter currency. An operator previews and explicitly
+approves each immutable source version. Posted, non-pending transactions match only when exactly one
+unused posted cash line has the same account, date and signed cash amount. Folio does not create or
+post a journal from this path. Pending, unmatched and ambiguous activity remains visible; a changed or
+removed previously matched source invalidates the match and creates a reconciliation exception
+without silently changing the journal. Existing feed history prevents account/currency rebinding,
+replays are idempotent, and unresolved period activity blocks the bank-reconciled close sign-off. For
+multiple exact candidates, an operator selects one with a required rationale; Folio revalidates the
+candidate at commit and retains a match-decision record. Tolerance/date-window matching and
+provider-native invoice, payroll, contract and payout subledger workflows remain launch work.
 
 ## API inventory
 
@@ -112,24 +127,30 @@ Interactive operators use `POST /api/jobs/provider-syncs` or **Sync now** in the
 That durable job executes the same adapter outside the HTTP process and is visible in Reports & jobs.
 The direct sync-run page API remains for adapter ingestion, controlled diagnostics, and compatibility.
 
-| Method and route                                | Purpose                                          | Permission |
-| ----------------------------------------------- | ------------------------------------------------ | ---------- |
-| `GET /api/integrations/catalog`                 | Approved provider capabilities                   | Read       |
-| `GET /api/integrations/overview`                | Connections, recent runs, exceptions and metrics | Read       |
-| `GET /api/integrations/connections`             | Tenant connector register                        | Read       |
-| `POST /api/integrations/connections`            | Configure a reference-only connection            | Admin      |
-| `POST /api/integrations/connections/status`     | Activate, pause or disconnect                    | Admin      |
-| `POST /api/integrations/sync-runs`              | Open a bounded sync run                          | Operate    |
-| `POST /api/integrations/sync-runs/:id/page`     | Idempotently stage a cursor page                 | Operate    |
-| `POST /api/integrations/sync-runs/:id/fail`     | Fail a run and create an exception               | Operate    |
-| `GET /api/integrations/connections/:id/records` | Inspect staged normalized records                | Read       |
-| `GET /api/integrations/mappings`                | Inspect active global or connection mappings     | Read       |
-| `POST /api/integrations/mappings`               | Create a versioned mapping                       | Admin      |
-| `POST /api/integrations/records/:id/preview`    | Validate and fingerprint the mapped draft shape  | Operate    |
-| `POST /api/integrations/records/:id/apply`      | Approve one idempotent draft-journal application | Operate    |
-| `GET /api/integrations/exceptions`              | Inspect integration dead letters                 | Read       |
-| `POST /api/integrations/exceptions/status`      | Retry, resolve or ignore an exception            | Operate    |
-| `POST /api/jobs/provider-syncs`                 | Queue a durable provider synchronization         | Operate    |
+| Method and route                                  | Purpose                                           | Permission |
+| ------------------------------------------------- | ------------------------------------------------- | ---------- |
+| `GET /api/integrations/catalog`                   | Approved provider capabilities                    | Read       |
+| `GET /api/integrations/overview`                  | Connections, recent runs, exceptions and metrics  | Read       |
+| `GET /api/integrations/connections`               | Tenant connector register                         | Read       |
+| `POST /api/integrations/connections`              | Configure a reference-only connection             | Admin      |
+| `POST /api/integrations/connections/status`       | Activate, pause or disconnect                     | Admin      |
+| `POST /api/integrations/sync-runs`                | Open a bounded sync run                           | Operate    |
+| `POST /api/integrations/sync-runs/:id/page`       | Idempotently stage a cursor page                  | Operate    |
+| `POST /api/integrations/sync-runs/:id/fail`       | Fail a run and create an exception                | Operate    |
+| `GET /api/integrations/connections/:id/records`   | Inspect staged normalized records                 | Read       |
+| `GET /api/integrations/mappings`                  | Inspect active global or connection mappings      | Read       |
+| `POST /api/integrations/mappings`                 | Create a versioned mapping                        | Admin      |
+| `POST /api/integrations/records/:id/preview`      | Validate and fingerprint the mapped draft shape   | Operate    |
+| `POST /api/integrations/records/:id/apply`        | Approve one idempotent draft-journal application  | Operate    |
+| `GET /api/integrations/exceptions`                | Inspect integration dead letters                  | Read       |
+| `POST /api/integrations/exceptions/status`        | Retry, resolve or ignore an exception             | Operate    |
+| `POST /api/jobs/provider-syncs`                   | Queue a durable provider synchronization          | Operate    |
+| `GET /api/bank-feed`                              | Bank bindings, current versions and match metrics | Read       |
+| `POST /api/bank-feed/accounts`                    | Bind a Plaid account to Folio cash                | Admin      |
+| `POST /api/integrations/records/:id/bank-preview` | Validate a native bank source version             | Operate    |
+| `POST /api/integrations/records/:id/bank-apply`   | Approve idempotent bank-feed application          | Operate    |
+| `GET /api/bank-feed/transactions/:id/candidates`  | List currently available exact cash candidates    | Read       |
+| `POST /api/bank-feed/transactions/:id/match`      | Approve a revalidated exact cash match            | Operate    |
 
 ## Verification in this increment
 
@@ -143,6 +164,8 @@ production legacy-route denial, durable fast acknowledgement, queue replay, leas
 exhaustion, dead-letter requeue, atomic inbox rollback, HTTP replay and child-process kill/restart
 after both claim and tenant commit. Mapping tests cover required outputs, transforms/defaults, exact
 account lookup, removal denial, stale-preview rejection, exception deduplication/resolution, transactional
-draft creation and replay idempotency. Live acceptance additionally requires provider-hosted sandbox
+draft creation and replay idempotency. Native Plaid tests cover account/currency binding, immutable
+rebind controls, exact unique and operator-selected matching, pending items, ambiguous and unmatched queues, modified and
+removed matched versions, journal non-mutation, close blocking and replay idempotency. Live acceptance additionally requires provider-hosted sandbox
 contract tests, provider-native subledger application fixtures, a deployment-level worker kill drill and
 a credentialed staging synchronization.

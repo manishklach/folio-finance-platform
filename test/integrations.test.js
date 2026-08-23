@@ -178,6 +178,72 @@ function configureBankJournalMappings(ledger, connection) {
     });
 }
 
+function stageProviderRecord(
+  ledger,
+  connection,
+  { external_id, source_version, normalized, operation = "added" },
+) {
+  if (ledger.integrationConnection(connection.id).status !== "active")
+    ledger.setIntegrationStatus({ connection_id: connection.id, status: "active" });
+  const run = ledger.startIntegrationSync({ connection_id: connection.id });
+  ledger.ingestIntegrationPage({
+    sync_run_id: run.id,
+    next_cursor: `${external_id}-${source_version}`,
+    has_more: false,
+    added:
+      operation === "added"
+        ? [{ object_type: "bank_transaction", external_id, source_version, normalized }]
+        : [],
+    modified:
+      operation === "modified"
+        ? [{ object_type: "bank_transaction", external_id, source_version, normalized }]
+        : [],
+    removed:
+      operation === "removed"
+        ? [{ object_type: "bank_transaction", external_id, source_version, normalized: {} }]
+        : [],
+  });
+  return ledger
+    .integrationRecords(connection.id)
+    .find(
+      (record) => record.external_id === external_id && record.source_version === source_version,
+    );
+}
+
+function nativeBankRecord(overrides = {}) {
+  return {
+    account_external_id: "plaid-checking-1",
+    occurred_on: "2026-08-22",
+    authorized_on: "2026-08-21",
+    description: "Cloud vendor ACH",
+    merchant_name: "Cloud Vendor",
+    cash_amount_cents: -4321,
+    currency: "USD",
+    pending: false,
+    ...overrides,
+  };
+}
+
+function postCashLine(ledger, amountCents, date = "2026-08-22", memo = "Cash activity") {
+  const accounts = Object.fromEntries(
+    ledger.getAccounts().map((account) => [account.code, account]),
+  );
+  const cashDebit = Math.max(amountCents, 0);
+  const cashCredit = Math.max(-amountCents, 0);
+  const otherDebit = cashCredit;
+  const otherCredit = cashDebit;
+  const draft = ledger.createDraft({
+    date,
+    memo,
+    source: "manual",
+    lines: [
+      { account_id: accounts["1000"].id, debit_cents: cashDebit, credit_cents: cashCredit },
+      { account_id: accounts["5000"].id, debit_cents: otherDebit, credit_cents: otherCredit },
+    ],
+  });
+  return ledger.postJournal(draft.id);
+}
+
 test("mapped provider records require preview and approval before creating an idempotent draft", () => {
   const { ledger, connection } = configuredLedger();
   configureBankJournalMappings(ledger, connection);
@@ -320,5 +386,215 @@ test("controlled previews classify invalid staged records into the exception wor
   assert.equal(preview.exception.error_code, "MAPPING_VALIDATION_FAILED");
   assert.equal(ledger.integrationRecord(record.id).status, "error");
   assert.equal(ledger.integrationDeadLetters().length, 1);
+  ledger.close();
+});
+
+test("Plaid records enter a bound bank subledger and uniquely match posted cash", () => {
+  const { ledger, connection } = configuredLedger();
+  const cash = ledger.getAccounts().find((account) => account.code === "1000");
+  const binding = ledger.configureBankFeedAccount({
+    connection_id: connection.id,
+    external_account_id: "plaid-checking-1",
+    cash_account_id: cash.id,
+    display_name: "Operating checking",
+    currency: "USD",
+  });
+  const journal = postCashLine(ledger, -4321);
+  const record = stageProviderRecord(ledger, connection, {
+    external_id: "plaid-txn-1",
+    source_version: "v1",
+    normalized: nativeBankRecord(),
+  });
+  const preview = ledger.previewBankFeedRecordApplication({ record_id: record.id });
+  assert.equal(preview.ready, true);
+  assert.equal(preview.feed_account.id, binding.id);
+
+  const result = runWithRequestContext({ actor: "bank-operator" }, () =>
+    ledger.applyBankFeedRecord({
+      record_id: record.id,
+      approved: true,
+      approval_note: "Reviewed Plaid source and cash-account binding",
+    }),
+  );
+  assert.equal(result.status, "applied");
+  assert.equal(result.transaction.status, "matched");
+  assert.equal(
+    result.match.journal_line_id,
+    journal.lines.find((line) => line.account_id === cash.id).id,
+  );
+  assert.equal(ledger.integrationRecord(record.id).applied_entity_type, "bank_feed_transaction");
+  assert.equal(ledger.bankFeedOverview().metrics.matched, 1);
+  assert.equal(ledger.exceptions().filter((item) => item.kind.startsWith("bank_feed_")).length, 0);
+
+  const replay = ledger.applyBankFeedRecord({
+    record_id: record.id,
+    approved: true,
+    approval_note: "Idempotent review replay",
+  });
+  assert.equal(replay.duplicate, true);
+  assert.equal(ledger.bankFeedOverview().transactions.length, 1);
+  ledger.close();
+});
+
+test("unmatched, ambiguous and changed matched Plaid activity enters reconciliation control", () => {
+  const { ledger, connection } = configuredLedger();
+  const cash = ledger.getAccounts().find((account) => account.code === "1000");
+  ledger.configureBankFeedAccount({
+    connection_id: connection.id,
+    external_account_id: "plaid-checking-1",
+    cash_account_id: cash.id,
+    display_name: "Operating checking",
+  });
+
+  const unmatched = stageProviderRecord(ledger, connection, {
+    external_id: "unmatched-1",
+    source_version: "v1",
+    normalized: nativeBankRecord({ cash_amount_cents: -1111 }),
+  });
+  assert.equal(
+    ledger.applyBankFeedRecord({
+      record_id: unmatched.id,
+      approved: true,
+      approval_note: "Reviewed unmatched source activity",
+    }).transaction.status,
+    "unmatched",
+  );
+
+  postCashLine(ledger, -2222, "2026-08-22", "Candidate one");
+  postCashLine(ledger, -2222, "2026-08-22", "Candidate two");
+  const ambiguous = stageProviderRecord(ledger, connection, {
+    external_id: "ambiguous-1",
+    source_version: "v1",
+    normalized: nativeBankRecord({ cash_amount_cents: -2222 }),
+  });
+  const ambiguousResult = ledger.applyBankFeedRecord({
+    record_id: ambiguous.id,
+    approved: true,
+    approval_note: "Reviewed ambiguous source activity",
+  });
+  assert.equal(ambiguousResult.transaction.status, "exception");
+  const candidateReview = ledger.bankFeedCandidates(ambiguousResult.transaction.id);
+  assert.equal(candidateReview.candidates.length, 2);
+  assert.throws(
+    () =>
+      ledger.matchBankFeedTransaction({
+        transaction_id: ambiguousResult.transaction.id,
+        journal_line_id: candidateReview.candidates[0].id,
+        rationale: "Reviewed exact candidates",
+      }),
+    /Explicit bank match approval/,
+  );
+  const manualMatch = runWithRequestContext({ actor: "bank-reviewer" }, () =>
+    ledger.matchBankFeedTransaction({
+      transaction_id: ambiguousResult.transaction.id,
+      journal_line_id: candidateReview.candidates[0].id,
+      approved: true,
+      rationale: "Selected the journal supported by bank remittance evidence",
+    }),
+  );
+  assert.equal(manualMatch.transaction.status, "matched");
+  assert.equal(manualMatch.decision.decided_by, "bank-reviewer");
+
+  postCashLine(ledger, -3333, "2026-08-22", "Original match");
+  const original = stageProviderRecord(ledger, connection, {
+    external_id: "changed-1",
+    source_version: "v1",
+    normalized: nativeBankRecord({ cash_amount_cents: -3333 }),
+  });
+  assert.equal(
+    ledger.applyBankFeedRecord({
+      record_id: original.id,
+      approved: true,
+      approval_note: "Reviewed original matched activity",
+    }).transaction.status,
+    "matched",
+  );
+  const changed = stageProviderRecord(ledger, connection, {
+    external_id: "changed-1",
+    source_version: "v2",
+    operation: "modified",
+    normalized: nativeBankRecord({ cash_amount_cents: -3555 }),
+  });
+  const changedResult = ledger.applyBankFeedRecord({
+    record_id: changed.id,
+    approved: true,
+    approval_note: "Reviewed provider amount modification",
+  });
+  assert.equal(changedResult.transaction.status, "unmatched");
+  const kinds = ledger.exceptions().map((item) => item.kind);
+  assert.ok(kinds.includes("bank_feed_unmatched"));
+  assert.ok(kinds.includes("bank_feed_ambiguous"));
+  assert.ok(kinds.includes("bank_feed_changed_matched"));
+  assert.throws(
+    () =>
+      ledger.completeCloseItem({
+        period: "2026-08",
+        item_key: "bank_reconciled",
+        evidence: "Attempted sign-off with unresolved feed activity",
+      }),
+    /must be resolved before sign-off/,
+  );
+  const otherAsset = ledger.getAccounts().find((account) => account.code === "1200");
+  assert.throws(
+    () =>
+      ledger.configureBankFeedAccount({
+        connection_id: connection.id,
+        external_account_id: "plaid-checking-1",
+        cash_account_id: otherAsset.id,
+        display_name: "Unsafe rebind",
+      }),
+    /cannot be rebound/,
+  );
+  ledger.close();
+});
+
+test("pending and removed Plaid versions preserve lineage without silently reversing journals", () => {
+  const { ledger, connection } = configuredLedger();
+  const cash = ledger.getAccounts().find((account) => account.code === "1000");
+  ledger.configureBankFeedAccount({
+    connection_id: connection.id,
+    external_account_id: "plaid-checking-1",
+    cash_account_id: cash.id,
+    display_name: "Operating checking",
+  });
+  const pending = stageProviderRecord(ledger, connection, {
+    external_id: "pending-1",
+    source_version: "v1",
+    normalized: nativeBankRecord({ pending: true, cash_amount_cents: -1200 }),
+  });
+  assert.equal(
+    ledger.applyBankFeedRecord({
+      record_id: pending.id,
+      approved: true,
+      approval_note: "Reviewed pending provider transaction",
+    }).transaction.status,
+    "pending",
+  );
+
+  postCashLine(ledger, -6600);
+  const original = stageProviderRecord(ledger, connection, {
+    external_id: "removed-1",
+    source_version: "v1",
+    normalized: nativeBankRecord({ cash_amount_cents: -6600 }),
+  });
+  ledger.applyBankFeedRecord({
+    record_id: original.id,
+    approved: true,
+    approval_note: "Reviewed transaction before removal",
+  });
+  const removed = stageProviderRecord(ledger, connection, {
+    external_id: "removed-1",
+    source_version: "v2",
+    operation: "removed",
+    normalized: {},
+  });
+  const removal = ledger.applyBankFeedRecord({
+    record_id: removed.id,
+    approved: true,
+    approval_note: "Reviewed provider removal and retained journal",
+  });
+  assert.equal(removal.transaction.status, "removed");
+  assert.ok(ledger.exceptions().some((item) => item.kind === "bank_feed_removed_matched"));
+  assert.equal(ledger.listJournals().filter((item) => item.status === "posted").length >= 1, true);
   ledger.close();
 });

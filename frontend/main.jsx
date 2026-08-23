@@ -323,6 +323,7 @@ function Integrations({ can, notify }) {
   const [selectedConnectionId, setSelectedConnectionId] = useState("");
   const [showMapping, setShowMapping] = useState(false);
   const [applicationPreview, setApplicationPreview] = useState(null);
+  const [bankPreview, setBankPreview] = useState(null);
   const [applicationBusy, setApplicationBusy] = useState(false);
   useEffect(() => {
     if (!selectedConnectionId && resource.data?.connections?.length)
@@ -478,6 +479,49 @@ function Integrations({ can, notify }) {
       setApplicationBusy(false);
     }
   }
+  async function previewBankApplication(record) {
+    try {
+      const preview = await api(`/api/integrations/records/${record.id}/bank-preview`, {
+        method: "POST",
+        body: {},
+      });
+      setBankPreview(preview);
+      if (!preview.ready) await Promise.all([resource.refresh(), workbench.refresh()]);
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function approveBankApplication(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      const result = await api(`/api/integrations/records/${bankPreview.record.id}/bank-apply`, {
+        method: "POST",
+        body: {
+          approved: true,
+          approval_note: form.get("approval_note"),
+        },
+      });
+      setBankPreview(null);
+      await Promise.all([resource.refresh(), workbench.refresh()]);
+      notify(
+        result.status === "applied"
+          ? {
+              kind: "success",
+              message:
+                result.transaction.status === "matched"
+                  ? "Bank activity matched to posted cash with source lineage retained."
+                  : `Bank activity entered the ${label(result.transaction.status)} queue.`,
+            }
+          : { kind: "error", message: "Bank activity failed validation and was classified." },
+      );
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
 
   const [records, mappings] = workbench.data || [[], []];
   const selectedConnection = value.connections.find((item) => item.id === selectedConnectionId);
@@ -595,7 +639,7 @@ function Integrations({ can, notify }) {
       </Panel>
       <Panel
         title="Accounting application workbench"
-        subtitle="Review normalized provider records, versioned mappings and draft-journal outcomes"
+        subtitle="Route provider records into native subledgers or controlled draft journals"
         action={
           can("admin") && selectedConnection ? (
             <button className="secondary" onClick={() => setShowMapping(true)}>
@@ -616,8 +660,9 @@ function Integrations({ can, notify }) {
                 options={value.connections.map((item) => [item.id, item.display_name])}
               />
               <span>
-                {mappings.length} active mapping{mappings.length === 1 ? "" : "s"} · records become
-                drafts, never automatically posted journals
+                {selectedConnection?.provider === "plaid"
+                  ? "Plaid bank transactions reconcile to posted cash through the native bank feed"
+                  : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
               </span>
             </div>
             {workbench.loading ? (
@@ -637,11 +682,22 @@ function Integrations({ can, notify }) {
                   item.effective_at ? new Date(item.effective_at).toLocaleDateString() : "—",
                   <Status value={item.status} />,
                   ["staged", "error"].includes(item.status) && can("operate") ? (
-                    <button className="small-button" onClick={() => previewApplication(item)}>
-                      Review mapping
-                    </button>
+                    selectedConnection?.provider === "plaid" &&
+                    item.object_type === "bank_transaction" ? (
+                      <button className="small-button" onClick={() => previewBankApplication(item)}>
+                        Review bank feed
+                      </button>
+                    ) : (
+                      <button className="small-button" onClick={() => previewApplication(item)}>
+                        Review mapping
+                      </button>
+                    )
                   ) : item.applied_entity_id ? (
-                    `Draft ${item.applied_entity_id}`
+                    item.applied_entity_type === "bank_feed_transaction" ? (
+                      "Bank feed applied"
+                    ) : (
+                      `Draft ${item.applied_entity_id}`
+                    )
                   ) : (
                     "—"
                   ),
@@ -846,6 +902,70 @@ function Integrations({ can, notify }) {
                   Return to mappings
                 </button>
               </div>
+            )}
+          </div>
+        </Dialog>
+      )}
+      {bankPreview && (
+        <Dialog
+          title="Review native bank-feed application"
+          subtitle={`Plaid transaction · ${bankPreview.record.external_id}`}
+          close={() => setBankPreview(null)}
+        >
+          <div className="application-review">
+            <div className="source-summary">
+              <ReviewValue
+                label="Cash account"
+                value={
+                  bankPreview.feed_account
+                    ? `${bankPreview.feed_account.cash_account_code} · ${bankPreview.feed_account.display_name}`
+                    : "Not bound"
+                }
+              />
+              <ReviewValue
+                label="Date"
+                value={
+                  bankPreview.normalized.occurred_on ||
+                  bankPreview.previous?.transaction_date ||
+                  "—"
+                }
+              />
+              <ReviewValue
+                label="Cash amount"
+                value={
+                  Number.isSafeInteger(bankPreview.normalized.cash_amount_cents)
+                    ? money(bankPreview.normalized.cash_amount_cents)
+                    : "Source removal"
+                }
+              />
+              <ReviewValue label="Operation" value={label(bankPreview.record.operation)} />
+            </div>
+            <div className={bankPreview.ready ? "control-note" : "control-note warning-note"}>
+              <strong>
+                {bankPreview.ready ? "Ready for bank review" : "Binding or source issue"}
+              </strong>
+              <span>
+                {bankPreview.ready
+                  ? "Folio will match one unique posted cash line. It will not create, post, reverse, or modify a journal."
+                  : bankPreview.issues.join(" · ")}
+              </span>
+            </div>
+            {bankPreview.ready ? (
+              <form className="form-stack" onSubmit={approveBankApplication}>
+                <Field
+                  label="Reviewer rationale"
+                  name="approval_note"
+                  as="textarea"
+                  hint="Confirm the source version, account binding and effect of a modification or removal."
+                />
+                <DialogActions
+                  close={() => setBankPreview(null)}
+                  label={applicationBusy ? "Applying…" : "Apply to bank feed"}
+                  disabled={applicationBusy}
+                />
+              </form>
+            ) : (
+              <DialogActions close={() => setBankPreview(null)} label="Close and correct" />
             )}
           </div>
         </Dialog>
@@ -2341,19 +2461,23 @@ function BankClose({ can, notify }) {
     () =>
       Promise.all([
         api("/api/bank-statements"),
+        api("/api/bank-feed"),
         api("/api/reconciliation-exceptions"),
         api("/api/accounts"),
+        api("/api/integrations/connections"),
       ]),
     [],
   );
   const [showImport, setShowImport] = useState(false);
+  const [showBinding, setShowBinding] = useState(false);
+  const [matchReview, setMatchReview] = useState(null);
   if (resource.loading) return <Loading />;
   if (resource.error) return <LoadError error={resource.error} retry={resource.refresh} />;
-  const [statements, exceptions, accounts] = resource.data;
+  const [statements, feed, exceptions, accounts, connections] = resource.data;
   async function updateException(item, status) {
     try {
       await api(`/api/reconciliation-exceptions/${item.id}`, {
-        method: "POST",
+        method: "PATCH",
         body: {
           status,
           resolution:
@@ -2390,19 +2514,122 @@ function BankClose({ can, notify }) {
       notify({ kind: "error", message: error.message });
     }
   }
+  async function bindBankAccount(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      await api("/api/bank-feed/accounts", {
+        method: "POST",
+        body: {
+          connection_id: form.get("connection_id"),
+          external_account_id: form.get("external_account_id"),
+          cash_account_id: Number(form.get("cash_account_id")),
+          display_name: form.get("display_name"),
+          currency: form.get("currency"),
+        },
+      });
+      setShowBinding(false);
+      await resource.refresh();
+      notify({ kind: "success", message: "Plaid account bound to the Folio cash subledger." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function reviewBankMatch(item) {
+    try {
+      setMatchReview(await api(`/api/bank-feed/transactions/${item.id}/candidates`));
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function approveBankMatch(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      await api(`/api/bank-feed/transactions/${matchReview.transaction.id}/match`, {
+        method: "POST",
+        body: {
+          journal_line_id: Number(form.get("journal_line_id")),
+          approved: true,
+          rationale: form.get("rationale"),
+        },
+      });
+      setMatchReview(null);
+      await resource.refresh();
+      notify({ kind: "success", message: "Exact posted-cash match approved and recorded." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
   return (
     <div className="module-flow">
       <ModuleBar
         title="Bank reconciliation & close"
         detail="Cash matching, assigned exceptions and evidence"
         action={
-          can("operate") && (
-            <button className="primary" onClick={() => setShowImport(true)}>
-              Import statement
-            </button>
-          )
+          <div className="button-row">
+            {can("admin") && (
+              <button className="secondary" onClick={() => setShowBinding(true)}>
+                Bind Plaid account
+              </button>
+            )}
+            {can("operate") && (
+              <button className="primary" onClick={() => setShowImport(true)}>
+                Import statement
+              </button>
+            )}
+          </div>
         }
       />
+      <section className="kpi-grid">
+        <Kpi label="Feed accounts" value={feed.metrics.active_accounts} detail="Active bindings" />
+        <Kpi label="Matched" value={feed.metrics.matched} detail="Unique posted cash lines" />
+        <Kpi label="Pending" value={feed.metrics.pending} detail="Awaiting provider posting" />
+        <Kpi
+          label="Needs review"
+          value={feed.metrics.needs_review}
+          detail="Unmatched or ambiguous"
+          warning={feed.metrics.needs_review > 0}
+        />
+      </section>
+      <Panel
+        title="Native bank feed"
+        subtitle="Versioned Plaid activity matched to posted cash without creating journals"
+      >
+        <Table
+          caption="Current bank-feed transaction versions"
+          emptyTitle="No bank-feed activity"
+          emptyDetail="Bind a Plaid account, synchronize it, then review staged records in Integrations."
+          columns={[
+            "Date",
+            "Account",
+            "Description",
+            "Amount",
+            "Source",
+            "Status",
+            "Match",
+            "Action",
+          ]}
+          rows={feed.transactions.map((item) => [
+            date(item.transaction_date),
+            `${item.cash_account_code} · ${item.feed_name}`,
+            item.merchant_name || item.description,
+            money(item.amount_cents),
+            `${label(item.operation)} · ${item.source_version}`,
+            <Status value={item.status} />,
+            item.matched_journal_id
+              ? `Journal ${item.matched_journal_id}${item.match_decided_by ? ` · ${item.match_decided_by}` : ""}`
+              : "—",
+            ["unmatched", "exception"].includes(item.status) && can("operate") ? (
+              <button className="small-button" onClick={() => reviewBankMatch(item)}>
+                Review match
+              </button>
+            ) : (
+              "—"
+            ),
+          ])}
+        />
+      </Panel>
       <div className="two-column">
         <Panel title="Bank statements" subtitle="Imported statements and match status">
           <Table
@@ -2481,6 +2708,94 @@ function BankClose({ can, notify }) {
             />
             <DialogActions close={() => setShowImport(false)} label="Validate and import" />
           </form>
+        </Dialog>
+      )}
+      {showBinding && (
+        <Dialog
+          title="Bind Plaid account"
+          subtitle="Map a provider account identifier to one active Folio cash account and currency."
+          close={() => setShowBinding(false)}
+        >
+          <form className="form-stack" onSubmit={bindBankAccount}>
+            <Field
+              label="Plaid connection"
+              name="connection_id"
+              as="select"
+              options={connections
+                .filter((connection) => connection.provider === "plaid")
+                .map((connection) => [connection.id, connection.display_name])}
+            />
+            <Field
+              label="Provider account ID"
+              name="external_account_id"
+              placeholder="Plaid account_id"
+              hint="Use the account_external_id present on normalized Plaid transactions."
+            />
+            <Field label="Display name" name="display_name" placeholder="Operating checking" />
+            <div className="form-grid">
+              <Field
+                label="Folio cash account"
+                name="cash_account_id"
+                as="select"
+                options={accounts
+                  .filter((account) => account.type === "asset")
+                  .map((account) => [account.id, `${account.code} · ${account.name}`])}
+              />
+              <Field label="Currency" name="currency" defaultValue="USD" pattern="[A-Za-z]{3}" />
+            </div>
+            <DialogActions close={() => setShowBinding(false)} label="Save binding" />
+          </form>
+        </Dialog>
+      )}
+      {matchReview && (
+        <Dialog
+          title="Review exact cash matches"
+          subtitle={`${matchReview.transaction.description} · ${money(matchReview.transaction.amount_cents)}`}
+          close={() => setMatchReview(null)}
+        >
+          {matchReview.candidates.length ? (
+            <form className="form-stack" onSubmit={approveBankMatch}>
+              <Field
+                label="Posted journal candidate"
+                name="journal_line_id"
+                as="select"
+                options={matchReview.candidates.map((candidate) => [
+                  candidate.id,
+                  `Journal ${candidate.entry_id} · ${candidate.entry_date} · ${candidate.memo}`,
+                ])}
+              />
+              <Field
+                label="Match rationale"
+                name="rationale"
+                as="textarea"
+                minLength="5"
+                hint="Document the remittance, statement or other evidence distinguishing this exact candidate."
+              />
+              <div className="control-note">
+                <strong>Controlled match</strong>
+                <span>
+                  Folio revalidates account, date, signed amount and availability at approval time.
+                  The posted journal remains immutable.
+                </span>
+              </div>
+              <DialogActions close={() => setMatchReview(null)} label="Approve match" />
+            </form>
+          ) : (
+            <>
+              <div className="control-note warning-note">
+                <strong>No exact posted-cash candidate</strong>
+                <span>
+                  Post or correct the underlying journal, then reopen this review. Folio will not
+                  manufacture a journal from bank activity.
+                </span>
+              </div>
+              <div className="dialog-actions">
+                <button className="secondary" onClick={() => setMatchReview(null)}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
         </Dialog>
       )}
     </div>
@@ -2998,13 +3313,15 @@ function Dialog({ title, subtitle, close, children }) {
     </div>
   );
 }
-function DialogActions({ close, label: actionLabel }) {
+function DialogActions({ close, label: actionLabel, disabled = false }) {
   return (
     <div className="dialog-actions">
       <button type="button" className="secondary" onClick={close}>
         Cancel
       </button>
-      <button className="primary">{actionLabel}</button>
+      <button className="primary" disabled={disabled}>
+        {actionLabel}
+      </button>
     </div>
   );
 }

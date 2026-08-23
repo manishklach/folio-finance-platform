@@ -73,6 +73,16 @@ approves the provider application cannot post its resulting draft. Removed recor
 provider/domain-specific reversal policy exists. Production acceptance additionally requires native
 subledger application and reconciliation fixtures for each approved provider object family.
 
+Repository acceptance for Plaid bank transactions now includes an administrator-controlled
+provider-account-to-cash-account binding, currency validation, immutable source-version lineage,
+explicit operator application, exact unique matching against unused posted cash lines, pending and
+exception states, idempotent replay, and modification/removal handling that invalidates a prior match
+without changing a posted journal. Unmatched, ambiguous, changed-matched and removed-matched activity
+is routed to the close exception queue, and unresolved activity blocks the applicable bank close
+sign-off. Multiple exact candidates require an operator-selected, commit-time-revalidated match with
+a retained rationale. Tolerance/date-window matching, hosted Plaid Link/token exchange, signed Plaid
+webhooks and credentialed sandbox evidence remain production acceptance gates.
+
 ## 3. Imports, mappings and exception operations
 
 Repository acceptance now includes versioned tenant fuzzy-match policies for one configured text field,
