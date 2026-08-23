@@ -146,7 +146,7 @@ npm run dev
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the architecture, accounting invariants, and change
 workflow. See [`ROADMAP.md`](ROADMAP.md) for the ordered path from this engineering MVP to a
-production financial system. The completed engineering matrix and remaining independent launch gates are in [`docs/production-readiness.md`](docs/production-readiness.md) and [`docs/security-and-compliance.md`](docs/security-and-compliance.md).
+production financial system. The completed engineering matrix and remaining independent launch gates are in [`docs/production-readiness.md`](docs/production-readiness.md), [`docs/security-and-compliance.md`](docs/security-and-compliance.md), and the evidence-based [`docs/security-best-practices-report.md`](docs/security-best-practices-report.md).
 
 Operational commands include `npm run migrate`, `npm run backup`,
 `npm run restore -- --source=<backup> --target=<empty-directory>`, `npm run ops:preflight`,

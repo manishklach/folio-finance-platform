@@ -166,6 +166,8 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   );
   assert.equal(configuredConnector.response.status, 201);
   assert.equal(configuredConnector.body.provider, "stripe");
+  assert.equal(configuredConnector.body.credential_secret_ref, undefined);
+  assert.equal(configuredConnector.body.webhook_secret_ref, undefined);
   assert.equal(
     (
       await call(
@@ -195,6 +197,7 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   );
   const org = await call(origin, "/api/admin/organizations", { name: "Beta Cloud" }, admin);
   assert.equal(org.response.status, 201);
+  assert.equal(org.body.database_path, undefined);
   const switched = await call(origin, "/api/auth/switch-org", { org_id: org.body.id }, admin);
   const beta = {
     cookie: switched.response.headers.get("set-cookie").split(";")[0],

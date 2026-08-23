@@ -1,7 +1,7 @@
 import http from "node:http";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLedger } from "./lib/db.js";
 import { ACCOUNT_TYPES } from "./lib/accounting.js";
@@ -26,6 +26,7 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
 const stateMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const latencyBuckets = [0.05, 0.1, 0.25, 0.5, 0.75, 1, 2, 5, 10];
+const maxMetricSeries = 512;
 const idempotentRoutes = new Set([
   "/api/invoices",
   "/api/receivables/payments",
@@ -52,10 +53,11 @@ export function createFolioServer(options = {}) {
     errors: 0,
     latency_ms: 0,
     inflight: 0,
+    series: 0,
     by_request: {},
   };
   const server = http.createServer(async (req, res) => {
-    const requestId = req.headers["x-request-id"] || randomUUID();
+    const requestId = safeRequestId(req.headers["x-request-id"]);
     const started = performance.now();
     res.setHeader("X-Request-Id", requestId);
     securityHeaders(res);
@@ -105,13 +107,22 @@ export function createFolioServer(options = {}) {
       const latency = Math.round((performance.now() - started) * 100) / 100;
       metrics.latency_ms += latency;
       metrics.inflight = Math.max(0, metrics.inflight - 1);
-      const route = metricRoute(safePath(req.url));
-      const metricKey = `${req.method}|${route}|${res.statusCode}`;
+      let route = metricRoute(safePath(req.url));
+      let method = metricMethod(req.method);
+      let status = res.statusCode;
+      let metricKey = `${method}|${route}|${status}`;
+      if (!metrics.by_request[metricKey] && metrics.series >= maxMetricSeries) {
+        route = "/_overflow";
+        method = "OTHER";
+        status = `${Math.floor(res.statusCode / 100)}00`;
+        metricKey = `${method}|${route}|${status}`;
+      }
       const requestMetric = metrics.by_request[metricKey] || {
         count: 0,
         latency_ms: 0,
         buckets: Object.fromEntries(latencyBuckets.map((bound) => [bound, 0])),
       };
+      if (!metrics.by_request[metricKey]) metrics.series += 1;
       requestMetric.count += 1;
       requestMetric.latency_ms += latency;
       for (const bound of latencyBuckets)
@@ -237,7 +248,7 @@ async function apiRequest(req, res, url, platform, ledgers, requestId) {
         request_id: requestId,
       });
       tenantLedger(ledgers, { org_id: organization.id, database_path: organization.database_path });
-      return json(res, 201, organization);
+      return json(res, 201, publicOrganization(organization));
     }
     const ledger = tenantLedger(ledgers, session);
     requirePermission(session, requiredPermission(req.method, url.pathname));
@@ -399,9 +410,9 @@ async function api(req, res, url, ledger, platform, session) {
   if (req.method === "GET" && url.pathname === "/api/integrations/catalog")
     return json(res, 200, ledger.providerCatalog());
   if (req.method === "GET" && url.pathname === "/api/integrations/overview")
-    return json(res, 200, ledger.integrationsOverview());
+    return json(res, 200, publicIntegrationOverview(ledger.integrationsOverview()));
   if (req.method === "GET" && url.pathname === "/api/integrations/connections")
-    return json(res, 200, ledger.integrationConnections());
+    return json(res, 200, ledger.integrationConnections().map(publicIntegrationConnection));
   if (req.method === "GET" && url.pathname === "/api/integrations/sync-runs")
     return json(
       res,
@@ -420,9 +431,17 @@ async function api(req, res, url, ledger, platform, session) {
       ledger.integrationRecords(integrationRecordsMatch[1], url.searchParams.get("status") || null),
     );
   if (req.method === "POST" && url.pathname === "/api/integrations/connections")
-    return json(res, 201, ledger.configureIntegration(await readJson(req)));
+    return json(
+      res,
+      201,
+      publicIntegrationConnection(ledger.configureIntegration(await readJson(req))),
+    );
   if (req.method === "POST" && url.pathname === "/api/integrations/connections/status")
-    return json(res, 200, ledger.setIntegrationStatus(await readJson(req)));
+    return json(
+      res,
+      200,
+      publicIntegrationConnection(ledger.setIntegrationStatus(await readJson(req))),
+    );
   if (req.method === "POST" && url.pathname === "/api/integrations/sync-runs")
     return json(res, 201, ledger.startIntegrationSync(await readJson(req)));
   const integrationPageMatch = url.pathname.match(
@@ -821,7 +840,22 @@ function authPayload(platform, session, csrf) {
     csrf_token: csrf,
   };
 }
+function publicOrganization(value) {
+  return { id: value.id, name: value.name, slug: value.slug };
+}
+function publicIntegrationConnection(value) {
+  const safe = { ...value };
+  delete safe.credential_secret_ref;
+  delete safe.webhook_secret_ref;
+  return safe;
+}
+function publicIntegrationOverview(value) {
+  return { ...value, connections: value.connections.map(publicIntegrationConnection) };
+}
 async function readJson(req) {
+  const contentType = String(req.headers["content-type"] || "");
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType))
+    throw problem("Content-Type must be application/json", 415);
   const body = req.bodyCache || (await readBody(req, 1_000_000));
   try {
     return JSON.parse(body.toString("utf8") || "{}");
@@ -841,10 +875,18 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 async function staticFile(res, pathname) {
-  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\//, "");
-  const safe = normalize(relative).replace(/^(\.\.(\/|\\|$))+/, "");
-  const filePath = join(publicDir, safe);
-  if (!filePath.startsWith(publicDir)) throw problem("Forbidden", 403);
+  const assetPath = pathname === "/" ? "index.html" : pathname.replace(/^\//, "");
+  const safe = normalize(assetPath);
+  const filePath = resolve(publicDir, safe);
+  const containment = relativePath(publicDir, filePath);
+  if (
+    !containment ||
+    containment.startsWith(`..${sep}`) ||
+    containment === ".." ||
+    isAbsolute(containment) ||
+    containment.split(sep).some((segment) => segment.startsWith("."))
+  )
+    throw problem("Forbidden", 403);
   try {
     const body = await readFile(filePath);
     const types = {
@@ -897,16 +939,18 @@ function clearSessionCookie(res) {
   res.setHeader("Set-Cookie", "folio_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
 }
 function parseCookies(value) {
-  return Object.fromEntries(
-    value
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const index = part.indexOf("=");
-        return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
-      }),
-  );
+  const result = {};
+  for (const part of value.split(";")) {
+    const item = part.trim();
+    const index = item.indexOf("=");
+    if (index < 1) continue;
+    try {
+      result[item.slice(0, index)] = decodeURIComponent(item.slice(index + 1));
+    } catch {
+      // Ignore malformed cookies instead of turning attacker-controlled syntax into a 500.
+    }
+  }
+  return result;
 }
 function constantEqual(expected, supplied) {
   const a = Buffer.from(expected);
@@ -925,6 +969,20 @@ function safePath(value = "") {
   } catch {
     return "/invalid";
   }
+}
+function safeRequestId(value) {
+  const supplied = Array.isArray(value) ? value[0] : value;
+  return typeof supplied === "string" && /^[A-Za-z0-9._:-]{1,64}$/.test(supplied)
+    ? supplied
+    : randomUUID();
+}
+function metricMethod(value) {
+  return ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(value)
+    ? value
+    : "OTHER";
+}
+function relativePath(rootPath, targetPath) {
+  return relative(rootPath, targetPath);
 }
 function health(platform, ledgers, runtime = { accepting: true }) {
   if (!runtime.accepting) return { status: "unhealthy", reason: "shutting_down" };

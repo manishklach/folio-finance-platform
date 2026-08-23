@@ -24,6 +24,14 @@ jobs:
           PLATFORM_DB_PATH: data/ci-platform.db
       - run: docker build --check .
       - run: docker build -t folio-ci:${{ github.sha }} .
+      - name: Scan production image for high-impact vulnerabilities
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: folio-ci:${{ github.sha }}
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
       - name: Validate production Compose topology
         run: docker compose -f compose.production.yml config --quiet
         env:
