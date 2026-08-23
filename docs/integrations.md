@@ -125,6 +125,7 @@ Plaid cursor mutation recovery, rate-limit retry, secret-safe failures, Stripe r
 timestamp replay, malformed header, rotation-signature, connection secret/account binding,
 native Stripe event normalization without direct journal posting, unsupported-event denial,
 production legacy-route denial, durable fast acknowledgement, queue replay, lease recovery, retry
-exhaustion, dead-letter requeue, atomic inbox rollback and HTTP replay cases. Live acceptance
-additionally requires provider-hosted sandbox contract tests, controlled accounting-application
-fixtures, process-level kill/restart evidence and a credentialed staging synchronization.
+exhaustion, dead-letter requeue, atomic inbox rollback, HTTP replay and child-process kill/restart
+after both claim and tenant commit. Live acceptance additionally requires provider-hosted sandbox
+contract tests, controlled accounting-application fixtures, a deployment-level worker kill drill and a
+credentialed staging synchronization.
