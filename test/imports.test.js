@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { createLedger } from "../lib/db.js";
 
@@ -47,6 +51,96 @@ test("stage validates mappings, formula-like text, rows and within-file duplicat
   assert.equal(batch.exceptions.length, 3);
   assert.throws(() => ledger.approveImport({ id: batch.id }), /explicitly approve/);
   ledger.close();
+});
+
+test("saved mapping profiles drive staging and retain version lineage", () => {
+  const ledger = createLedger(":memory:");
+  const profile = ledger.createImportMappingProfile({
+    name: "Legacy account export",
+    template_key: "chart_of_accounts",
+    mapping: { code: "account", name: "label", type: "classification" },
+  });
+  const batch = ledger.stageImport({
+    template_key: "chart_of_accounts",
+    mapping_profile_id: profile.id,
+    filename: "legacy-accounts.csv",
+    csv: "account,label,classification\n9050,Implementation support,expense",
+  });
+  assert.equal(batch.mapping_profile_id, profile.id);
+  assert.equal(batch.mapping_profile_version, 1);
+  assert.deepEqual(batch.mapping, {
+    code: "account",
+    name: "label",
+    type: "classification",
+  });
+  assert.equal(batch.rows[0].normalized.code, "9050");
+  assert.throws(
+    () =>
+      ledger.stageImport({
+        template_key: "chart_of_accounts",
+        mapping_profile_id: profile.id,
+        mapping: { code: "label", name: "account", type: "classification" },
+        filename: "profile-override.csv",
+        csv: "account,label,classification\n9060,Profile override,expense",
+      }),
+    /cannot be overridden/,
+  );
+  assert.throws(
+    () =>
+      ledger.stageImport({
+        template_key: "customers",
+        mapping_profile_id: profile.id,
+        filename: "wrong-template.csv",
+        csv: "name,external_id\nWrong template,C-1",
+      }),
+    /does not match this template version/,
+  );
+  ledger.close();
+});
+
+test("existing import batches upgrade to mapping-profile lineage columns", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "folio-import-upgrade-"));
+  const databasePath = join(root, "tenant.db");
+  let ledger;
+  t.after(() => {
+    ledger?.close();
+    rmSync(root, { recursive: true, force: true });
+  });
+  const old = new DatabaseSync(databasePath);
+  old.exec(`CREATE TABLE import_batches (
+    id TEXT PRIMARY KEY,
+    template_key TEXT NOT NULL,
+    template_version INTEGER NOT NULL,
+    filename TEXT NOT NULL,
+    file_sha256 TEXT NOT NULL,
+    mapping_json TEXT NOT NULL,
+    options_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'staged',
+    row_count INTEGER NOT NULL,
+    valid_count INTEGER NOT NULL,
+    error_count INTEGER NOT NULL,
+    duplicate_count INTEGER NOT NULL,
+    applied_count INTEGER NOT NULL DEFAULT 0,
+    allow_partial INTEGER NOT NULL DEFAULT 0,
+    created_by TEXT NOT NULL,
+    approved_by TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    approved_at TEXT,
+    applied_at TEXT,
+    UNIQUE(template_key,file_sha256)
+  )`);
+  old.close();
+  ledger = createLedger(databasePath, { seed: false, orgId: "import-upgrade" });
+  const columns = new Set(
+    ledger.db
+      .prepare("PRAGMA table_info(import_batches)")
+      .all()
+      .map((column) => column.name),
+  );
+  assert.equal(columns.has("mapping_profile_id"), true);
+  assert.equal(columns.has("mapping_profile_version"), true);
+  ledger.close();
+  ledger = null;
 });
 
 test("approved valid subset applies once and exact file replay is rejected", () => {

@@ -42,7 +42,10 @@ flowchart LR
 Template definitions are returned by `GET /api/imports/templates`, including required fields, types,
 enumerations, version, sample header, and batch-level options. Source headers default to canonical field
 names. API clients may provide a target-to-source `mapping` object and administrators may save
-versioned mapping profiles.
+versioned mapping profiles. The transactional UI now implements source selection, local header
+detection, automatic exact-name suggestions, explicit select-based field mapping, reusable tenant
+profiles, a mapping review step and then server validation. Reused profiles retain their ID and version
+on the batch; every batch also retains the exact effective mapping snapshot.
 
 ## Validation and duplicate controls
 
@@ -84,8 +87,8 @@ whole-batch rollback, blocking exceptions, balanced draft creation, posted suble
 bank matching, journal integrity, API authentication, CSRF, authorization, and tenant database
 isolation.
 
-Before pilot use, Folio still needs browser file selection rather than paste-only CSV entry, a visual
-drag/select field mapper, downloadable template files, large-file worker processing, pagination beyond
-the 250-row review window, correction/restage assistance, configurable duplicate candidates beyond
-exact natural keys, approval segregation policies, and migration-volume/load evidence. These are
-tracked by the production acceptance specification and are not represented as complete here.
+Before pilot use, Folio still needs downloadable template files, large-file worker processing,
+pagination beyond the 250-row review window, correction/restage assistance, configurable duplicate
+candidates beyond exact natural keys, approval segregation policies, and migration-volume/load
+evidence. These are tracked by the production acceptance specification and are not represented as
+complete here.

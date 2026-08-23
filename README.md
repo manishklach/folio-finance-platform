@@ -147,6 +147,8 @@ npm run dev
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the architecture, accounting invariants, and change
 workflow. See [`ROADMAP.md`](ROADMAP.md) for the ordered path from this engineering MVP to a
 production financial system. The completed engineering matrix and remaining independent launch gates are in [`docs/production-readiness.md`](docs/production-readiness.md), [`docs/security-and-compliance.md`](docs/security-and-compliance.md), and the evidence-based [`docs/security-best-practices-report.md`](docs/security-best-practices-report.md).
+The daily-journey coverage, import workbench flow, interaction controls and unproven accessibility
+gates are tracked in [`docs/transactional-ux.md`](docs/transactional-ux.md).
 The repository-grounded trust boundaries, attacker model, abuse paths and prioritized mitigations are
 in [`docs/codex-ledger-threat-model.md`](docs/codex-ledger-threat-model.md).
 

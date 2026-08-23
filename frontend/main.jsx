@@ -9,6 +9,60 @@ const money = (value = 0) =>
 const date = (value) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString() : "—");
 const label = (value = "") => String(value).replaceAll("_", " ");
 
+function blankImportDraft(templateKey = "chart_of_accounts") {
+  return {
+    template_key: templateKey,
+    filename: `${templateKey}.csv`,
+    csv: "",
+    mapping: {},
+    mapping_profile_id: "",
+    mapping_profile_name: "",
+    cash_account_id: "",
+    start_date: "",
+    end_date: "",
+    opening: "",
+    closing: "",
+  };
+}
+
+function csvHeaders(csv) {
+  const headerLine = String(csv || "")
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/, 1)[0];
+  if (!headerLine.trim()) return [];
+  const headers = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < headerLine.length; index += 1) {
+    const character = headerLine[index];
+    if (character === '"') {
+      if (quoted && headerLine[index + 1] === '"') {
+        value += '"';
+        index += 1;
+      } else quoted = !quoted;
+    } else if (character === "," && !quoted) {
+      headers.push(value.trim());
+      value = "";
+    } else value += character;
+  }
+  headers.push(value.trim());
+  return headers.filter(Boolean);
+}
+
+function suggestedMapping(template, headers, current = {}) {
+  const available = new Map(
+    headers.map((header) => [header.toLowerCase().replaceAll(" ", "_"), header]),
+  );
+  return Object.fromEntries(
+    template.fields.map((field) => [
+      field.key,
+      headers.includes(current[field.key])
+        ? current[field.key]
+        : available.get(field.key.toLowerCase()) || "",
+    ]),
+  );
+}
+
 async function api(path, { method = "GET", body, idempotent = true, headers: extraHeaders } = {}) {
   const headers = { Accept: "application/json" };
   Object.assign(headers, extraHeaders);
@@ -496,46 +550,155 @@ function Imports({ can, notify }) {
         api("/api/imports/batches"),
         api("/api/imports/exceptions"),
         api("/api/accounts"),
+        api("/api/imports/mapping-profiles"),
       ]),
     [],
   );
   const [showStage, setShowStage] = useState(false);
-  const [templateKey, setTemplateKey] = useState("chart_of_accounts");
+  const [wizardStep, setWizardStep] = useState(1);
+  const [draft, setDraft] = useState(blankImportDraft());
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [batchQuery, setBatchQuery] = useState("");
+  const [exceptionStatus, setExceptionStatus] = useState("open");
   if (resource.loading) return <Loading />;
   if (resource.error) return <LoadError error={resource.error} retry={resource.refresh} />;
-  const [templates, batches, exceptions, accounts] = resource.data;
-  const selectedTemplate = templates.find((item) => item.key === templateKey) || templates[0];
+  const [templates, batches, exceptions, accounts, mappingProfiles] = resource.data;
+  const selectedTemplate =
+    templates.find((item) => item.key === draft.template_key) || templates[0];
+  const selectedMappingProfile = mappingProfiles.find(
+    (item) => item.id === draft.mapping_profile_id,
+  );
+  const headers = csvHeaders(draft.csv);
+  const requiredMapped = selectedTemplate.fields
+    .filter((field) => field.required)
+    .every((field) => draft.mapping[field.key]);
+  const visibleBatches = batches.filter((item) =>
+    `${item.filename} ${item.template_key} ${item.status}`
+      .toLowerCase()
+      .includes(batchQuery.trim().toLowerCase()),
+  );
+  const visibleExceptions = exceptions
+    .filter((item) => exceptionStatus === "all" || item.status === exceptionStatus)
+    .slice(0, 20);
+  const previewMappingProfile = preview?.mapping_profile_id
+    ? mappingProfiles.find((item) => item.id === preview.mapping_profile_id)
+    : null;
+
+  function openWizard() {
+    setDraft(blankImportDraft());
+    setWizardStep(1);
+    setShowStage(true);
+  }
+
+  function updateDraft(values) {
+    setDraft((current) => ({ ...current, ...values }));
+  }
+
+  function selectTemplate(templateKey) {
+    setDraft(blankImportDraft(templateKey));
+  }
+
+  async function loadCsvFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5_000_000) {
+      notify({ kind: "error", message: "CSV files are limited to 5 MB." });
+      event.target.value = "";
+      return;
+    }
+    const csv = await file.text();
+    updateDraft({ filename: file.name, csv, mapping: {} });
+  }
+
+  function continueToMapping() {
+    if (!draft.filename.trim() || !draft.csv.trim()) {
+      notify({ kind: "error", message: "Choose a CSV file or paste CSV data first." });
+      return;
+    }
+    if (!headers.length) {
+      notify({ kind: "error", message: "The CSV header row could not be read." });
+      return;
+    }
+    if (
+      draft.template_key === "bank_transactions" &&
+      ![
+        draft.cash_account_id,
+        draft.start_date,
+        draft.end_date,
+        draft.opening,
+        draft.closing,
+      ].every((value) => String(value).trim())
+    ) {
+      notify({ kind: "error", message: "Complete every bank statement control total." });
+      return;
+    }
+    updateDraft({ mapping: suggestedMapping(selectedTemplate, headers, draft.mapping) });
+    setWizardStep(2);
+  }
+
+  function applyMappingProfile(profileId) {
+    const profile = mappingProfiles.find((item) => item.id === profileId);
+    updateDraft({
+      mapping_profile_id: profile?.id || "",
+      mapping: profile
+        ? suggestedMapping(selectedTemplate, headers, profile.mapping)
+        : suggestedMapping(selectedTemplate, headers, draft.mapping),
+    });
+  }
 
   async function stage(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    if (wizardStep !== 3) return;
     setBusy(true);
     try {
       const options =
-        templateKey === "bank_transactions"
+        draft.template_key === "bank_transactions"
           ? {
-              cash_account_id: Number(form.get("cash_account_id")),
-              start_date: form.get("start_date"),
-              end_date: form.get("end_date"),
-              opening_cents: Math.round(Number(form.get("opening")) * 100),
-              closing_cents: Math.round(Number(form.get("closing")) * 100),
+              cash_account_id: Number(draft.cash_account_id),
+              start_date: draft.start_date,
+              end_date: draft.end_date,
+              opening_cents: Math.round(Number(draft.opening) * 100),
+              closing_cents: Math.round(Number(draft.closing) * 100),
             }
           : {};
       const batch = await api("/api/imports/stage", {
         method: "POST",
         body: {
-          template_key: templateKey,
-          filename: form.get("filename"),
-          csv: form.get("csv"),
+          template_key: draft.template_key,
+          filename: draft.filename,
+          csv: draft.csv,
+          mapping: draft.mapping,
+          mapping_profile_id: draft.mapping_profile_id || undefined,
           options,
         },
       });
+      let mappingSaved = false;
+      let mappingSaveError = "";
+      if (draft.mapping_profile_name.trim()) {
+        try {
+          await api("/api/imports/mapping-profiles", {
+            method: "POST",
+            body: {
+              name: draft.mapping_profile_name,
+              template_key: draft.template_key,
+              mapping: draft.mapping,
+            },
+          });
+          mappingSaved = true;
+        } catch (error) {
+          mappingSaveError = error.message;
+        }
+      }
       setPreview(batch);
       setShowStage(false);
       await resource.refresh();
-      notify({ kind: "success", message: "Import validated and staged for review." });
+      notify({
+        kind: mappingSaveError ? "error" : "success",
+        message: mappingSaveError
+          ? `Import staged, but the optional mapping profile was not saved: ${mappingSaveError}`
+          : `Import validated and staged for review${mappingSaved ? "; mapping profile saved" : ""}.`,
+      });
     } catch (error) {
       notify({ kind: "error", message: error.message });
     } finally {
@@ -600,8 +763,8 @@ function Imports({ can, notify }) {
         detail="Versioned templates, validation previews, duplicate controls and traceable application"
         action={
           can("operate") && (
-            <button className="primary" onClick={() => setShowStage(true)}>
-              Stage import
+            <button className="primary" onClick={openWizard}>
+              New import
             </button>
           )
         }
@@ -630,9 +793,23 @@ function Imports({ can, notify }) {
           title="Import batches"
           subtitle="Files remain staged until an operator reviews the preview"
         >
+          <div className="workflow-toolbar">
+            <Field
+              label="Find a batch"
+              type="search"
+              value={batchQuery}
+              onChange={(event) => setBatchQuery(event.target.value)}
+              placeholder="Filename, template or status"
+              required={false}
+            />
+            <span>{visibleBatches.length} shown</span>
+          </div>
           <Table
             columns={["File", "Template", "Rows", "Valid", "Exceptions", "Status", "Review"]}
-            rows={batches.map((item) => [
+            caption="Import batches"
+            emptyTitle="No matching batches"
+            emptyDetail="Change the search or start a new controlled import."
+            rows={visibleBatches.map((item) => [
               item.filename,
               label(item.template_key),
               item.row_count,
@@ -649,9 +826,28 @@ function Imports({ can, notify }) {
           title="Exception queue"
           subtitle="Warnings and blocking rows require an explicit disposition"
         >
+          <div className="workflow-toolbar">
+            <Field
+              label="Exception status"
+              as="select"
+              value={exceptionStatus}
+              onChange={(event) => setExceptionStatus(event.target.value)}
+              options={[
+                ["open", "Open"],
+                ["acknowledged", "Acknowledged"],
+                ["resolved", "Resolved"],
+                ["ignored", "Ignored"],
+                ["all", "All statuses"],
+              ]}
+            />
+            <span>Showing up to 20</span>
+          </div>
           <Table
             columns={["Code", "Severity", "Message", "Status", "Action"]}
-            rows={exceptions.slice(0, 20).map((item) => [
+            caption="Import exception queue"
+            emptyTitle="No matching exceptions"
+            emptyDetail="This queue is clear for the selected status."
+            rows={visibleExceptions.map((item) => [
               label(item.code),
               <Status value={item.severity} />,
               item.message,
@@ -679,6 +875,12 @@ function Imports({ can, notify }) {
                 ["Valid", preview.valid_count],
                 ["Errors", preview.error_count],
                 ["Duplicates", preview.duplicate_count],
+                [
+                  "Mapping",
+                  previewMappingProfile
+                    ? `${previewMappingProfile.name} · v${preview.mapping_profile_version}`
+                    : "Exact batch snapshot",
+                ],
                 ["Status", <Status value={preview.status} />],
               ]}
             />
@@ -698,6 +900,7 @@ function Imports({ can, notify }) {
           </div>
           <Table
             columns={["CSV row", "Natural key", "Status", "Validation result", "Created record"]}
+            caption={`Validation preview for ${preview.filename}`}
             rows={preview.rows.map((item) => [
               item.row_number,
               item.natural_key,
@@ -712,49 +915,237 @@ function Imports({ can, notify }) {
       )}
       {showStage && (
         <Dialog
-          title="Stage a controlled import"
-          subtitle="Nothing is applied until validation completes and you approve the row preview."
+          title="New controlled import"
+          subtitle="Choose the source, map its columns, then review before server validation. Nothing posts automatically."
           close={() => setShowStage(false)}
         >
           <form className="form-stack" onSubmit={stage}>
-            <Field
-              label="Template"
-              name="template_key"
-              as="select"
-              value={templateKey}
-              onChange={(event) => setTemplateKey(event.target.value)}
-              options={templates.map((item) => [item.key, `${item.name} · v${item.version}`])}
-            />
-            <Field label="Source filename" name="filename" placeholder={`${templateKey}.csv`} />
-            {templateKey === "bank_transactions" && (
+            <ol className="wizard-steps" aria-label="Import workflow progress">
+              {["Source", "Map columns", "Review"].map((step, index) => (
+                <li key={step} aria-current={wizardStep === index + 1 ? "step" : undefined}>
+                  <span>{index + 1}</span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+            {wizardStep === 1 && (
               <>
                 <Field
-                  label="Cash account"
-                  name="cash_account_id"
+                  label="Import template"
                   as="select"
-                  options={accounts
-                    .filter((account) => account.type === "asset")
-                    .map((account) => [account.id, `${account.code} · ${account.name}`])}
+                  value={draft.template_key}
+                  onChange={(event) => selectTemplate(event.target.value)}
+                  options={templates.map((item) => [
+                    item.key,
+                    `${item.name} · version ${item.version}`,
+                  ])}
                 />
-                <div className="form-grid">
-                  <Field label="Statement start" name="start_date" type="date" />
-                  <Field label="Statement end" name="end_date" type="date" />
-                  <Field label="Opening balance" name="opening" type="number" step="0.01" />
-                  <Field label="Closing balance" name="closing" type="number" step="0.01" />
+                <label className="file-drop">
+                  <input type="file" accept=".csv,text/csv" onChange={loadCsvFile} />
+                  <strong>{draft.csv ? "Replace CSV file" : "Choose CSV file"}</strong>
+                  <span>Up to 5 MB and 10,000 data rows. The file stays tenant-scoped.</span>
+                </label>
+                <Field
+                  label="Source filename"
+                  value={draft.filename}
+                  onChange={(event) => updateDraft({ filename: event.target.value })}
+                  placeholder={`${draft.template_key}.csv`}
+                />
+                <Field
+                  label="CSV data"
+                  as="textarea"
+                  value={draft.csv}
+                  onChange={(event) => updateDraft({ csv: event.target.value, mapping: {} })}
+                  placeholder={`${selectedTemplate.sample_header}\n`}
+                  hint={`Choose a file above or paste its contents. Expected fields: ${selectedTemplate.fields.map((item) => item.key).join(", ")}.`}
+                />
+                {draft.template_key === "bank_transactions" && (
+                  <div className="source-options" aria-label="Bank statement details">
+                    <h3>Statement control totals</h3>
+                    <Field
+                      label="Cash account"
+                      as="select"
+                      value={draft.cash_account_id}
+                      onChange={(event) => updateDraft({ cash_account_id: event.target.value })}
+                      options={[
+                        ["", "Select a cash account"],
+                        ...accounts
+                          .filter((account) => account.type === "asset")
+                          .map((account) => [account.id, `${account.code} · ${account.name}`]),
+                      ]}
+                    />
+                    <div className="form-grid">
+                      <Field
+                        label="Statement start"
+                        type="date"
+                        value={draft.start_date}
+                        onChange={(event) => updateDraft({ start_date: event.target.value })}
+                      />
+                      <Field
+                        label="Statement end"
+                        type="date"
+                        value={draft.end_date}
+                        onChange={(event) => updateDraft({ end_date: event.target.value })}
+                      />
+                      <Field
+                        label="Opening balance"
+                        type="number"
+                        step="0.01"
+                        value={draft.opening}
+                        onChange={(event) => updateDraft({ opening: event.target.value })}
+                      />
+                      <Field
+                        label="Closing balance"
+                        type="number"
+                        step="0.01"
+                        value={draft.closing}
+                        onChange={(event) => updateDraft({ closing: event.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="step-actions">
+                  <button type="button" className="secondary" onClick={() => setShowStage(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="primary" onClick={continueToMapping}>
+                    Map columns
+                  </button>
                 </div>
               </>
             )}
-            <Field
-              label="CSV data"
-              name="csv"
-              as="textarea"
-              placeholder={selectedTemplate.sample_header}
-              hint={`Expected mapped headers: ${selectedTemplate.fields.map((item) => item.key).join(", ")}. Formula-like text is rejected.`}
-            />
-            <DialogActions
-              close={() => setShowStage(false)}
-              label={busy ? "Validating…" : "Validate and preview"}
-            />
+            {wizardStep === 2 && (
+              <>
+                <div className="source-summary">
+                  <div>
+                    <span>Source</span>
+                    <strong>{draft.filename}</strong>
+                  </div>
+                  <div>
+                    <span>Detected columns</span>
+                    <strong>{headers.length}</strong>
+                  </div>
+                  <div>
+                    <span>Target</span>
+                    <strong>{selectedTemplate.name}</strong>
+                  </div>
+                </div>
+                <Field
+                  label="Use a saved mapping"
+                  as="select"
+                  required={false}
+                  defaultValue=""
+                  onChange={(event) => applyMappingProfile(event.target.value)}
+                  options={[
+                    ["", "Automatic exact-name mapping"],
+                    ...mappingProfiles
+                      .filter((item) => item.template_key === draft.template_key)
+                      .map((item) => [item.id, `${item.name} · version ${item.version}`]),
+                  ]}
+                  hint="Profiles are tenant-scoped and retain their template version."
+                />
+                <div className="mapping-list" role="group" aria-label="Column mappings">
+                  {selectedTemplate.fields.map((field) => (
+                    <div className="mapping-row" key={field.key}>
+                      <div>
+                        <strong>{field.label}</strong>
+                        <small>
+                          {field.key} · {field.type} · {field.required ? "required" : "optional"}
+                        </small>
+                      </div>
+                      <span aria-hidden="true">←</span>
+                      <Field
+                        label={`Source column for ${field.label}`}
+                        as="select"
+                        required={field.required}
+                        value={draft.mapping[field.key] || ""}
+                        onChange={(event) =>
+                          updateDraft({
+                            mapping_profile_id: "",
+                            mapping: { ...draft.mapping, [field.key]: event.target.value },
+                          })
+                        }
+                        options={[
+                          ["", field.required ? "Select a source column" : "Not mapped"],
+                          ...headers.map((header) => [header, header]),
+                        ]}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {can("admin") && (
+                  <Field
+                    label="Save this mapping for reuse"
+                    value={draft.mapping_profile_name}
+                    onChange={(event) => updateDraft({ mapping_profile_name: event.target.value })}
+                    required={false}
+                    placeholder="Optional profile name"
+                    hint="Saved only after this file passes server validation."
+                  />
+                )}
+                {!requiredMapped && (
+                  <Alert>Map every required target field before continuing.</Alert>
+                )}
+                <div className="step-actions">
+                  <button type="button" className="secondary" onClick={() => setWizardStep(1)}>
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={!requiredMapped}
+                    onClick={() => setWizardStep(3)}
+                  >
+                    Review import
+                  </button>
+                </div>
+              </>
+            )}
+            {wizardStep === 3 && (
+              <>
+                <div className="review-card">
+                  <DescriptionList
+                    items={[
+                      ["Source file", draft.filename],
+                      ["Template", `${selectedTemplate.name} · v${selectedTemplate.version}`],
+                      ["Detected columns", headers.length],
+                      ["Mapped fields", Object.values(draft.mapping).filter(Boolean).length],
+                      [
+                        "Mapping lineage",
+                        selectedMappingProfile
+                          ? `${selectedMappingProfile.name} · v${selectedMappingProfile.version}`
+                          : "Exact batch snapshot",
+                      ],
+                      ["Saved profile", draft.mapping_profile_name || "Not requested"],
+                    ]}
+                  />
+                </div>
+                <Table
+                  caption="Import mapping review"
+                  columns={["Target field", "Source column", "Requirement"]}
+                  rows={selectedTemplate.fields.map((field) => [
+                    field.label,
+                    draft.mapping[field.key] || "Not mapped",
+                    field.required ? "Required" : "Optional",
+                  ])}
+                />
+                <div className="review-notice" role="note">
+                  <strong>Next: server validation</strong>
+                  <span>
+                    Formula-like content, duplicates, types and natural keys are checked before a
+                    row preview is created. No accounting record is created at this step.
+                  </span>
+                </div>
+                <div className="step-actions">
+                  <button type="button" className="secondary" onClick={() => setWizardStep(2)}>
+                    Back
+                  </button>
+                  <button className="primary" disabled={busy}>
+                    {busy ? "Validating source…" : "Stage and validate"}
+                  </button>
+                </div>
+              </>
+            )}
           </form>
         </Dialog>
       )}
@@ -1559,16 +1950,24 @@ function ModuleBar({ title, detail, action }) {
     </section>
   );
 }
-function Table({ columns, rows }) {
-  if (!rows.length)
-    return <Empty title="Nothing here yet" detail="New records will appear here." />;
+function Table({
+  columns,
+  rows,
+  caption,
+  emptyTitle = "Nothing here yet",
+  emptyDetail = "New records will appear here.",
+}) {
+  if (!rows.length) return <Empty title={emptyTitle} detail={emptyDetail} />;
   return (
     <div className="table-wrap">
       <table>
+        {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column}>{column}</th>
+              <th scope="col" key={column}>
+                {column}
+              </th>
             ))}
           </tr>
         </thead>
@@ -1659,22 +2058,59 @@ function Toast({ notice, onClose }) {
 }
 function Dialog({ title, subtitle, close, children }) {
   const closeRef = useRef(null);
+  const dialogRef = useRef(null);
+  const titleRef = useRef(null);
+  const closeHandlerRef = useRef(close);
+  const returnFocusRef = useRef(document.activeElement);
+  closeHandlerRef.current = close;
   useEffect(() => {
-    closeRef.current?.focus();
-    const handler = (event) => event.key === "Escape" && close();
+    const priorBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    titleRef.current?.focus();
+    const handler = (event) => {
+      if (event.key === "Escape") return closeHandlerRef.current();
+      if (event.key !== "Tab") return;
+      const focusable = [
+        ...dialogRef.current.querySelectorAll(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((element) => element.getClientRects().length);
+      if (!focusable.length) return event.preventDefault();
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [close]);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      document.body.style.overflow = priorBodyOverflow;
+      returnFocusRef.current?.focus?.();
+    };
+  }, []);
   return (
     <div
       className="dialog-backdrop"
       onMouseDown={(event) => event.target === event.currentTarget && close()}
     >
-      <section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <section
+        ref={dialogRef}
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+      >
         <header>
           <div>
             <p className="eyebrow">CONTROLLED WORKFLOW</p>
-            <h2 id="dialog-title">{title}</h2>
+            <h2 ref={titleRef} tabIndex="-1" id="dialog-title">
+              {title}
+            </h2>
             <p>{subtitle}</p>
           </div>
           <button ref={closeRef} className="icon-button" onClick={close} aria-label="Close dialog">
