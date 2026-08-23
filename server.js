@@ -747,13 +747,28 @@ function overview(ledger, url) {
 
 async function webhook(req, res, url, platform, ledgers, requestId, environment) {
   if (req.method !== "POST") throw problem("Not found", 404);
-  const match = url.pathname.match(/^\/webhooks\/(stripe|payroll|expenses)\/([a-z0-9-]+)$/);
+  const match = url.pathname.match(
+    /^\/webhooks\/(stripe|payroll|expenses)\/([a-z0-9-]+)(?:\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?$/,
+  );
   if (!match) throw problem("Not found", 404);
-  const [, provider, slug] = match;
+  const [, provider, slug, connectionId] = match;
   const org = platform.organizationBySlug(slug);
   if (!org) throw problem("Not found", 404);
+  if (provider === "stripe" && environment.NODE_ENV === "production" && !connectionId)
+    throw problem("Not found", 404);
+  let ledger;
+  let connection;
+  if (connectionId) {
+    ledger = tenantLedger(ledgers, { org_id: org.id, database_path: org.database_path });
+    connection = ledger.integrationConnection(connectionId);
+    if (connection.provider !== provider || connection.status !== "active")
+      throw problem("Not found", 404);
+  }
   const raw = await readBody(req, 1_000_000);
-  const signingSecret = secret(`WEBHOOK_SECRET_${provider.toUpperCase()}`, { environment });
+  const signingSecret = secret(
+    connection?.webhook_secret_ref || `WEBHOOK_SECRET_${provider.toUpperCase()}`,
+    { environment },
+  );
   if (!signingSecret) throw problem("Webhook receiver is not configured", 503);
   if (
     !verifyWebhookSignature({
@@ -773,10 +788,16 @@ async function webhook(req, res, url, platform, ledgers, requestId, environment)
   }
   if (!event.id || !event.type || !event.data)
     throw problem("Webhook id, type, and data are required");
+  if (
+    connection?.external_account_id &&
+    event.account &&
+    event.account !== connection.external_account_id
+  )
+    throw problem("Webhook provider account does not match the connection", 401);
   const payloadHash = digest(raw);
   const existing = platform.webhookLookup(provider, event.id, org.id, payloadHash);
   if (existing) return json(res, 200, { duplicate: true, result: existing.result });
-  const ledger = tenantLedger(ledgers, { org_id: org.id, database_path: org.database_path });
+  ledger ||= tenantLedger(ledgers, { org_id: org.id, database_path: org.database_path });
   const application = await runWithRequestContext(
     { actor: `webhook.${provider}`, orgId: org.id, role: "system", requestId },
     () =>

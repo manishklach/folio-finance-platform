@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { createLedger } from "../lib/db.js";
 import { createFolioServer } from "../server.js";
 import { verifyStripeSignature, verifyWebhookSignature } from "../lib/webhook-verification.js";
 
@@ -122,4 +123,79 @@ test("Stripe HTTP boundary rejects legacy and stale signatures before event proc
     401,
   );
   assert.equal((await send({ "stripe-signature": `t=${now},v1=${signature}` })).status, 422);
+});
+
+test("Stripe connection endpoint uses its secret reference and binds provider account", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "folio-stripe-connection-webhook-"));
+  const connectionSecret = "whsec_connection_specific_secret";
+  const app = createFolioServer({
+    platformDbPath: join(directory, "platform.db"),
+    tenantDir: join(directory, "tenants"),
+    environment: { NODE_ENV: "test", STRIPE_CONNECTION_WEBHOOK: connectionSecret },
+  });
+  const setup = await app.platform.setup({
+    organization_name: "Stripe connection boundary",
+    name: "Admin",
+    email: "admin@example.test",
+    password: "SecurePassword123",
+  });
+  const ledger = createLedger(setup.session.database_path, { orgId: setup.session.org_id });
+  const connection = ledger.configureIntegration({
+    provider: "stripe",
+    environment: "production",
+    display_name: "Stripe production",
+    external_account_id: "acct_expected",
+    credential_secret_ref: "STRIPE_CONNECTION_CREDENTIAL",
+    webhook_secret_ref: "STRIPE_CONNECTION_WEBHOOK",
+  });
+  ledger.setIntegrationStatus({ connection_id: connection.id, status: "active" });
+  ledger.close();
+  await new Promise((resolve) => app.server.listen(0, "127.0.0.1", resolve));
+  t.after(async () => {
+    await new Promise((resolve) => app.close(resolve));
+    rmSync(directory, { recursive: true, force: true });
+  });
+  const endpoint = `http://127.0.0.1:${app.server.address().port}/webhooks/stripe/${setup.session.slug}/${connection.id}`;
+  const send = async (account) => {
+    const body = Buffer.from(
+      JSON.stringify({ id: `evt_${account}`, type: "unsupported", account, data: {} }),
+    );
+    const now = Math.floor(Date.now() / 1000);
+    const signature = createHmac("sha256", connectionSecret)
+      .update(`${now}.`)
+      .update(body)
+      .digest("hex");
+    return fetch(endpoint, {
+      method: "POST",
+      headers: { "stripe-signature": `t=${now},v1=${signature}` },
+      body,
+    });
+  };
+  assert.equal((await send("acct_wrong")).status, 401);
+  assert.equal((await send("acct_expected")).status, 422);
+});
+
+test("production Stripe webhooks reject tenant-slug-only endpoints", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "folio-stripe-production-route-"));
+  const app = createFolioServer({
+    platformDbPath: join(directory, "platform.db"),
+    tenantDir: join(directory, "tenants"),
+    environment: { NODE_ENV: "production" },
+  });
+  const setup = await app.platform.setup({
+    organization_name: "Production route",
+    name: "Admin",
+    email: "admin@example.test",
+    password: "SecurePassword123",
+  });
+  await new Promise((resolve) => app.server.listen(0, "127.0.0.1", resolve));
+  t.after(async () => {
+    await new Promise((resolve) => app.close(resolve));
+    rmSync(directory, { recursive: true, force: true });
+  });
+  const response = await fetch(
+    `http://127.0.0.1:${app.server.address().port}/webhooks/stripe/${setup.session.slug}`,
+    { method: "POST", body: "{}" },
+  );
+  assert.equal(response.status, 404);
 });

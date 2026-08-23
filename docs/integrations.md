@@ -9,12 +9,12 @@ can carry live financial data.
 
 ## Initial matrix
 
-| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                              | Still required for live use                                                                                                                                  |
-| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned request/normalization adapter, full pagination restart, staged outcomes, retries and exceptions                                           | Link handoff/token exchange, JWT webhook verification, sandbox certification and credentialed staging evidence                                               |
-| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter plus raw-body `Stripe-Signature` verification, five-minute timestamp tolerance, tenant-transactional inbox and rotation signatures | OAuth/restricted-key exchange, Stripe-to-Folio event translation, asynchronous acknowledgement/worker split, payout reconciliation and sandbox certification |
-| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries and staged outcomes                                                   | OAuth lifecycle, verified events, detailed payroll receipts, GL mappings and sandbox certification                                                           |
-| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries and staged outcomes                                                    | OAuth lifecycle, signed webhooks, association expansion and contract-handoff review                                                                          |
+| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                                        | Still required for live use                                                                                                                                  |
+| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned request/normalization adapter, full pagination restart, staged outcomes, retries and exceptions                                                                                     | Link handoff/token exchange, JWT webhook verification, sandbox certification and credentialed staging evidence                                               |
+| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter plus raw-body `Stripe-Signature` verification, connection-scoped secret/account binding, five-minute timestamp tolerance, tenant-transactional inbox and rotation signatures | OAuth/restricted-key exchange, Stripe-to-Folio event translation, asynchronous acknowledgement/worker split, payout reconciliation and sandbox certification |
+| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries and staged outcomes                                                                                             | OAuth lifecycle, verified events, detailed payroll receipts, GL mappings and sandbox certification                                                           |
+| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries and staged outcomes                                                                                              | OAuth lifecycle, signed webhooks, association expansion and contract-handoff review                                                                          |
 
 The provider behavior assumptions above follow the vendors' current official documentation:
 [Plaid transaction sync](https://plaid.com/docs/transactions/sync-migration/),
@@ -36,6 +36,12 @@ Configuration, mapping and connection-state changes require the administrator ro
 authenticated tenant member. Synchronization and exception operations require accounting-operator
 access. Existing tenant database isolation, session authorization and CSRF controls apply to every
 route.
+
+Production Stripe endpoints use
+`POST /webhooks/stripe/<organization-slug>/<integration-connection-id>`. Folio resolves only that
+active Stripe connection's secret-manager reference and rejects a signed Connect event whose
+top-level account differs from the configured external account. The older slug-only endpoint is
+available for local/test compatibility and is fail-closed in production.
 
 ## Data flow
 
@@ -101,6 +107,7 @@ Automated tests cover the four-provider catalog, secret-reference boundary, prod
 requirement, legal state changes, cursor advancement, added/modified/removed records, replay
 idempotency, failed-run exception creation, operator resolution, provider schema fixtures, paging,
 Plaid cursor mutation recovery, rate-limit retry, secret-safe failures, Stripe raw-body tamper,
-timestamp replay, malformed header, rotation-signature, atomic inbox rollback and HTTP replay cases.
-Live acceptance additionally requires provider-hosted sandbox contract tests, end-to-end webhook
-event fixtures, process-level worker crash recovery and a credentialed staging synchronization.
+timestamp replay, malformed header, rotation-signature, connection secret/account binding,
+production legacy-route denial, atomic inbox rollback and HTTP replay cases. Live acceptance
+additionally requires provider-hosted sandbox contract tests, end-to-end webhook event fixtures,
+process-level worker crash recovery and a credentialed staging synchronization.
