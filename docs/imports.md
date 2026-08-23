@@ -22,6 +22,12 @@ flowchart LR
   T -->|Any runtime failure| R[Roll back entire valid subset and open blocking exception]
   L --> C[Subledger and GL reconciliation]
   R --> O[Assign, resolve, ignore, or correct and restage]
+  E --> X{Correction scope}
+  X -->|Unapplied or failed batch| Y[Replace every source row]
+  X -->|Partially applied batch| Z[Restage exception rows only]
+  Y --> W[Stage linked child and supersede source]
+  Z --> W
+  W --> V
 ```
 
 ## Version 1 template matrix
@@ -44,8 +50,9 @@ enumerations, version, sample header, and batch-level options. Source headers de
 names. API clients may provide a target-to-source `mapping` object and administrators may save
 versioned mapping profiles. The transactional UI now implements source selection, local header
 detection, automatic exact-name suggestions, explicit select-based field mapping, reusable tenant
-profiles, a mapping review step and then server validation. Reused profiles retain their ID and version
-on the batch; every batch also retains the exact effective mapping snapshot.
+profiles, downloadable blank templates, a mapping review step and then server validation. Reused
+profiles retain their ID and version on the batch; every batch also retains the exact effective mapping
+snapshot.
 
 ## Validation and duplicate controls
 
@@ -63,32 +70,48 @@ on the batch; every batch also retains the exact effective mapping snapshot.
   failure rolls back every entity from that apply attempt and creates a blocking exception.
 - Repeating `apply` on an already applied batch returns the recorded result without another financial
   effect.
+- Row previews are paged in the tenant database at 25–250 rows per request. Exception queues are
+  filtered and paged server-side, with a separate open-item count, so the browser never has to fetch an
+  unbounded queue.
+
+## Correction and restaging
+
+`Correct and restage` reconstructs editable CSV from the source batch's retained raw row values and
+preserves the exact template, mapping, batch options and source-batch identifier. An unapplied staged or
+failed batch must retain its complete row population. A partially applied batch includes only its
+non-applied validation and duplicate rows, so already-created records cannot be replayed.
+
+When a corrected child successfully stages from an unapplied batch, the source is atomically marked
+`rejected` and its open exceptions are acknowledged with the child batch ID. Failed and partially
+applied sources retain their historical status. The child always stores `restaged_from_batch_id`; the
+UI exposes that lineage in review. Row-count, template and eligible-status checks prevent a caller from
+misrepresenting an unrelated or incomplete file as the correction.
 
 ## Permissions and API
 
-| Method and route                        | Purpose                                               | Permission                            |
-| --------------------------------------- | ----------------------------------------------------- | ------------------------------------- |
-| `GET /api/imports/templates`            | Inspect current template contracts                    | Read                                  |
-| `GET /api/imports/batches`              | List bounded batch history                            | Read                                  |
-| `GET /api/imports/batches/:id`          | Review rows, mapping, hashes, outcomes and exceptions | Read                                  |
-| `POST /api/imports/stage`               | Parse, map, validate and stage a file                 | Operate + CSRF + idempotency key      |
-| `POST /api/imports/batches/:id/approve` | Approve all clean rows or explicit valid subset       | Operate + CSRF                        |
-| `POST /api/imports/batches/:id/apply`   | Atomically apply an approved batch                    | Operate + CSRF; repository idempotent |
-| `GET /api/imports/mapping-profiles`     | List active mapping versions                          | Read                                  |
-| `POST /api/imports/mapping-profiles`    | Save a validated mapping profile                      | Admin + CSRF                          |
-| `GET /api/imports/exceptions`           | Inspect validation and application exceptions         | Read                                  |
-| `POST /api/imports/exceptions/status`   | Record a disposition and owner                        | Operate + CSRF                        |
+| Method and route                                 | Purpose                                              | Permission                            |
+| ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------- |
+| `GET /api/imports/templates`                     | Inspect current template contracts                   | Read                                  |
+| `GET /api/imports/batches`                       | List bounded batch history                           | Read                                  |
+| `GET /api/imports/batches/:id`                   | Review a paged row set, mapping, hashes and outcomes | Read                                  |
+| `GET /api/imports/batches/:id/correction-source` | Reconstruct eligible rows and source lineage         | Read                                  |
+| `POST /api/imports/stage`                        | Parse, map, validate and stage a file                | Operate + CSRF + idempotency key      |
+| `POST /api/imports/batches/:id/approve`          | Approve all clean rows or explicit valid subset      | Operate + CSRF                        |
+| `POST /api/imports/batches/:id/apply`            | Atomically apply an approved batch                   | Operate + CSRF; repository idempotent |
+| `GET /api/imports/mapping-profiles`              | List active mapping versions                         | Read                                  |
+| `POST /api/imports/mapping-profiles`             | Save a validated mapping profile                     | Admin + CSRF                          |
+| `GET /api/imports/exceptions`                    | Filter and page validation/application exceptions    | Read                                  |
+| `POST /api/imports/exceptions/status`            | Record a disposition and owner                       | Operate + CSRF                        |
 
 ## Verification and remaining production work
 
 Automated tests cover all ten templates, custom source mappings, formula-like input, validation errors,
 within-file and cross-batch duplicate behavior, explicit valid-row subsets, exact-file replay,
 whole-batch rollback, blocking exceptions, balanced draft creation, posted subledger transactions,
-bank matching, journal integrity, API authentication, CSRF, authorization, and tenant database
-isolation.
+bank matching, correction scope and parent/child lineage, row-count safeguards, row/exception
+pagination, schema upgrades, journal integrity, API authentication, CSRF, authorization, and tenant
+database isolation.
 
-Before pilot use, Folio still needs downloadable template files, large-file worker processing,
-pagination beyond the 250-row review window, correction/restage assistance, configurable duplicate
-candidates beyond exact natural keys, approval segregation policies, and migration-volume/load
-evidence. These are tracked by the production acceptance specification and are not represented as
-complete here.
+Before pilot use, Folio still needs large-file worker processing, configurable duplicate candidates
+beyond exact natural keys, approval segregation policies, and launch-volume migration/load evidence.
+These are tracked by the production acceptance specification and are not represented as complete here.

@@ -119,6 +119,15 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   );
   assert.equal(stagedImport.response.status, 201);
   assert.equal(stagedImport.body.valid_count, 1);
+  const importPreview = await call(
+    origin,
+    `/api/imports/batches/${stagedImport.body.id}?page=1&page_size=25`,
+    null,
+    admin,
+  );
+  assert.equal(importPreview.response.status, 200);
+  assert.equal(importPreview.body.row_page.page_size, 25);
+  assert.equal(importPreview.body.row_page.total_rows, 1);
   assert.equal(
     (
       await call(
@@ -153,6 +162,26 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   );
   assert.equal(appliedImport.response.status, 200);
   assert.equal(appliedImport.body.applied_count, 1);
+  const correctionBatch = await call(
+    origin,
+    "/api/imports/stage",
+    {
+      template_key: "chart_of_accounts",
+      filename: "api-correction.csv",
+      csv: "code,name,type\nAPI-9100,Valid row,expense\n,Missing code,expense",
+    },
+    { ...admin, idempotency: "import-correction-admin-1" },
+  );
+  assert.equal(correctionBatch.response.status, 201);
+  const correctionSource = await call(
+    origin,
+    `/api/imports/batches/${correctionBatch.body.id}/correction-source`,
+    null,
+    admin,
+  );
+  assert.equal(correctionSource.response.status, 200);
+  assert.equal(correctionSource.body.scope, "full_replacement");
+  assert.equal(correctionSource.body.row_count, 2);
   const configuredConnector = await call(
     origin,
     "/api/integrations/connections",

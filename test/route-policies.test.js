@@ -45,7 +45,7 @@ test("API route manifest is unambiguous, complete-by-construction, and fail-clos
     );
   assert.equal(
     API_ROUTE_POLICIES.filter((policy) => policy.template.includes(":")).length,
-    20,
+    21,
     "dynamic route inventory changed; review and update the manifest",
   );
 });

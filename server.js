@@ -489,10 +489,30 @@ async function api(req, res, url, ledger, platform, session) {
   if (req.method === "GET" && url.pathname === "/api/imports/mapping-profiles")
     return json(res, 200, ledger.importMappingProfiles());
   if (req.method === "GET" && url.pathname === "/api/imports/exceptions")
-    return json(res, 200, ledger.importExceptions());
+    return json(
+      res,
+      200,
+      ledger.importExceptions({
+        status: url.searchParams.get("status") || "open",
+        page: url.searchParams.get("page"),
+        page_size: url.searchParams.get("page_size"),
+      }),
+    );
+  const importCorrectionMatch = url.pathname.match(
+    /^\/api\/imports\/batches\/([^/]+)\/correction-source$/,
+  );
+  if (req.method === "GET" && importCorrectionMatch)
+    return json(res, 200, ledger.importCorrectionSource(importCorrectionMatch[1]));
   const importBatchMatch = url.pathname.match(/^\/api\/imports\/batches\/([^/]+)$/);
   if (req.method === "GET" && importBatchMatch)
-    return json(res, 200, ledger.importBatch(importBatchMatch[1]));
+    return json(
+      res,
+      200,
+      ledger.importBatch(importBatchMatch[1], {
+        page: url.searchParams.get("page"),
+        page_size: url.searchParams.get("page_size"),
+      }),
+    );
   if (req.method === "POST" && url.pathname === "/api/imports/stage")
     return json(res, 201, ledger.stageImport(await readJson(req)));
   const importApproveMatch = url.pathname.match(/^\/api\/imports\/batches\/([^/]+)\/approve$/);

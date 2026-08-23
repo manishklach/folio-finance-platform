@@ -139,8 +139,156 @@ test("existing import batches upgrade to mapping-profile lineage columns", (t) =
   );
   assert.equal(columns.has("mapping_profile_id"), true);
   assert.equal(columns.has("mapping_profile_version"), true);
+  assert.equal(columns.has("restaged_from_batch_id"), true);
   ledger.close();
   ledger = null;
+});
+
+test("large previews paginate and reject invalid page boundaries", () => {
+  const ledger = createLedger(":memory:");
+  const rows = Array.from(
+    { length: 260 },
+    (_, index) => `P${String(index + 1).padStart(4, "0")},Paged account ${index + 1},expense`,
+  );
+  const staged = ledger.stageImport({
+    template_key: "chart_of_accounts",
+    filename: "paged-accounts.csv",
+    csv: ["code,name,type", ...rows].join("\n"),
+  });
+  assert.deepEqual(staged.row_page, {
+    page: 1,
+    page_size: 100,
+    total_rows: 260,
+    total_pages: 3,
+    from: 1,
+    to: 100,
+  });
+  const lastPage = ledger.importBatch(staged.id, { page: 3, page_size: 100 });
+  assert.equal(lastPage.rows.length, 60);
+  assert.equal(lastPage.rows[0].row_number, 202);
+  assert.equal(lastPage.row_page.to, 260);
+  assert.throws(() => ledger.importBatch(staged.id, { page: 4 }), /out of range/);
+  assert.throws(
+    () => ledger.importBatch(staged.id, { page_size: 251 }),
+    /whole number from 25 through 250/,
+  );
+  ledger.close();
+});
+
+test("exception queue filters and paginates on the tenant database", () => {
+  const ledger = createLedger(":memory:");
+  const invalidRows = Array.from(
+    { length: 45 },
+    (_, index) => `,Invalid account ${index + 1},expense`,
+  );
+  ledger.stageImport({
+    template_key: "chart_of_accounts",
+    filename: "many-invalid-accounts.csv",
+    csv: ["code,name,type", ...invalidRows].join("\n"),
+  });
+  const lastPage = ledger.importExceptions({ status: "open", page: 3, page_size: 20 });
+  assert.equal(lastPage.items.length, 5);
+  assert.equal(lastPage.open_total, 45);
+  assert.deepEqual(lastPage.page, {
+    page: 3,
+    page_size: 20,
+    total: 45,
+    total_pages: 3,
+    from: 41,
+    to: 45,
+  });
+  ledger.resolveImportException({
+    id: lastPage.items[0].id,
+    status: "resolved",
+    resolution: "Corrected by operator",
+  });
+  assert.equal(ledger.importExceptions({ status: "resolved" }).items.length, 1);
+  assert.equal(ledger.importExceptions({ status: "open" }).open_total, 44);
+  ledger.close();
+});
+
+test("correction sources preserve full-replacement and applied-exception lineage", () => {
+  const ledger = createLedger(":memory:");
+  const original = ledger.stageImport({
+    template_key: "chart_of_accounts",
+    filename: "accounts-with-errors.csv",
+    mapping: { code: "account", name: "label", type: "classification" },
+    csv: [
+      "account,label,classification",
+      "9100,Valid row,expense",
+      ",Missing code,expense",
+      "9100,Duplicate code,expense",
+    ].join("\n"),
+  });
+  const fullSource = ledger.importCorrectionSource(original.id);
+  assert.equal(fullSource.scope, "full_replacement");
+  assert.equal(fullSource.row_count, 3);
+  assert.deepEqual(fullSource.source_row_numbers, [2, 3, 4]);
+  assert.match(fullSource.csv, /Missing code/);
+  assert.throws(
+    () =>
+      ledger.stageImport({
+        template_key: "chart_of_accounts",
+        restaged_from_batch_id: original.id,
+        filename: "incomplete-correction.csv",
+        csv: "account,label,classification\n9200,Only one row,expense",
+        mapping: fullSource.mapping,
+      }),
+    /retain all 3 source rows/,
+  );
+  assert.equal(ledger.importBatch(original.id).status, "staged");
+  const corrected = ledger.stageImport({
+    template_key: fullSource.template_key,
+    restaged_from_batch_id: fullSource.source_batch_id,
+    filename: fullSource.filename,
+    mapping: fullSource.mapping,
+    csv: [
+      "account,label,classification",
+      "9100,Valid row,expense",
+      "9200,Fixed missing code,expense",
+      "9300,Fixed duplicate code,expense",
+    ].join("\n"),
+  });
+  assert.equal(corrected.restaged_from_batch_id, original.id);
+  assert.equal(corrected.valid_count, 3);
+  assert.equal(ledger.importBatch(original.id).status, "rejected");
+  assert.ok(
+    ledger
+      .importBatch(original.id)
+      .exceptions.every(
+        (item) => item.status === "acknowledged" && item.resolution.includes(corrected.id),
+      ),
+  );
+  assert.throws(() => ledger.importCorrectionSource(original.id), /not eligible/);
+
+  const partial = ledger.stageImport({
+    template_key: "chart_of_accounts",
+    filename: "partially-applied-accounts.csv",
+    csv: [
+      "code,name,type",
+      "9400,Applied row,expense",
+      ",Missing code,expense",
+      "9400,Duplicate applied row,expense",
+    ].join("\n"),
+  });
+  ledger.approveImport({ id: partial.id, apply_valid_rows: true });
+  ledger.applyImport(partial.id);
+  const exceptionSource = ledger.importCorrectionSource(partial.id);
+  assert.equal(exceptionSource.scope, "exception_rows");
+  assert.equal(exceptionSource.row_count, 2);
+  assert.deepEqual(exceptionSource.source_row_numbers, [3, 4]);
+  const exceptionCorrection = ledger.stageImport({
+    template_key: exceptionSource.template_key,
+    restaged_from_batch_id: exceptionSource.source_batch_id,
+    filename: exceptionSource.filename,
+    mapping: exceptionSource.mapping,
+    csv: ["code,name,type", "9500,Fixed missing,expense", "9600,Fixed duplicate,expense"].join(
+      "\n",
+    ),
+  });
+  assert.equal(exceptionCorrection.valid_count, 2);
+  assert.equal(ledger.importBatch(partial.id).status, "applied");
+  ledger.close();
 });
 
 test("approved valid subset applies once and exact file replay is rejected", () => {

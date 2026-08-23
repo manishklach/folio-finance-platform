@@ -829,6 +829,35 @@ button,
   font-size: 11px;
   white-space: nowrap;
 }
+.template-download {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+.template-download span {
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  background: #fbfcfb;
+}
+.table-pagination span {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
 .field {
   display: grid;
   gap: 6px;
@@ -1050,6 +1079,14 @@ button,
   }
   .workflow-toolbar > span {
     padding-bottom: 0;
+  }
+  .template-download,
+  .table-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .template-download span {
+    text-align: left;
   }
   .module-bar {
     align-items: flex-start;

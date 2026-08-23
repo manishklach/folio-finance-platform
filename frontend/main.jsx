@@ -17,6 +17,10 @@ function blankImportDraft(templateKey = "chart_of_accounts") {
     mapping: {},
     mapping_profile_id: "",
     mapping_profile_name: "",
+    restaged_from_batch_id: "",
+    correction_source_filename: "",
+    correction_row_count: 0,
+    correction_scope: "",
     cash_account_id: "",
     start_date: "",
     end_date: "",
@@ -61,6 +65,10 @@ function suggestedMapping(template, headers, current = {}) {
         : available.get(field.key.toLowerCase()) || "",
     ]),
   );
+}
+
+function sameHeaders(left, right) {
+  return left.length === right.length && left.every((header, index) => header === right[index]);
 }
 
 async function api(path, { method = "GET", body, idempotent = true, headers: extraHeaders } = {}) {
@@ -193,6 +201,7 @@ function AuthScreen({ needsSetup, onAuthenticated }) {
                 name="bootstrap_token"
                 type="password"
                 autoComplete="off"
+                required={false}
                 hint="Provided by the person who deployed Folio. Local development may leave this blank."
               />
             </>
@@ -543,16 +552,24 @@ function Integrations({ can, notify }) {
 }
 
 function Imports({ can, notify }) {
+  const [exceptionStatus, setExceptionStatus] = useState("open");
+  const [exceptionPage, setExceptionPage] = useState(1);
   const resource = useLoad(
     () =>
       Promise.all([
         api("/api/imports/templates"),
         api("/api/imports/batches"),
-        api("/api/imports/exceptions"),
         api("/api/accounts"),
         api("/api/imports/mapping-profiles"),
       ]),
     [],
+  );
+  const exceptionResource = useLoad(
+    () =>
+      api(
+        `/api/imports/exceptions?status=${encodeURIComponent(exceptionStatus)}&page=${exceptionPage}&page_size=20`,
+      ),
+    [exceptionStatus, exceptionPage],
   );
   const [showStage, setShowStage] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
@@ -560,10 +577,20 @@ function Imports({ can, notify }) {
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [batchQuery, setBatchQuery] = useState("");
-  const [exceptionStatus, setExceptionStatus] = useState("open");
-  if (resource.loading) return <Loading />;
-  if (resource.error) return <LoadError error={resource.error} retry={resource.refresh} />;
-  const [templates, batches, exceptions, accounts, mappingProfiles] = resource.data;
+  if (resource.loading || exceptionResource.loading) return <Loading />;
+  if (resource.error || exceptionResource.error)
+    return (
+      <LoadError
+        error={resource.error || exceptionResource.error}
+        retry={() => Promise.all([resource.refresh(), exceptionResource.refresh()])}
+      />
+    );
+  const [templates, batches, accounts, mappingProfiles] = resource.data;
+  const {
+    items: exceptions,
+    page: exceptionPagination,
+    open_total: openExceptions,
+  } = exceptionResource.data;
   const selectedTemplate =
     templates.find((item) => item.key === draft.template_key) || templates[0];
   const selectedMappingProfile = mappingProfiles.find(
@@ -578,9 +605,6 @@ function Imports({ can, notify }) {
       .toLowerCase()
       .includes(batchQuery.trim().toLowerCase()),
   );
-  const visibleExceptions = exceptions
-    .filter((item) => exceptionStatus === "all" || item.status === exceptionStatus)
-    .slice(0, 20);
   const previewMappingProfile = preview?.mapping_profile_id
     ? mappingProfiles.find((item) => item.id === preview.mapping_profile_id)
     : null;
@@ -608,7 +632,25 @@ function Imports({ can, notify }) {
       return;
     }
     const csv = await file.text();
-    updateDraft({ filename: file.name, csv, mapping: {} });
+    updateDraft({
+      filename: file.name,
+      csv,
+      mapping: sameHeaders(headers, csvHeaders(csv)) ? draft.mapping : {},
+    });
+  }
+
+  function downloadTemplate() {
+    const blob = new Blob([`${selectedTemplate.sample_header}\n`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedTemplate.key}-v${selectedTemplate.version}-template.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   function continueToMapping() {
@@ -670,6 +712,7 @@ function Imports({ can, notify }) {
           csv: draft.csv,
           mapping: draft.mapping,
           mapping_profile_id: draft.mapping_profile_id || undefined,
+          restaged_from_batch_id: draft.restaged_from_batch_id || undefined,
           options,
         },
       });
@@ -692,7 +735,7 @@ function Imports({ can, notify }) {
       }
       setPreview(batch);
       setShowStage(false);
-      await resource.refresh();
+      await Promise.all([resource.refresh(), exceptionResource.refresh()]);
       notify({
         kind: mappingSaveError ? "error" : "success",
         message: mappingSaveError
@@ -706,11 +749,51 @@ function Imports({ can, notify }) {
     }
   }
 
-  async function openBatch(id) {
+  async function openBatch(id, page = 1) {
     try {
-      setPreview(await api(`/api/imports/batches/${id}`));
+      setPreview(await api(`/api/imports/batches/${id}?page=${page}&page_size=100`));
     } catch (error) {
       notify({ kind: "error", message: error.message });
+    }
+  }
+
+  async function beginCorrection() {
+    setBusy(true);
+    try {
+      const source = await api(`/api/imports/batches/${preview.id}/correction-source`);
+      setDraft({
+        ...blankImportDraft(source.template_key),
+        filename: source.filename,
+        csv: source.csv,
+        mapping: source.mapping,
+        restaged_from_batch_id: source.source_batch_id,
+        correction_source_filename: source.source_filename,
+        correction_row_count: source.row_count,
+        correction_scope: source.scope,
+        cash_account_id: source.options.cash_account_id
+          ? String(source.options.cash_account_id)
+          : "",
+        start_date: source.options.start_date || "",
+        end_date: source.options.end_date || "",
+        opening:
+          source.options.opening_cents === undefined
+            ? ""
+            : String(source.options.opening_cents / 100),
+        closing:
+          source.options.closing_cents === undefined
+            ? ""
+            : String(source.options.closing_cents / 100),
+      });
+      setWizardStep(1);
+      setShowStage(true);
+      notify({
+        kind: "success",
+        message: `${source.row_count} ${source.scope === "full_replacement" ? "source" : "exception"} row${source.row_count === 1 ? "" : "s"} loaded for correction with source lineage.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -727,12 +810,21 @@ function Imports({ can, notify }) {
         body: {},
       });
       setPreview(applied);
-      await resource.refresh();
+      await Promise.all([resource.refresh(), exceptionResource.refresh()]);
       notify({
         kind: "success",
         message: `${applied.applied_count} validated rows applied with retained lineage.`,
       });
     } catch (error) {
+      try {
+        const refreshedPreview = await api(
+          `/api/imports/batches/${preview.id}?page=1&page_size=100`,
+        );
+        setPreview(refreshedPreview);
+        await Promise.all([resource.refresh(), exceptionResource.refresh()]);
+      } catch {
+        // Preserve the original apply failure when the recovery refresh is unavailable.
+      }
       notify({ kind: "error", message: error.message });
     } finally {
       setBusy(false);
@@ -749,7 +841,7 @@ function Imports({ can, notify }) {
           resolution: "Reviewed in the import operations workbench",
         },
       });
-      await resource.refresh();
+      await Promise.all([resource.refresh(), exceptionResource.refresh()]);
       notify({ kind: "success", message: "Import exception resolved." });
     } catch (error) {
       notify({ kind: "error", message: error.message });
@@ -783,9 +875,9 @@ function Imports({ can, notify }) {
         />
         <Kpi
           label="Open exceptions"
-          value={exceptions.filter((item) => item.status === "open").length}
+          value={openExceptions}
           detail="Validation or apply issues"
-          warning={exceptions.some((item) => item.status === "open")}
+          warning={openExceptions > 0}
         />
       </section>
       <div className="two-column">
@@ -831,7 +923,10 @@ function Imports({ can, notify }) {
               label="Exception status"
               as="select"
               value={exceptionStatus}
-              onChange={(event) => setExceptionStatus(event.target.value)}
+              onChange={(event) => {
+                setExceptionStatus(event.target.value);
+                setExceptionPage(1);
+              }}
               options={[
                 ["open", "Open"],
                 ["acknowledged", "Acknowledged"],
@@ -840,14 +935,18 @@ function Imports({ can, notify }) {
                 ["all", "All statuses"],
               ]}
             />
-            <span>Showing up to 20</span>
+            <span>
+              {exceptionPagination.total
+                ? `${exceptionPagination.from}–${exceptionPagination.to} of ${exceptionPagination.total}`
+                : "Queue clear"}
+            </span>
           </div>
           <Table
             columns={["Code", "Severity", "Message", "Status", "Action"]}
             caption="Import exception queue"
             emptyTitle="No matching exceptions"
             emptyDetail="This queue is clear for the selected status."
-            rows={visibleExceptions.map((item) => [
+            rows={exceptions.map((item) => [
               label(item.code),
               <Status value={item.severity} />,
               item.message,
@@ -861,6 +960,27 @@ function Imports({ can, notify }) {
               ),
             ])}
           />
+          {exceptionPagination.total_pages > 1 && (
+            <nav className="table-pagination" aria-label="Import exception pages">
+              <button
+                className="secondary"
+                disabled={exceptionPagination.page === 1}
+                onClick={() => setExceptionPage((page) => page - 1)}
+              >
+                Previous
+              </button>
+              <span aria-live="polite">
+                Page {exceptionPagination.page} of {exceptionPagination.total_pages}
+              </span>
+              <button
+                className="secondary"
+                disabled={exceptionPagination.page === exceptionPagination.total_pages}
+                onClick={() => setExceptionPage((page) => page + 1)}
+              >
+                Next
+              </button>
+            </nav>
+          )}
         </Panel>
       </div>
       {preview && (
@@ -881,22 +1001,38 @@ function Imports({ can, notify }) {
                     ? `${previewMappingProfile.name} · v${preview.mapping_profile_version}`
                     : "Exact batch snapshot",
                 ],
+                [
+                  "Correction lineage",
+                  preview.restaged_from_batch_id
+                    ? `Restaged from ${preview.restaged_from_batch_id.slice(0, 8)}…`
+                    : "Original source batch",
+                ],
                 ["Status", <Status value={preview.status} />],
               ]}
             />
-            {preview.status === "staged" && can("operate") && (
-              <button
-                className="primary"
-                disabled={busy || !preview.valid_count}
-                onClick={approveAndApply}
-              >
-                {busy
-                  ? "Applying…"
-                  : preview.error_count || preview.duplicate_count
-                    ? "Apply valid rows only"
-                    : "Approve and apply"}
-              </button>
-            )}
+            <div className="button-row">
+              {(preview.error_count > 0 ||
+                preview.duplicate_count > 0 ||
+                preview.status === "failed") &&
+                can("operate") && (
+                  <button className="secondary" disabled={busy} onClick={beginCorrection}>
+                    Correct and restage
+                  </button>
+                )}
+              {preview.status === "staged" && can("operate") && (
+                <button
+                  className="primary"
+                  disabled={busy || !preview.valid_count}
+                  onClick={approveAndApply}
+                >
+                  {busy
+                    ? "Applying…"
+                    : preview.error_count || preview.duplicate_count
+                      ? "Apply valid rows only"
+                      : "Approve and apply"}
+                </button>
+              )}
+            </div>
           </div>
           <Table
             columns={["CSV row", "Natural key", "Status", "Validation result", "Created record"]}
@@ -911,6 +1047,28 @@ function Imports({ can, notify }) {
                 : "—",
             ])}
           />
+          {preview.row_page && preview.row_page.total_pages > 1 && (
+            <nav className="table-pagination" aria-label="Import validation preview pages">
+              <button
+                className="secondary"
+                disabled={preview.row_page.page === 1 || busy}
+                onClick={() => openBatch(preview.id, preview.row_page.page - 1)}
+              >
+                Previous 100
+              </button>
+              <span aria-live="polite">
+                Rows {preview.row_page.from}–{preview.row_page.to} of {preview.row_page.total_rows}{" "}
+                · page {preview.row_page.page} of {preview.row_page.total_pages}
+              </span>
+              <button
+                className="secondary"
+                disabled={preview.row_page.page === preview.row_page.total_pages || busy}
+                onClick={() => openBatch(preview.id, preview.row_page.page + 1)}
+              >
+                Next 100
+              </button>
+            </nav>
+          )}
         </Panel>
       )}
       {showStage && (
@@ -940,6 +1098,25 @@ function Imports({ can, notify }) {
                     `${item.name} · version ${item.version}`,
                   ])}
                 />
+                <div className="template-download">
+                  <button type="button" className="secondary" onClick={downloadTemplate}>
+                    Download blank {selectedTemplate.name.toLowerCase()} template
+                  </button>
+                  <span>CSV headers match template version {selectedTemplate.version}.</span>
+                </div>
+                {draft.restaged_from_batch_id && (
+                  <div className="review-notice" role="note">
+                    <strong>Correcting {draft.correction_source_filename}</strong>
+                    <span>
+                      Edit the {draft.correction_row_count} row
+                      {draft.correction_row_count === 1 ? "" : "s"} below. The new batch will retain
+                      a link to its source.{" "}
+                      {draft.correction_scope === "full_replacement"
+                        ? "This is a full replacement because the source batch was not applied."
+                        : "Previously applied rows are excluded; only exception rows are restaged."}
+                    </span>
+                  </div>
+                )}
                 <label className="file-drop">
                   <input type="file" accept=".csv,text/csv" onChange={loadCsvFile} />
                   <strong>{draft.csv ? "Replace CSV file" : "Choose CSV file"}</strong>
@@ -955,7 +1132,13 @@ function Imports({ can, notify }) {
                   label="CSV data"
                   as="textarea"
                   value={draft.csv}
-                  onChange={(event) => updateDraft({ csv: event.target.value, mapping: {} })}
+                  onChange={(event) => {
+                    const csv = event.target.value;
+                    updateDraft({
+                      csv,
+                      mapping: sameHeaders(headers, csvHeaders(csv)) ? draft.mapping : {},
+                    });
+                  }}
                   placeholder={`${selectedTemplate.sample_header}\n`}
                   hint={`Choose a file above or paste its contents. Expected fields: ${selectedTemplate.fields.map((item) => item.key).join(", ")}.`}
                 />
@@ -1110,6 +1293,12 @@ function Imports({ can, notify }) {
                       ["Template", `${selectedTemplate.name} · v${selectedTemplate.version}`],
                       ["Detected columns", headers.length],
                       ["Mapped fields", Object.values(draft.mapping).filter(Boolean).length],
+                      [
+                        "Correction source",
+                        draft.restaged_from_batch_id
+                          ? `${draft.correction_source_filename} · ${draft.correction_row_count} rows`
+                          : "Original source batch",
+                      ],
                       [
                         "Mapping lineage",
                         selectedMappingProfile
