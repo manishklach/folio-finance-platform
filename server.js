@@ -17,6 +17,7 @@ import {
   validateProductionConfig,
 } from "./lib/runtime-config.js";
 import { verifyWebhookSignature } from "./lib/webhook-verification.js";
+import { stripeWebhookPage } from "./lib/provider-adapters.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -802,14 +803,18 @@ async function webhook(req, res, url, platform, ledgers, requestId, environment)
     { actor: `webhook.${provider}`, orgId: org.id, role: "system", requestId },
     () =>
       ledger.applyExternalEvent(provider, event.id, payloadHash, () =>
-        applyWebhook(provider, event, ledger),
+        applyWebhook(provider, event, ledger, connection),
       ),
   );
   platform.webhookRecord(provider, event.id, org.id, payloadHash, "processed", application.result);
   return json(res, 200, application);
 }
 
-function applyWebhook(provider, event, ledger) {
+function applyWebhook(provider, event, ledger, connection) {
+  if (provider === "stripe" && connection) {
+    const run = ledger.startIntegrationSync({ connection_id: connection.id, trigger: "webhook" });
+    return ledger.ingestIntegrationPage({ sync_run_id: run.id, ...stripeWebhookPage(event) });
+  }
   if (provider === "stripe" && event.type === "payment.received")
     return ledger.recordPayment(event.data);
   if (provider === "stripe" && event.type === "invoice.created")

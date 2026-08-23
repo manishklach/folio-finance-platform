@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createLedger } from "../lib/db.js";
-import { synchronizeProviderConnection } from "../lib/provider-adapters.js";
+import { stripeWebhookPage, synchronizeProviderConnection } from "../lib/provider-adapters.js";
 
 function connection(provider, settings = {}, externalAccountId = null) {
   const ledger = createLedger(":memory:");
@@ -161,6 +161,44 @@ test("Stripe adapter paginates by object ID and preserves a created-time waterma
     watermark: "1787472060",
   });
   ledger.close();
+});
+
+test("Stripe webhook events become versioned provider records instead of accounting commands", () => {
+  const page = stripeWebhookPage({
+    id: "evt_invoice_created_1",
+    type: "invoice.created",
+    created: 1787472200,
+    data: {
+      object: {
+        id: "in_webhook_1",
+        customer: "cus_1",
+        amount_due: 7250,
+        currency: "usd",
+        status: "draft",
+        livemode: true,
+      },
+    },
+  });
+  assert.equal(page.added.length, 1);
+  assert.equal(page.added[0].object_type, "stripe_invoice");
+  assert.equal(page.added[0].external_id, "in_webhook_1");
+  assert.equal(page.added[0].source_version, "evt_invoice_created_1");
+  assert.deepEqual(page.added[0].normalized, {
+    customer_external_id: "cus_1",
+    amount_cents: 7250,
+    currency: "usd",
+    status: "draft",
+    livemode: true,
+  });
+  assert.throws(
+    () =>
+      stripeWebhookPage({
+        id: "evt_unknown",
+        type: "radar.early_fraud_warning.created",
+        data: { object: { id: "issfr_1" } },
+      }),
+    /not supported/,
+  );
 });
 
 test("Gusto adapter honors response pagination metadata and normalizes payroll totals", async () => {

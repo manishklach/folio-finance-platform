@@ -156,9 +156,24 @@ test("Stripe connection endpoint uses its secret reference and binds provider ac
     rmSync(directory, { recursive: true, force: true });
   });
   const endpoint = `http://127.0.0.1:${app.server.address().port}/webhooks/stripe/${setup.session.slug}/${connection.id}`;
-  const send = async (account) => {
+  const send = async (account, type = "unsupported") => {
     const body = Buffer.from(
-      JSON.stringify({ id: `evt_${account}`, type: "unsupported", account, data: {} }),
+      JSON.stringify({
+        id: `evt_${account}_${type}`,
+        type,
+        account,
+        created: 1787472200,
+        data: {
+          object: {
+            id: "in_connection_1",
+            customer: "cus_connection_1",
+            amount_due: 9100,
+            currency: "usd",
+            status: "draft",
+            livemode: true,
+          },
+        },
+      }),
     );
     const now = Math.floor(Date.now() / 1000);
     const signature = createHmac("sha256", connectionSecret)
@@ -172,7 +187,21 @@ test("Stripe connection endpoint uses its secret reference and binds provider ac
     });
   };
   assert.equal((await send("acct_wrong")).status, 401);
-  assert.equal((await send("acct_expected")).status, 422);
+  const first = await send("acct_expected", "invoice.created");
+  const replay = await send("acct_expected", "invoice.created");
+  assert.equal(first.status, 200);
+  assert.equal(replay.status, 200);
+  assert.equal((await replay.json()).duplicate, true);
+  const activeLedger = app.ledgers.get(setup.session.org_id);
+  const records = activeLedger.integrationRecords(connection.id);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].object_type, "stripe_invoice");
+  assert.equal(
+    activeLedger.db
+      .prepare("SELECT COUNT(*) count FROM journal_entries WHERE source='stripe_webhook'")
+      .get().count,
+    0,
+  );
 });
 
 test("production Stripe webhooks reject tenant-slug-only endpoints", async (t) => {
