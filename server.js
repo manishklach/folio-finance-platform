@@ -11,6 +11,8 @@ import { runWithRequestContext } from "./lib/request-context.js";
 import { financialReport, reportCsv, reportPdf } from "./lib/reports.js";
 import * as Sentry from "@sentry/node";
 import { secret } from "./lib/secrets.js";
+import { validateBrowserOrigin, validateProductionConfig } from "./lib/runtime-config.js";
+export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
 if (sentryDsn)
@@ -23,6 +25,7 @@ if (sentryDsn)
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
 const stateMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const latencyBuckets = [0.05, 0.1, 0.25, 0.5, 0.75, 1, 2, 5, 10];
 const idempotentRoutes = new Set([
   "/api/invoices",
   "/api/receivables/payments",
@@ -42,12 +45,14 @@ export function createFolioServer(options = {}) {
       options.tenantDir || process.env.TENANT_DB_DIR,
     );
   const ledgers = new Map();
+  const runtime = { accepting: true };
   const metrics = {
     started_at: new Date().toISOString(),
     requests: 0,
     errors: 0,
     latency_ms: 0,
-    by_route: {},
+    inflight: 0,
+    by_request: {},
   };
   const server = http.createServer(async (req, res) => {
     const requestId = req.headers["x-request-id"] || randomUUID();
@@ -55,15 +60,22 @@ export function createFolioServer(options = {}) {
     res.setHeader("X-Request-Id", requestId);
     securityHeaders(res);
     metrics.requests += 1;
+    metrics.inflight += 1;
     try {
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-      if (url.pathname === "/healthz") {
-        const readiness = health(platform, ledgers);
+      if (url.pathname === "/livez")
+        return json(res, 200, {
+          status: "alive",
+          uptime_seconds: Math.round(process.uptime()),
+          time: new Date().toISOString(),
+        });
+      if (url.pathname === "/readyz" || url.pathname === "/healthz") {
+        const readiness = health(platform, ledgers, runtime);
         return json(res, readiness.status === "ok" ? 200 : 503, readiness);
       }
       if (req.method === "GET" && url.pathname === "/setup/status")
         return json(res, 200, platform.status());
-      if (url.pathname === "/metrics") return json(res, 200, metricsSnapshot(metrics));
+      if (url.pathname === "/metrics") return prometheus(res, metrics, platform, ledgers, runtime);
       if (url.pathname.startsWith("/webhooks/"))
         return await webhook(req, res, url, platform, ledgers, requestId);
       if (url.pathname.startsWith("/api/"))
@@ -92,8 +104,19 @@ export function createFolioServer(options = {}) {
     } finally {
       const latency = Math.round((performance.now() - started) * 100) / 100;
       metrics.latency_ms += latency;
-      const route = `${req.method} ${safePath(req.url)}`;
-      metrics.by_route[route] = (metrics.by_route[route] || 0) + 1;
+      metrics.inflight = Math.max(0, metrics.inflight - 1);
+      const route = metricRoute(safePath(req.url));
+      const metricKey = `${req.method}|${route}|${res.statusCode}`;
+      const requestMetric = metrics.by_request[metricKey] || {
+        count: 0,
+        latency_ms: 0,
+        buckets: Object.fromEntries(latencyBuckets.map((bound) => [bound, 0])),
+      };
+      requestMetric.count += 1;
+      requestMetric.latency_ms += latency;
+      for (const bound of latencyBuckets)
+        if (latency / 1000 <= bound) requestMetric.buckets[bound] += 1;
+      metrics.by_request[metricKey] = requestMetric;
       log("request", {
         request_id: requestId,
         method: req.method,
@@ -110,14 +133,16 @@ export function createFolioServer(options = {}) {
   server.keepAliveTimeout = 5_000;
   server.on("clientError", (_error, socket) => socket.end("HTTP/1.1 400 Bad Request\r\n\r\n"));
   function close(callback) {
+    runtime.accepting = false;
     for (const ledger of ledgers.values()) ledger.close();
     platform.close();
     server.close(callback);
   }
-  return { server, platform, ledgers, close };
+  return { server, platform, ledgers, runtime, close };
 }
 
 async function apiRequest(req, res, url, platform, ledgers, requestId) {
+  if (stateMethods.has(req.method)) validateBrowserOrigin(req.headers);
   const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
   if (
     req.method === "POST" &&
@@ -901,15 +926,8 @@ function safePath(value = "") {
     return "/invalid";
   }
 }
-function metricsSnapshot(metrics) {
-  return {
-    ...metrics,
-    average_latency_ms: metrics.requests
-      ? Math.round((metrics.latency_ms / metrics.requests) * 100) / 100
-      : 0,
-  };
-}
-function health(platform, ledgers) {
+function health(platform, ledgers, runtime = { accepting: true }) {
+  if (!runtime.accepting) return { status: "unhealthy", reason: "shutting_down" };
   try {
     const started = performance.now();
     platform.db.prepare("SELECT 1 ok").get();
@@ -924,6 +942,71 @@ function health(platform, ledgers) {
     return { status: "unhealthy", database: "unavailable" };
   }
 }
+function prometheus(res, metrics, platform, ledgers, runtime) {
+  const ready = health(platform, ledgers, runtime).status === "ok" ? 1 : 0;
+  const lines = [
+    "# HELP folio_up Whether the Folio process is running.",
+    "# TYPE folio_up gauge",
+    "folio_up 1",
+    "# HELP folio_ready Whether Folio can accept accounting requests.",
+    "# TYPE folio_ready gauge",
+    `folio_ready ${ready}`,
+    "# HELP folio_process_uptime_seconds Process uptime.",
+    "# TYPE folio_process_uptime_seconds gauge",
+    `folio_process_uptime_seconds ${process.uptime()}`,
+    "# HELP folio_http_inflight_requests Requests currently executing.",
+    "# TYPE folio_http_inflight_requests gauge",
+    `folio_http_inflight_requests ${metrics.inflight}`,
+    "# HELP folio_tenant_connections Open tenant ledger connections.",
+    "# TYPE folio_tenant_connections gauge",
+    `folio_tenant_connections ${ledgers.size}`,
+    "# HELP folio_http_requests_total HTTP requests by bounded route and status.",
+    "# TYPE folio_http_requests_total counter",
+    "# HELP folio_http_request_duration_seconds Request duration by bounded route.",
+    "# TYPE folio_http_request_duration_seconds histogram",
+  ];
+  const durations = new Map();
+  for (const [key, value] of Object.entries(metrics.by_request)) {
+    const [method, route, status] = key.split("|");
+    const labels = `method="${metricEscape(method)}",route="${metricEscape(route)}",status="${metricEscape(status)}"`;
+    lines.push(`folio_http_requests_total{${labels}} ${value.count}`);
+    const durationKey = `${method}|${route}`;
+    const duration = durations.get(durationKey) || {
+      count: 0,
+      latency_ms: 0,
+      buckets: Object.fromEntries(latencyBuckets.map((bound) => [bound, 0])),
+    };
+    duration.count += value.count;
+    duration.latency_ms += value.latency_ms;
+    for (const bound of latencyBuckets) duration.buckets[bound] += value.buckets[bound];
+    durations.set(durationKey, duration);
+  }
+  for (const [key, value] of durations) {
+    const [method, route] = key.split("|");
+    const labels = `method="${metricEscape(method)}",route="${metricEscape(route)}"`;
+    for (const bound of latencyBuckets)
+      lines.push(
+        `folio_http_request_duration_seconds_bucket{${labels},le="${bound}"} ${value.buckets[bound]}`,
+      );
+    lines.push(`folio_http_request_duration_seconds_bucket{${labels},le="+Inf"} ${value.count}`);
+    lines.push(`folio_http_request_duration_seconds_sum{${labels}} ${value.latency_ms / 1000}`);
+    lines.push(`folio_http_request_duration_seconds_count{${labels}} ${value.count}`);
+  }
+  res.writeHead(200, {
+    "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  return res.end(`${lines.join("\n")}\n`);
+}
+function metricRoute(path) {
+  return path
+    .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ":id")
+    .replace(/\/\d+(?=\/|$)/g, "/:id")
+    .slice(0, 160);
+}
+function metricEscape(value) {
+  return String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "\\n");
+}
 function log(event, fields) {
   process.stdout.write(
     `${JSON.stringify({ timestamp: new Date().toISOString(), event, ...fields })}\n`,
@@ -935,10 +1018,31 @@ function problem(message, statusCode = 400) {
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
+  validateProductionConfig(process.env);
   const app = createFolioServer();
   const port = Number(process.env.PORT || 4310);
-  app.server.listen(port, "127.0.0.1", () => log("started", { url: `http://127.0.0.1:${port}` }));
-  const shutdown = () => app.close(() => process.exit(0));
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  const host = process.env.HOST || "127.0.0.1";
+  app.server.listen(port, host, () => log("started", { host, port }));
+  let stopping = false;
+  const shutdown = (signal) => {
+    if (stopping) return;
+    stopping = true;
+    app.runtime.accepting = false;
+    log("shutdown_started", { signal });
+    const timer = setTimeout(
+      () => {
+        log("shutdown_forced", { signal });
+        process.exit(1);
+      },
+      Number(process.env.SHUTDOWN_TIMEOUT_MS || 20_000),
+    );
+    timer.unref();
+    app.close(() => {
+      clearTimeout(timer);
+      log("shutdown_complete", { signal });
+      process.exit(0);
+    });
+  };
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }

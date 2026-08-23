@@ -24,7 +24,7 @@ that engine without weakening its deterministic ledger controls.
 | 14. Transactional product UX         | Active   | Guided daily workflows, accessibility, responsive tables/forms, design system |
 | 15. External integrations            | Active   | Common connector lifecycle shipped; live provider adapters remain             |
 | 16. Import and exception operations  | Active   | Ten templates and controlled apply shipped; visual mapper/scale work remains  |
-| 17. Production operations            | Pending  | Hosting, SLOs, monitoring, DR exercises, release/rollback and support         |
+| 17. Production operations            | Active   | Hardened single-node stack and encrypted DR shipped; live exercises remain    |
 | 18. Security hardening               | Pending  | Threat model, abuse tests, scanning, remediation and independent retest       |
 | 19. Edge and migration assurance     | Pending  | Complex accounting, upgrades, failure injection, load and provider contracts  |
 | 20. Accounting validation            | Pending  | CPA/controller test packs, findings, remediation and signed evidence          |

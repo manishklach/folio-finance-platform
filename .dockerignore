@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.tmp
+.runtime
+backups
+data
+node_modules
+npm-debug.log*
+secrets
+test
+coverage

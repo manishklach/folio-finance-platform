@@ -7,4 +7,6 @@ node_modules/
 coverage/
 backups/
 .tmp/
+.runtime/
+secrets/
 .DS_Store

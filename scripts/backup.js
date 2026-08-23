@@ -1,44 +1,23 @@
-import { createHash } from "node:crypto";
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { createBackup } from "../lib/backup.js";
 
-const platformPath = resolve(process.env.PLATFORM_DB_PATH || "data/platform.db");
-const backupRoot = resolve(process.env.BACKUP_DIR || "backups");
-const stamp = new Date().toISOString().replaceAll(":", "-");
-const destination = join(backupRoot, stamp);
-mkdirSync(destination, { recursive: true });
+const key = backupKey();
+if (process.env.NODE_ENV === "production" && !process.env.BACKUP_ENCRYPTION_KEY_FILE)
+  throw new Error("Production backups require BACKUP_ENCRYPTION_KEY_FILE");
+if (process.env.NODE_ENV === "production" && !process.env.BACKUP_KEY_ID)
+  throw new Error("Production backups require BACKUP_KEY_ID");
+const result = createBackup({
+  platformPath: resolve(process.env.PLATFORM_DB_PATH || "data/platform.db"),
+  backupRoot: resolve(process.env.BACKUP_DIR || "backups"),
+  attachmentRoot: resolve(process.env.ATTACHMENT_DIR || "data/attachments"),
+  encryptionKey: key,
+  keyId: key ? process.env.BACKUP_KEY_ID || "development-key" : null,
+});
+process.stdout.write(`${JSON.stringify(result)}\n`);
 
-const control = new DatabaseSync(platformPath);
-control.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-const tenantPaths = control
-  .prepare("SELECT id,database_path FROM organizations WHERE status='active'")
-  .all();
-control.close();
-
-const files = [{ kind: "platform", org_id: null, path: platformPath }];
-for (const tenant of tenantPaths) {
-  const database = new DatabaseSync(tenant.database_path);
-  database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-  database.close();
-  files.push({ kind: "tenant", org_id: tenant.id, path: tenant.database_path });
+function backupKey() {
+  if (process.env.BACKUP_ENCRYPTION_KEY_FILE)
+    return readFileSync(resolve(process.env.BACKUP_ENCRYPTION_KEY_FILE), "utf8").trim();
+  return process.env.BACKUP_ENCRYPTION_KEY || null;
 }
-
-const manifest = { created_at: new Date().toISOString(), files: [] };
-for (const [index, file] of files.entries()) {
-  const targetName = `${index}-${file.kind}-${basename(file.path)}`;
-  const target = join(destination, targetName);
-  copyFileSync(file.path, target);
-  const sha256 = createHash("sha256").update(readFileSync(target)).digest("hex");
-  manifest.files.push({
-    kind: file.kind,
-    org_id: file.org_id,
-    source: file.path,
-    backup: targetName,
-    sha256,
-  });
-}
-writeFileSync(join(destination, "manifest.json"), JSON.stringify(manifest, null, 2));
-process.stdout.write(
-  `${JSON.stringify({ backup: destination, databases: manifest.files.length })}\n`,
-);

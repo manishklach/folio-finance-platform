@@ -17,6 +17,7 @@
     "verify-integrity": "node scripts/verify-integrity.js",
     "build": "vite build",
     "test:load": "node scripts/load-benchmark.js",
+    "ops:preflight": "node scripts/ops-preflight.js",
     "privacy": "node scripts/privacy.js"
   },
   "engines": {

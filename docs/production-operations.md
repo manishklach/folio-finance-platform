@@ -1,0 +1,146 @@
+# Production operations and single-node deployment
+
+This is Folio's executable single-node production reference. It is an engineering deployment
+baseline, not evidence that a particular cloud account, DNS zone, on-call team, off-site vault, or
+customer support organization has been provisioned. Pilot and production acceptance still require a
+credentialed deployment and the named operational exercises below.
+
+## Topology and boundaries
+
+```mermaid
+flowchart LR
+  U[Accounting users] -->|TLS 1.2+| C[Caddy edge proxy]
+  C -->|private network| F[Folio single writer]
+  F --> P[(Platform SQLite)]
+  F --> T[(One SQLite ledger per tenant)]
+  F --> A[(Attachment volume)]
+  M[Prometheus] -->|private /metrics| F
+  M --> AM[Alertmanager]
+  AM -->|secret URL file| O[On-call system]
+  B[Scheduled backup job] --> P
+  B --> T
+  B --> A
+  B --> E[(AES-256-GCM backup volume)]
+  E --> X[Encrypted off-host replication]
+```
+
+The topology deliberately runs exactly one Folio writer. It must not be placed behind multiple app
+replicas or on shared SQLite storage. Horizontal scaling requires the PostgreSQL migration described
+in `adr-001-production-database.md`. Caddy is the only publicly exposed service; `/metrics` is blocked
+at the edge and scraped over the internal network.
+
+The Compose definition uses read-only filesystems, dropped Linux capabilities, no-new-privileges,
+non-root application/monitoring users, bounded temporary filesystems, persistent named volumes,
+dependency health checks, graceful stop periods, and secret files rather than credential values in
+the image. Caddy obtains and renews public TLS certificates for `FOLIO_DOMAIN`.
+
+## Environments and secrets
+
+Development, staging, and production require separate hosts/projects, domains, volumes, encryption
+keys, provider credentials, error-tracking projects, alert routes, and backup destinations. Never
+clone a production database into development. Staging receives synthetic or approved de-identified
+data only.
+
+Required production secret files:
+
+| Secret file variable         | Purpose                                           | Rotation evidence                                                           |
+| ---------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------- |
+| `BACKUP_ENCRYPTION_KEY_FILE` | 32 random bytes encoded as base64                 | Non-secret `BACKUP_KEY_ID`, successful backup and restore using the new key |
+| `ALERT_WEBHOOK_URL_FILE`     | On-call webhook consumed directly by Alertmanager | Successful test alert and resolved notification                             |
+| `SENTRY_DSN_FILE`            | Production error project                          | Synthetic captured error without PII                                        |
+| `OPENAI_API_KEY_FILE`        | Optional journal drafting; file may be empty      | Provider rotation record and draft evaluation when enabled                  |
+
+Provider connector references point to the deployment secrets manager and are not Docker secrets in
+this initial adapter-neutral stack. Live adapters must add their secret files and least-privilege
+identities before certification.
+
+## Preflight and deployment
+
+Use an immutable registry digest, never `latest` or a mutable tag. The preflight rejects insecure
+cookies, HTTP origins, loopback production binding, mutable images, malformed backup keys, missing
+secret files, a non-HTTPS alert route, or a domain/origin mismatch.
+
+```sh
+export NODE_ENV=production HOST=0.0.0.0 SESSION_COOKIE_SECURE=true
+export FOLIO_DOMAIN=folio.example.com PUBLIC_ORIGIN=https://folio.example.com
+export FOLIO_IMAGE=registry.example.com/folio@sha256:<64-hex-digest>
+export BACKUP_KEY_ID=backup-key-2026-08
+export BACKUP_ENCRYPTION_KEY_FILE=/secure/folio/backup-key
+export ALERT_WEBHOOK_URL_FILE=/secure/folio/alert-webhook
+export SENTRY_DSN_FILE=/secure/folio/sentry-dsn
+export OPENAI_API_KEY_FILE=/secure/folio/openai-key
+npm run ops:preflight
+```
+
+Release procedure:
+
+1. Record the release commit, immutable image digest, change owner, migration list, risk, rollback
+   owner, and maintenance window in the release ticket.
+2. Confirm CI, security review, accounting regression evidence, and required external approvals for
+   that exact commit.
+3. Run the preflight, test alert delivery, inspect disk headroom, and run an encrypted backup. Copy the
+   backup to encrypted off-host storage and verify its object checksum.
+4. Rehearse the migration against a restored staging copy. Run
+   `docker compose -f compose.production.yml --profile operations run --rm migrate` against the
+   production volume only during the approved window.
+5. Start the pinned release with `docker compose -f compose.production.yml up -d --wait`. Confirm
+   `/livez`, `/readyz`, sign-in, dashboard, a read-only statement, Prometheus targets, Alertmanager,
+   structured logs, and error tracking.
+6. Run journal integrity and subledger/GL reconciliation checks, then record the release evidence.
+
+This single-node release has a short controlled restart; it does not claim zero downtime.
+
+## Rollback
+
+Application rollback and data rollback are separate decisions. Never point older application code at
+a schema it cannot read.
+
+1. Stop mutations and preserve logs/request IDs. Determine whether the issue is code-only or whether
+   the migration/data changed.
+2. For a code-only compatible rollback, set `FOLIO_IMAGE` to the prior approved digest, run preflight,
+   recreate Folio, and verify readiness, integrity, and reconciliations.
+3. If schema/data rollback is required, stop Folio, preserve the failed volume as evidence, restore the
+   pre-release encrypted backup into new volumes/directories, and run the prior image against the
+   restored copy. Do not overwrite failed or live files.
+4. Reconcile restored subledgers and statements through the recovery point. Accounting approves any
+   re-entered transactions; operators never manufacture corrective journal entries silently.
+5. Record recovery point, lost/replayed external events, customer impact, and follow-up owner.
+
+## Monitoring and alert operations
+
+Folio exposes separate `/livez` and dependency-aware `/readyz` endpoints. During graceful shutdown,
+liveness remains healthy while readiness becomes 503. `/metrics` emits bounded-route Prometheus
+counters and latency histograms; UUID and numeric path segments are normalized to avoid high
+cardinality and identifier leakage.
+
+Repository alerts cover process availability, readiness, server-error ratio, and p95 latency. The
+rules follow Prometheus's symptom-oriented alerting guidance, while Alertmanager groups, inhibits,
+routes, repeats, and resolves notifications. Production owners must add infrastructure alerts for
+host/volume capacity, certificate renewal, backup age, off-host replication, and external provider
+freshness because this application process cannot observe those systems reliably.
+
+Every quarter, send a synthetic page through the configured route and record alert creation,
+delivery, acknowledgement, escalation, and resolved delivery times. A configured file alone is not
+proof that anyone will be paged.
+
+The Compose dependency health behavior follows [Docker's current service-health guidance](https://docs.docker.com/compose/how-tos/startup-order/).
+Prometheus loads and validates rules through `rule_files`, and Alertmanager routes those alerts to a
+receiver using a secret-backed `url_file`, as described in the official
+[Prometheus alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)
+and [Alertmanager configuration](https://prometheus.io/docs/alerting/latest/configuration/).
+
+## Backup, recovery, and support schedule
+
+- Run encrypted control/tenant/attachment backups at least hourly to meet the one-hour ledger/control
+  RPO. Replicate completed immutable backup directories off-host; a local named volume is not a backup
+  destination.
+- Retain 35 daily and 12 monthly recovery points unless contractual/legal requirements demand more.
+- Run an automated checksum/integrity restore weekly, a named operator restore quarterly, and a
+  regional-loss/tabletop exercise annually. The production RTO target is four hours.
+- Keep primary/secondary on-call, accounting escalation, security, privacy/legal, deployment, and
+  customer-communications ownership in the approved operations system.
+- SEV-1 acknowledgement target is 15 minutes. Customer tickets involving posting, isolation, or
+  statement correctness bypass ordinary support and page finance engineering/accounting support.
+
+See `backup-restore-runbook.md` and `incident-response.md` for execution detail. External evidence,
+personal contact information, contracts, keys, customer data, and signed approvals stay outside Git.

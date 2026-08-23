@@ -22,3 +22,18 @@ jobs:
       - run: npm run migrate
         env:
           PLATFORM_DB_PATH: data/ci-platform.db
+      - run: docker build --check .
+      - run: docker build -t folio-ci:${{ github.sha }} .
+      - name: Validate production Compose topology
+        run: docker compose -f compose.production.yml config --quiet
+        env:
+          FOLIO_DOMAIN: folio.example.test
+          BACKUP_KEY_ID: ci-backup-key
+          ALERT_WEBHOOK_URL_FILE: .env.example
+          BACKUP_ENCRYPTION_KEY_FILE: .env.example
+          OPENAI_API_KEY_FILE: .env.example
+          SENTRY_DSN_FILE: .env.example
+      - name: Validate monitoring configuration
+        run: |
+          docker run --rm --entrypoint /bin/promtool -v "$PWD/ops:/etc/prometheus:ro" prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint /bin/amtool -v "$PWD/ops:/etc/alertmanager:ro" -v "$PWD/.env.example:/run/secrets/alert_webhook_url:ro" prom/alertmanager:v0.28.1 check-config /etc/alertmanager/alertmanager.yml

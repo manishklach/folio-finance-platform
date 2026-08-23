@@ -1,0 +1,35 @@
+groups:
+  - name: folio-availability
+    rules:
+      - alert: FolioUnavailable
+        expr: up{job="folio"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: Folio is unavailable
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/incident-response.md
+      - alert: FolioNotReady
+        expr: folio_ready == 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: Folio is alive but cannot accept accounting requests
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
+      - alert: FolioHighServerErrorRate
+        expr: sum(rate(folio_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(folio_http_requests_total[5m])), 0.001) > 0.02
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: Folio server error rate exceeds 2 percent
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/incident-response.md
+      - alert: FolioHighP95Latency
+        expr: histogram_quantile(0.95, sum by (le) (rate(folio_http_request_duration_seconds_bucket[5m]))) > 0.5
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Folio p95 request latency exceeds 500 ms
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
