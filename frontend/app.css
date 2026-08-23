@@ -811,6 +811,48 @@ button,
   font-size: 12px;
   line-height: 1.5;
 }
+.application-review {
+  display: grid;
+  gap: 15px;
+  padding: 20px;
+}
+.application-review .source-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.control-note {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid #b7d8ca;
+  border-radius: 10px;
+  background: #eff8f4;
+  color: #23483d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.control-note.warning-note {
+  border-color: #edca9d;
+  background: #fff8ed;
+  color: #75480f;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.check-row input {
+  width: 16px;
+  height: 16px;
+}
+.form-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .workflow-toolbar {
   display: flex;
   align-items: end;
@@ -1057,6 +1099,9 @@ button,
   .form-grid,
   .source-summary {
     grid-template-columns: 1fr;
+  }
+  .application-review .source-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .wizard-steps li {
     justify-content: center;

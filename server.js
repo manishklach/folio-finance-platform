@@ -609,6 +609,12 @@ async function api(req, res, url, ledger, platform, session, environment) {
     );
   if (req.method === "GET" && url.pathname === "/api/integrations/exceptions")
     return json(res, 200, ledger.integrationDeadLetters());
+  if (req.method === "GET" && url.pathname === "/api/integrations/mappings")
+    return json(
+      res,
+      200,
+      ledger.integrationMappings(url.searchParams.get("connection_id") || null),
+    );
   const integrationRecordsMatch = url.pathname.match(
     /^\/api\/integrations\/connections\/([^/]+)\/records$/,
   );
@@ -658,6 +664,30 @@ async function api(req, res, url, ledger, platform, session, environment) {
     );
   if (req.method === "POST" && url.pathname === "/api/integrations/mappings")
     return json(res, 201, ledger.createIntegrationMapping(await readJson(req)));
+  const integrationPreviewMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/preview$/,
+  );
+  if (req.method === "POST" && integrationPreviewMatch)
+    return json(
+      res,
+      200,
+      ledger.previewIntegrationRecordApplication({
+        record_id: integrationPreviewMatch[1],
+        classify: true,
+      }),
+    );
+  const integrationApplyMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/apply$/,
+  );
+  if (req.method === "POST" && integrationApplyMatch)
+    return json(
+      res,
+      200,
+      ledger.applyIntegrationRecord({
+        ...(await readJson(req)),
+        record_id: integrationApplyMatch[1],
+      }),
+    );
   if (req.method === "POST" && url.pathname === "/api/integrations/exceptions/status")
     return json(res, 200, ledger.resolveIntegrationDeadLetter(await readJson(req)));
   if (req.method === "GET" && url.pathname === "/api/imports/templates")

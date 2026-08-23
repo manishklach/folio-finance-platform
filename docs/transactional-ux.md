@@ -13,6 +13,7 @@ a WCAG certification or a substitute for controller usability validation.
 | Revenue                      | Contract entry, billing, recognition, waterfall and GL reconciliation                                                                | Revenue UI and ASC 606 regression/property tests                         | Representative controller walkthrough                            |
 | Receivables                  | Payments, applications, credits, refunds, write-offs, disputes and collections                                                       | Receivables UI and SaaS/operations tests                                 | End-user task timing and high-volume queue evidence              |
 | Imports                      | Source/template, mapping, versioned fuzzy policy, paged validation, compare/accept rationale, controlled apply and linked correction | UI/import/API tests, 10k capacity gate and rendered-browser verification | Deployed soak evidence and controller walkthrough                |
+| Integrations                 | Connection lifecycle, durable sync, staged-record queue, versioned mapping, fingerprinted preview, approval note and draft outcome   | Integration UI, route-policy and mapping/application regression tests    | Provider sandbox and native subledger walkthroughs               |
 | Bank and close               | Statement controls, reconciliation exceptions, checklist and period lock                                                             | Bank/close UI and operations tests                                       | Named close rehearsal with retained evidence                     |
 | Investments and fixed assets | Guided lifecycle actions, rollforwards, disclosures and GL reconciliation                                                            | Module UIs and Topic regression tests                                    | Controller validation against representative populations         |
 | Reports and administration   | Statement exports plus users, policies, connector and fiscal configuration                                                           | Reports/admin UI, route-policy tests and report tests                    | Manual screen-reader review and customer role testing            |
@@ -39,6 +40,27 @@ flowchart LR
   C -->|Yes| X[Full source replacement or exception-only child]
   X --> V
 ```
+
+## Provider application flow
+
+```mermaid
+flowchart LR
+  S[Durable provider synchronization] --> N[Normalized immutable record]
+  N --> M[Administrator-owned versioned mapping]
+  M --> P[Operator preview and mapping fingerprint]
+  P --> V{All fields and accounts valid?}
+  V -->|No| E[Record-linked exception queue]
+  V -->|Yes| A[Explicit approval note]
+  A --> D[Idempotent draft journal]
+  D --> R[Independent posting and reconciliation review]
+  E --> C[Correct mapping and retry]
+  C --> P
+```
+
+The provider workbench never treats a normalized event as a posting command. The server recomputes the
+mapping at application time and rejects an approval if its fingerprint is stale. Provider removals require
+an explicit reversal policy, and successful application creates a draft that remains subject to the normal
+posting permission and closed-period controls.
 
 The browser never determines validity or authorization. Client suggestions only prepare the mapping;
 the tenant repository re-parses the complete CSV, validates the mapping and template version, rejects

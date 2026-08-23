@@ -84,6 +84,8 @@ The detailed fixed-assets matrix, lifecycle flowchart, API inventory, and scope 
 - Concrete Plaid, Stripe, Gusto, and HubSpot HTTP adapters with bounded paging, throttling retries,
   normalized source outcomes, safe failures, and a tenant-scoped CLI synchronization worker
 - Versioned mapping definitions, payload hashes, run metrics, and resolvable exception/dead-letter queues
+- Transactional provider-record workbench with mapping previews, stale-preview protection, approval
+  notes, record-linked exceptions, and idempotent draft-journal creation without automatic posting
 - Administrator-only configuration and operator-scoped synchronization controls
 
 The exact implemented boundary, provider matrix, flowchart, API inventory, and remaining live-provider

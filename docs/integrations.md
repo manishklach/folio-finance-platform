@@ -9,12 +9,12 @@ can carry live financial data.
 
 ## Initial matrix
 
-| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                                                                                        | Still required for live use                                                                                                                |
-| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned request/normalization adapter, full pagination restart, staged outcomes, retries and exceptions                                                                                                                                     | Link handoff/token exchange, JWT webhook verification, sandbox certification and credentialed staging evidence                             |
-| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter, raw-body `Stripe-Signature` verification, connection-scoped secret/account binding, timestamp tolerance, durable fast acknowledgement, leased retry/dead-letter worker, tenant-transactional inbox and native event staging | OAuth/restricted-key exchange, controlled staged-record-to-accounting mapping/application, payout reconciliation and sandbox certification |
-| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries and staged outcomes                                                                                                                                             | OAuth lifecycle, verified events, detailed payroll receipts, GL mappings and sandbox certification                                         |
-| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries and staged outcomes                                                                                                                                              | OAuth lifecycle, signed webhooks, association expansion and contract-handoff review                                                        |
+| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                                                  | Still required for live use                                                                                                          |
+| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned request/normalization adapter, full pagination restart, staged outcomes, retries, mapping preview and approved draft-journal application                                                      | Link handoff/token exchange, JWT webhook verification, native bank matching, sandbox certification and credentialed staging evidence |
+| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter, raw-body `Stripe-Signature` verification, connection-scoped secret/account binding, durable queue/inbox, native event staging, mapping preview and approved draft-journal application | OAuth/restricted-key exchange, native billing/subledger application, payout reconciliation and sandbox certification                 |
+| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries, staged outcomes, mapping preview and approved draft-journal application                                                  | OAuth lifecycle, verified events, detailed payroll receipts, native payroll subledger handoff and sandbox certification              |
+| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries, staged outcomes, mapping preview and approved draft-journal application                                                   | OAuth lifecycle, signed webhooks, association expansion, native contract handoff and sandbox certification                           |
 
 The provider behavior assumptions above follow the vendors' current official documentation:
 [Plaid transaction sync](https://plaid.com/docs/transactions/sync-migration/),
@@ -76,8 +76,8 @@ npm run integrations:sync -- --database=data/tenants/<tenant>.db --connection=<c
 ```
 
 The scheduler must supply one JSON credential secret file/environment reference for the selected
-connection. Automatic mapping application and hosted authorization remain separate controlled
-workflows.
+connection. Hosted authorization and provider-specific native subledger application remain separate
+controlled workflows.
 
 Connection-bound signed webhooks are verified and durably inserted into the platform delivery queue
 before HTTP 202 is returned. A separate worker claims one delivery with a time-limited lease, applies
@@ -96,8 +96,15 @@ boundary.
 Supported native Stripe customer, subscription, invoice, credit-note, charge, refund, dispute and
 payout events are normalized into versioned provider records in that same transaction. They do not
 act as client-supplied accounting commands and do not post journals directly. Unsupported event
-families fail closed. The staged records must pass configured mappings, review controls and payout or
-subledger reconciliation before they may create accounting effects.
+families fail closed. An administrator configures connection-specific, versioned mappings into the
+five-field journal draft shape: date, memo, integer-cent amount, debit account code and credit account
+code. An operator previews the exact mapping fingerprint and must supply an approval note. A successful
+application creates one idempotent **draft** journal; it never posts, and its application approver is
+blocked from posting it. Mapping changes invalidate stale
+previews, validation failures enter one record-linked exception, and removed records fail closed for a
+separate reversal policy. Applying a corrected record resolves its linked mapping exception in the same
+transaction. Provider-native invoice, payroll, bank-matching, contract and payout subledger workflows
+remain launch work and must reconcile before posting.
 
 ## API inventory
 
@@ -116,7 +123,10 @@ The direct sync-run page API remains for adapter ingestion, controlled diagnosti
 | `POST /api/integrations/sync-runs/:id/page`     | Idempotently stage a cursor page                 | Operate    |
 | `POST /api/integrations/sync-runs/:id/fail`     | Fail a run and create an exception               | Operate    |
 | `GET /api/integrations/connections/:id/records` | Inspect staged normalized records                | Read       |
+| `GET /api/integrations/mappings`                | Inspect active global or connection mappings     | Read       |
 | `POST /api/integrations/mappings`               | Create a versioned mapping                       | Admin      |
+| `POST /api/integrations/records/:id/preview`    | Validate and fingerprint the mapped draft shape  | Operate    |
+| `POST /api/integrations/records/:id/apply`      | Approve one idempotent draft-journal application | Operate    |
 | `GET /api/integrations/exceptions`              | Inspect integration dead letters                 | Read       |
 | `POST /api/integrations/exceptions/status`      | Retry, resolve or ignore an exception            | Operate    |
 | `POST /api/jobs/provider-syncs`                 | Queue a durable provider synchronization         | Operate    |
@@ -131,6 +141,8 @@ timestamp replay, malformed header, rotation-signature, connection secret/accoun
 native Stripe event normalization without direct journal posting, unsupported-event denial,
 production legacy-route denial, durable fast acknowledgement, queue replay, lease recovery, retry
 exhaustion, dead-letter requeue, atomic inbox rollback, HTTP replay and child-process kill/restart
-after both claim and tenant commit. Live acceptance additionally requires provider-hosted sandbox
-contract tests, controlled accounting-application fixtures, a deployment-level worker kill drill and a
-credentialed staging synchronization.
+after both claim and tenant commit. Mapping tests cover required outputs, transforms/defaults, exact
+account lookup, removal denial, stale-preview rejection, exception deduplication/resolution, transactional
+draft creation and replay idempotency. Live acceptance additionally requires provider-hosted sandbox
+contract tests, provider-native subledger application fixtures, a deployment-level worker kill drill and
+a credentialed staging synchronization.

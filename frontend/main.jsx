@@ -320,6 +320,24 @@ function Module({ active, ...props }) {
 function Integrations({ can, notify }) {
   const resource = useLoad(() => api("/api/integrations/overview"), []);
   const [showForm, setShowForm] = useState(false);
+  const [selectedConnectionId, setSelectedConnectionId] = useState("");
+  const [showMapping, setShowMapping] = useState(false);
+  const [applicationPreview, setApplicationPreview] = useState(null);
+  const [applicationBusy, setApplicationBusy] = useState(false);
+  useEffect(() => {
+    if (!selectedConnectionId && resource.data?.connections?.length)
+      setSelectedConnectionId(resource.data.connections[0].id);
+  }, [resource.data, selectedConnectionId]);
+  const workbench = useLoad(
+    () =>
+      selectedConnectionId
+        ? Promise.all([
+            api(`/api/integrations/connections/${selectedConnectionId}/records`),
+            api(`/api/integrations/mappings?connection_id=${selectedConnectionId}`),
+          ])
+        : Promise.resolve([[], []]),
+    [selectedConnectionId],
+  );
   if (resource.loading) return <Loading />;
   if (resource.error) return <LoadError error={resource.error} retry={resource.refresh} />;
   const value = resource.data;
@@ -392,6 +410,77 @@ function Integrations({ can, notify }) {
       notify({ kind: "error", message: error.message });
     }
   }
+  async function saveMapping(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const fallback = form.get("default");
+    try {
+      await api("/api/integrations/mappings", {
+        method: "POST",
+        body: {
+          connection_id: selectedConnectionId,
+          object_type: form.get("object_type"),
+          source_field: form.get("source_field"),
+          target_field: form.get("target_field"),
+          transform: form.get("transform"),
+          required: form.get("required") === "on",
+          ...(fallback === "" ? {} : { default: fallback }),
+        },
+      });
+      setShowMapping(false);
+      await workbench.refresh();
+      notify({ kind: "success", message: "Versioned mapping activated for future previews." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function previewApplication(record) {
+    try {
+      const preview = await api(`/api/integrations/records/${record.id}/preview`, {
+        method: "POST",
+        body: {},
+      });
+      setApplicationPreview(preview);
+      if (!preview.ready) await Promise.all([resource.refresh(), workbench.refresh()]);
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function approveApplication(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      const result = await api(`/api/integrations/records/${applicationPreview.record.id}/apply`, {
+        method: "POST",
+        body: {
+          approved: true,
+          approval_note: form.get("approval_note"),
+          mapping_fingerprint: applicationPreview.mapping_fingerprint,
+        },
+      });
+      setApplicationPreview(null);
+      await Promise.all([resource.refresh(), workbench.refresh()]);
+      notify(
+        result.status === "applied"
+          ? {
+              kind: "success",
+              message: `Draft journal ${result.journal.id} created for independent posting review.`,
+            }
+          : {
+              kind: "error",
+              message: "Record could not be applied and was placed in the exception queue.",
+            },
+      );
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  const [records, mappings] = workbench.data || [[], []];
+  const selectedConnection = value.connections.find((item) => item.id === selectedConnectionId);
 
   return (
     <div className="module-flow">
@@ -505,6 +594,69 @@ function Integrations({ can, notify }) {
         />
       </Panel>
       <Panel
+        title="Accounting application workbench"
+        subtitle="Review normalized provider records, versioned mappings and draft-journal outcomes"
+        action={
+          can("admin") && selectedConnection ? (
+            <button className="secondary" onClick={() => setShowMapping(true)}>
+              Add mapping
+            </button>
+          ) : null
+        }
+      >
+        {value.connections.length ? (
+          <>
+            <div className="workflow-toolbar">
+              <Field
+                label="Connection"
+                name="workbench_connection"
+                as="select"
+                value={selectedConnectionId}
+                onChange={(event) => setSelectedConnectionId(event.target.value)}
+                options={value.connections.map((item) => [item.id, item.display_name])}
+              />
+              <span>
+                {mappings.length} active mapping{mappings.length === 1 ? "" : "s"} · records become
+                drafts, never automatically posted journals
+              </span>
+            </div>
+            {workbench.loading ? (
+              <Loading />
+            ) : workbench.error ? (
+              <LoadError error={workbench.error} retry={workbench.refresh} />
+            ) : (
+              <Table
+                caption="Provider accounting application queue"
+                emptyTitle="No synchronized records"
+                emptyDetail="Run a provider synchronization to stage normalized records for review."
+                columns={["Type", "Provider ID", "Operation", "Effective", "Status", "Action"]}
+                rows={records.map((item) => [
+                  label(item.object_type),
+                  item.external_id,
+                  label(item.operation),
+                  item.effective_at ? new Date(item.effective_at).toLocaleDateString() : "—",
+                  <Status value={item.status} />,
+                  ["staged", "error"].includes(item.status) && can("operate") ? (
+                    <button className="small-button" onClick={() => previewApplication(item)}>
+                      Review mapping
+                    </button>
+                  ) : item.applied_entity_id ? (
+                    `Draft ${item.applied_entity_id}`
+                  ) : (
+                    "—"
+                  ),
+                ])}
+              />
+            )}
+          </>
+        ) : (
+          <Empty
+            title="No connector configured"
+            detail="Configure a provider connection before building an accounting mapping."
+          />
+        )}
+      </Panel>
+      <Panel
         title="Integration exception queue"
         subtitle="Provider failures remain visible until an authorized operator records a disposition"
       >
@@ -575,6 +727,127 @@ function Integrations({ can, notify }) {
             </div>
             <DialogActions close={() => setShowForm(false)} label="Save configuration" />
           </form>
+        </Dialog>
+      )}
+      {showMapping && selectedConnection && (
+        <Dialog
+          title="Add versioned accounting mapping"
+          subtitle={`Map one ${selectedConnection.display_name} source field into the controlled journal draft shape.`}
+          close={() => setShowMapping(false)}
+        >
+          <form className="form-stack" onSubmit={saveMapping}>
+            <div className="form-grid">
+              <Field
+                label="Provider object type"
+                name="object_type"
+                placeholder="bank_transaction"
+              />
+              <Field label="Source field path" name="source_field" placeholder="amount_cents" />
+            </div>
+            <div className="form-grid">
+              <Field
+                label="Journal target"
+                name="target_field"
+                as="select"
+                options={[
+                  ["date", "Date"],
+                  ["memo", "Memo"],
+                  ["amount_cents", "Amount (cents)"],
+                  ["debit_account_code", "Debit account code"],
+                  ["credit_account_code", "Credit account code"],
+                ]}
+              />
+              <Field
+                label="Transform"
+                name="transform"
+                as="select"
+                options={[
+                  ["identity", "Use as supplied"],
+                  ["date", "ISO date"],
+                  ["cents", "Integer cents"],
+                  ["lowercase", "Lowercase"],
+                  ["uppercase", "Uppercase"],
+                ]}
+              />
+            </div>
+            <Field
+              label="Fallback value"
+              name="default"
+              required={false}
+              hint="Useful for a fixed Folio account code. Folio increments mapping versions automatically."
+            />
+            <label className="check-row">
+              <input type="checkbox" name="required" />
+              Fail validation when the source field and fallback are both empty
+            </label>
+            <DialogActions close={() => setShowMapping(false)} label="Activate mapping" />
+          </form>
+        </Dialog>
+      )}
+      {applicationPreview && (
+        <Dialog
+          title="Review accounting application"
+          subtitle={`${label(applicationPreview.record.object_type)} · ${applicationPreview.record.external_id}`}
+          close={() => setApplicationPreview(null)}
+        >
+          <div className="application-review">
+            <div className="source-summary">
+              <ReviewValue label="Date" value={applicationPreview.mapped.date || "Not mapped"} />
+              <ReviewValue
+                label="Amount"
+                value={
+                  applicationPreview.mapped.amount_cents
+                    ? money(applicationPreview.mapped.amount_cents)
+                    : "Not mapped"
+                }
+              />
+              <ReviewValue
+                label="Debit"
+                value={applicationPreview.mapped.debit_account_code || "Not mapped"}
+              />
+              <ReviewValue
+                label="Credit"
+                value={applicationPreview.mapped.credit_account_code || "Not mapped"}
+              />
+            </div>
+            <div
+              className={applicationPreview.ready ? "control-note" : "control-note warning-note"}
+            >
+              <strong>
+                {applicationPreview.ready ? "Ready for approval" : "Mapping needs attention"}
+              </strong>
+              <span>
+                {applicationPreview.ready
+                  ? applicationPreview.mapped.memo
+                  : applicationPreview.issues.join(" · ")}
+              </span>
+            </div>
+            {applicationPreview.ready ? (
+              <form className="form-stack" onSubmit={approveApplication}>
+                <Field
+                  label="Approval note"
+                  name="approval_note"
+                  as="textarea"
+                  minLength="5"
+                  placeholder="Describe the source evidence and account mapping reviewed."
+                />
+                <p className="form-hint">
+                  Approval creates a draft only. A user with posting permission must independently
+                  review and post it from Journals.
+                </p>
+                <DialogActions
+                  close={() => setApplicationPreview(null)}
+                  label={applicationBusy ? "Applying…" : "Approve and create draft"}
+                />
+              </form>
+            ) : (
+              <div className="dialog-actions">
+                <button className="secondary" onClick={() => setApplicationPreview(null)}>
+                  Return to mappings
+                </button>
+              </div>
+            )}
+          </div>
         </Dialog>
       )}
     </div>
@@ -2518,7 +2791,7 @@ function Kpi({ label: name, value, detail, warning }) {
     </article>
   );
 }
-function Panel({ title, subtitle, children }) {
+function Panel({ title, subtitle, action, children }) {
   return (
     <section className="panel">
       {title && (
@@ -2527,10 +2800,19 @@ function Panel({ title, subtitle, children }) {
             <h2>{title}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
+          {action && <div>{action}</div>}
         </header>
       )}
       <div className="panel-body">{children}</div>
     </section>
+  );
+}
+function ReviewValue({ label: name, value }) {
+  return (
+    <div>
+      <span>{name}</span>
+      <strong title={String(value)}>{value}</strong>
+    </div>
   );
 }
 function ModuleBar({ title, detail, action }) {

@@ -66,6 +66,13 @@ Provider selection may change only through a recorded architecture decision. Liv
 provider sandbox contract tests and a credentialed staging sync; mocks alone do not prove production
 connector readiness.
 
+Repository acceptance includes connection-specific versioned mappings into a validated journal-draft
+shape, server-recomputed preview fingerprints, explicit approval notes, idempotent application and
+record-linked mapping exceptions. No provider record posts a journal automatically, and the actor who
+approves the provider application cannot post its resulting draft. Removed records fail closed until a
+provider/domain-specific reversal policy exists. Production acceptance additionally requires native
+subledger application and reconciliation fixtures for each approved provider object family.
+
 ## 3. Imports, mappings and exception operations
 
 Repository acceptance now includes versioned tenant fuzzy-match policies for one configured text field,
