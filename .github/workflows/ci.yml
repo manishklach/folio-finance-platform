@@ -22,6 +22,7 @@ jobs:
       - run: npm run migrate
         env:
           PLATFORM_DB_PATH: data/ci-platform.db
+      - run: npm run migrate:rehearse
       - run: docker build --check .
       - run: docker build -t folio-ci:${{ github.sha }} .
       - name: Scan production image for high-impact vulnerabilities

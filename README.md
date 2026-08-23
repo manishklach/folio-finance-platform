@@ -148,13 +148,15 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the architecture, accounting invari
 workflow. See [`ROADMAP.md`](ROADMAP.md) for the ordered path from this engineering MVP to a
 production financial system. The completed engineering matrix and remaining independent launch gates are in [`docs/production-readiness.md`](docs/production-readiness.md), [`docs/security-and-compliance.md`](docs/security-and-compliance.md), and the evidence-based [`docs/security-best-practices-report.md`](docs/security-best-practices-report.md).
 
-Operational commands include `npm run migrate`, `npm run backup`,
+Operational commands include `npm run migrate`, `npm run migrate:rehearse`, `npm run backup`,
 `npm run restore -- --source=<backup> --target=<empty-directory>`, `npm run ops:preflight`,
 `npm run verify-integrity`, `npm run test:load`, and `npm run privacy -- export|delete ...`.
 
 The single-node TLS/container topology, production preflight, Prometheus/Alertmanager rules, encrypted
 backup and restore drills, release/rollback steps, SLOs and remaining external operations gates are in
 [`docs/production-operations.md`](docs/production-operations.md).
+Platform upgrade, drift detection, rollback, and interrupted-migration guarantees are documented in
+[`docs/migration-assurance.md`](docs/migration-assurance.md).
 
 ## Test
 

@@ -18,7 +18,7 @@
 | Integration/import ops    | Active             | connector/run foundation and controlled ten-template imports shipped; live provider adapters, visual mapping and scale evidence remain     |
 | Production operations     | Active             | hardened Compose/TLS topology, metrics/alerts and authenticated encrypted restore shipped; credentialed hosting and named exercises remain |
 | Security assurance        | Active             | repository review, abuse regressions and image scanning shipped; threat model, credentialed pen test and independent retest remain         |
-| Accounting assurance      | Pending            | edge/migration suites and named CPA/controller validation required                                                                         |
+| Accounting assurance      | Active             | platform drift, oldest-schema, rollback and interruption suites shipped; accounting property catalogs and CPA/controller validation remain |
 
 “Complete” means the repository contains and tests the engineering capability. It does not claim an external audit, certification, legal opinion, or professional accounting opinion.
 

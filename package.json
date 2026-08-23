@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "migrate": "node scripts/migrate.js",
     "migrate:down": "node scripts/migrate.js --down",
+    "migrate:rehearse": "node scripts/migration-rehearsal.js",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js",
     "verify-integrity": "node scripts/verify-integrity.js",
