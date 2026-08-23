@@ -161,6 +161,18 @@ test("production startup fails closed without HTTPS, secure cookies, a safe bind
     }),
     true,
   );
+  assert.throws(
+    () =>
+      validateProductionConfig({
+        NODE_ENV: "production",
+        SESSION_COOKIE_SECURE: "true",
+        PUBLIC_ORIGIN: "https://folio.test",
+        HOST: "0.0.0.0",
+        BOOTSTRAP_TOKEN_FILE: bootstrap,
+        STRIPE_WEBHOOK_TOLERANCE_SECONDS: "0",
+      }),
+    /STRIPE_WEBHOOK_TOLERANCE_SECONDS/,
+  );
   assert.equal(
     validateBootstrapRequest(
       { "x-folio-bootstrap-token": readFileSync(bootstrap, "utf8") },

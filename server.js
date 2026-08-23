@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { extname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ import {
   validateBrowserOrigin,
   validateProductionConfig,
 } from "./lib/runtime-config.js";
+import { verifyWebhookSignature } from "./lib/webhook-verification.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -84,7 +85,7 @@ export function createFolioServer(options = {}) {
         return json(res, 200, platform.status());
       if (url.pathname === "/metrics") return prometheus(res, metrics, platform, ledgers, runtime);
       if (url.pathname.startsWith("/webhooks/"))
-        return await webhook(req, res, url, platform, ledgers, requestId);
+        return await webhook(req, res, url, platform, ledgers, requestId, environment);
       if (url.pathname.startsWith("/api/"))
         return await apiRequest(req, res, url, platform, ledgers, requestId, environment);
       return await staticFile(res, url.pathname);
@@ -744,7 +745,7 @@ function overview(ledger, url) {
   };
 }
 
-async function webhook(req, res, url, platform, ledgers, requestId) {
+async function webhook(req, res, url, platform, ledgers, requestId, environment) {
   if (req.method !== "POST") throw problem("Not found", 404);
   const match = url.pathname.match(/^\/webhooks\/(stripe|payroll|expenses)\/([a-z0-9-]+)$/);
   if (!match) throw problem("Not found", 404);
@@ -752,10 +753,17 @@ async function webhook(req, res, url, platform, ledgers, requestId) {
   const org = platform.organizationBySlug(slug);
   if (!org) throw problem("Not found", 404);
   const raw = await readBody(req, 1_000_000);
-  const signingSecret = secret(`WEBHOOK_SECRET_${provider.toUpperCase()}`);
+  const signingSecret = secret(`WEBHOOK_SECRET_${provider.toUpperCase()}`, { environment });
   if (!signingSecret) throw problem("Webhook receiver is not configured", 503);
-  const expected = createHmac("sha256", signingSecret).update(raw).digest("hex");
-  if (!constantEqual(expected, String(req.headers["x-folio-signature"] || "")))
+  if (
+    !verifyWebhookSignature({
+      provider,
+      rawBody: raw,
+      headers: req.headers,
+      signingSecret,
+      stripeToleranceSeconds: Number(environment.STRIPE_WEBHOOK_TOLERANCE_SECONDS || 300),
+    })
+  )
     throw problem("Invalid webhook signature", 401);
   let event;
   try {
@@ -958,11 +966,6 @@ function parseCookies(value) {
     }
   }
   return result;
-}
-function constantEqual(expected, supplied) {
-  const a = Buffer.from(expected);
-  const b = Buffer.from(supplied);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 function clientIp(req) {
   return req.socket.remoteAddress || "unknown";

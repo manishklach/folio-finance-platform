@@ -42,6 +42,7 @@ jobs:
           BACKUP_ENCRYPTION_KEY_FILE: .env.example
           OPENAI_API_KEY_FILE: .env.example
           SENTRY_DSN_FILE: .env.example
+          BOOTSTRAP_TOKEN_FILE: .env.example
       - name: Validate monitoring configuration
         run: |
           docker run --rm --entrypoint /bin/promtool -v "$PWD/ops:/etc/prometheus:ro" prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
