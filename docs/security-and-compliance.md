@@ -6,6 +6,7 @@
 - Server-side admin/bookkeeper/approver/read-only authorization and physically separated organization databases. Organization selection comes only from a verified membership. A fail-closed route manifest declares the scope and minimum permission for every API method/path; undeclared handlers cannot execute. Cached ledger handles remain bound to both the verified organization and its resolved database path.
 - SQLite foreign keys, WAL/busy timeout, posted-entry immutability triggers, journal hash verification, backups with SHA-256 manifests, and a restore verifier.
 - Request/body limits, CSP and defensive headers, signed/idempotent webhooks, attachment type/size checks and non-public storage.
+- Session-identity-based per-user rate limits and global/per-tenant concurrency bulkheads, with stricter pools for synchronous reports, imports, integration sync creation, and AI drafts. Rejections provide retry guidance and bounded metrics without tenant identifiers.
 - Request/user/org correlated JSON logs, readiness latency, metrics, and optional Sentry error capture without default PII.
 - Production secret-file enforcement for secrets mounted by a cloud vault, Kubernetes Secret, Docker secret, or equivalent manager.
 - Organization data export and confirmed deletion tooling for privacy operations.
@@ -32,3 +33,6 @@ These cannot be manufactured or self-attested by a coding agent and remain block
 5. The company assigns control owners and completes a SOC 2 readiness assessment before setting an audit period.
 
 Until sign-off contains real parties, dates and attached evidence, Folio must be described as production-engineered but not externally certified or accountant-approved.
+
+Admission control is process-local and does not replace an edge WAF, a distributed limiter, tenant
+storage quotas, durable background jobs, or deployed multi-tenant soak evidence.

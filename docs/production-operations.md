@@ -62,6 +62,14 @@ cookies, HTTP origins, loopback production binding, mutable images, malformed ba
 secret files, a bootstrap token shorter than 32 bytes, a non-HTTPS alert route, or a domain/origin
 mismatch.
 
+Authenticated requests are admitted using trusted session organization/user IDs. Defaults allow 64
+active requests process-wide, 8 per tenant, and 240 requests per user per minute. Synchronous report
+exports, import stage/apply, integration sync creation, and AI drafting also share a 2-request
+concurrency and 30-request-per-minute pool per tenant. Configure these with the six
+`ADMISSION_*` variables in `.env.example`; invalid, zero, or out-of-range values fail startup. Tune
+only from staging/load evidence, and keep the per-tenant values below the capacity at which one
+tenant materially raises another tenant's latency.
+
 ```sh
 export NODE_ENV=production HOST=0.0.0.0 SESSION_COOKIE_SECURE=true
 export FOLIO_DOMAIN=folio.example.com PUBLIC_ORIGIN=https://folio.example.com
@@ -117,13 +125,22 @@ a schema it cannot read.
 Folio exposes separate `/livez` and dependency-aware `/readyz` endpoints. During graceful shutdown,
 liveness remains healthy while readiness becomes 503. `/metrics` emits bounded-route Prometheus
 counters and latency histograms; UUID and numeric path segments are normalized to avoid high
-cardinality and identifier leakage.
+cardinality and identifier leakage. Admission metrics expose active/tracked counts and rejection
+reasons without organization or user labels. `FolioAdmissionRejections` tickets sustained rejection
+traffic; inspect the reason label and request logs, then distinguish expected client bursts from
+resource saturation before raising a limit.
 
 Repository alerts cover process availability, readiness, server-error ratio, and p95 latency. The
 rules follow Prometheus's symptom-oriented alerting guidance, while Alertmanager groups, inhibits,
 routes, repeats, and resolves notifications. Production owners must add infrastructure alerts for
 host/volume capacity, certificate renewal, backup age, off-host replication, and external provider
 freshness because this application process cannot observe those systems reliably.
+
+These in-process limits are a bulkhead, not a distributed edge defense. The production owner must
+still configure connection and anonymous-request limits at the load balancer/WAF. Report generation,
+import application, and provider sync remain synchronous in this release; a horizontally scaled
+deployment requires a shared limiter plus durable job queues. Restarting the process resets rate
+windows, and no claim is made that admission control supplies billing quotas or storage quotas.
 
 Every quarter, send a synthetic page through the configured route and record alert creation,
 delivery, acknowledgement, escalation, and resolved delivery times. A configured file alone is not

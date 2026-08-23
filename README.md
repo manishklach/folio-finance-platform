@@ -160,6 +160,9 @@ and `npm run privacy -- export|delete ...`.
 The single-node TLS/container topology, production preflight, Prometheus/Alertmanager rules, encrypted
 backup and restore drills, release/rollback steps, SLOs and remaining external operations gates are in
 [`docs/production-operations.md`](docs/production-operations.md).
+Authenticated workloads have configurable per-user rate limits plus process, tenant, and expensive-job
+concurrency bulkheads. These are single-process safeguards; edge/WAF controls and durable queues remain
+deployment and architecture gates documented in the operations guide.
 Production first-administrator setup requires a secret-manager-mounted, 32-byte-or-longer bootstrap
 token entered once in the setup screen; local development may omit it.
 Platform upgrade, drift detection, rollback, and interrupted-migration guarantees are documented in

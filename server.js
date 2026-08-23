@@ -19,6 +19,7 @@ import {
 import { verifyWebhookSignature } from "./lib/webhook-verification.js";
 import { apiRoutePolicy } from "./lib/api-route-policies.js";
 import { applyWebhookEvent } from "./lib/webhook-application.js";
+import { admissionClass, createAdmissionController } from "./lib/admission-control.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -55,6 +56,7 @@ export function createFolioServer(options = {}) {
       options.tenantDir || process.env.TENANT_DB_DIR,
     );
   const ledgers = new Map();
+  const admission = options.admission || createAdmissionController(environment);
   const runtime = { accepting: true };
   const metrics = {
     started_at: new Date().toISOString(),
@@ -86,14 +88,25 @@ export function createFolioServer(options = {}) {
       }
       if (req.method === "GET" && url.pathname === "/setup/status")
         return json(res, 200, platform.status());
-      if (url.pathname === "/metrics") return prometheus(res, metrics, platform, ledgers, runtime);
+      if (url.pathname === "/metrics")
+        return prometheus(res, metrics, platform, ledgers, runtime, admission);
       if (url.pathname.startsWith("/webhooks/"))
         return await webhook(req, res, url, platform, ledgers, requestId, environment);
       if (url.pathname.startsWith("/api/"))
-        return await apiRequest(req, res, url, platform, ledgers, requestId, environment);
+        return await apiRequest(
+          req,
+          res,
+          url,
+          platform,
+          ledgers,
+          requestId,
+          environment,
+          admission,
+        );
       return await staticFile(res, url.pathname);
     } catch (error) {
       metrics.errors += 1;
+      if (error.retryAfter) res.setHeader("Retry-After", String(error.retryAfter));
       if (sentryDsn)
         Sentry.captureException(error, {
           tags: {
@@ -158,10 +171,10 @@ export function createFolioServer(options = {}) {
     platform.close();
     server.close(callback);
   }
-  return { server, platform, ledgers, runtime, close };
+  return { server, platform, ledgers, runtime, admission, close };
 }
 
-async function apiRequest(req, res, url, platform, ledgers, requestId, environment) {
+async function apiRequest(req, res, url, platform, ledgers, requestId, environment, admission) {
   const routePolicy = apiRoutePolicy(req.method, url.pathname);
   if (stateMethods.has(req.method)) validateBrowserOrigin(req.headers);
   const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
@@ -202,71 +215,83 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
     requestId,
   };
   req.folioContext = context;
+  const admissionLease = admission.enter({
+    orgId: session.org_id,
+    userId: session.user_id,
+    category: admissionClass(req.method, url.pathname),
+  });
   return runWithRequestContext(context, async () => {
-    if (routePolicy.csrf && !platform.verifyCsrf(session, req.headers["x-csrf-token"]))
-      throw problem("Invalid CSRF token", 403);
-    if (routePolicy.permission) requirePermission(session, routePolicy.permission);
-    if (req.method === "GET" && url.pathname === "/api/auth/me")
-      return json(res, 200, authPayload(platform, session, platform.issueCsrf(session.id)));
-    if (req.method === "POST" && url.pathname === "/api/auth/logout") {
-      platform.logout(session.id);
-      clearSessionCookie(res);
-      return json(res, 200, { ok: true });
-    }
-    if (req.method === "POST" && url.pathname === "/api/auth/switch-org") {
-      const result = platform.switchOrganization(session, (await readJson(req)).org_id, meta);
-      setSessionCookie(res, result.token);
-      return json(res, 200, authPayload(platform, result.session, result.csrf));
-    }
-    if (req.method === "POST" && url.pathname === "/api/admin/users") {
-      return json(
-        res,
-        201,
-        await platform.invite(await readJson(req), { ...session, request_id: requestId }),
-      );
-    }
-    if (req.method === "POST" && url.pathname === "/api/auth/register") {
-      const body = await readJson(req);
-      return json(
-        res,
-        201,
-        await platform.invite(
-          {
-            email: body.email,
-            name: body.name,
-            role: body.role,
-            temporary_password: body.password,
-          },
-          { ...session, request_id: requestId },
-        ),
-      );
-    }
-    const resetPasswordMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
-    if (req.method === "POST" && resetPasswordMatch) {
-      return json(
-        res,
-        200,
-        await platform.resetPassword(resetPasswordMatch[1], (await readJson(req)).password, {
+    try {
+      if (routePolicy.csrf && !platform.verifyCsrf(session, req.headers["x-csrf-token"]))
+        throw problem("Invalid CSRF token", 403);
+      if (routePolicy.permission) requirePermission(session, routePolicy.permission);
+      if (req.method === "GET" && url.pathname === "/api/auth/me")
+        return json(res, 200, authPayload(platform, session, platform.issueCsrf(session.id)));
+      if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+        platform.logout(session.id);
+        clearSessionCookie(res);
+        return json(res, 200, { ok: true });
+      }
+      if (req.method === "POST" && url.pathname === "/api/auth/switch-org") {
+        const result = platform.switchOrganization(session, (await readJson(req)).org_id, meta);
+        setSessionCookie(res, result.token);
+        return json(res, 200, authPayload(platform, result.session, result.csrf));
+      }
+      if (req.method === "POST" && url.pathname === "/api/admin/users") {
+        return json(
+          res,
+          201,
+          await platform.invite(await readJson(req), { ...session, request_id: requestId }),
+        );
+      }
+      if (req.method === "POST" && url.pathname === "/api/auth/register") {
+        const body = await readJson(req);
+        return json(
+          res,
+          201,
+          await platform.invite(
+            {
+              email: body.email,
+              name: body.name,
+              role: body.role,
+              temporary_password: body.password,
+            },
+            { ...session, request_id: requestId },
+          ),
+        );
+      }
+      const resetPasswordMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
+      if (req.method === "POST" && resetPasswordMatch) {
+        return json(
+          res,
+          200,
+          await platform.resetPassword(resetPasswordMatch[1], (await readJson(req)).password, {
+            ...session,
+            request_id: requestId,
+          }),
+        );
+      }
+      if (req.method === "POST" && url.pathname === "/api/admin/organizations") {
+        const organization = platform.createOrganization(await readJson(req), {
           ...session,
           request_id: requestId,
-        }),
-      );
+        });
+        tenantLedger(ledgers, {
+          org_id: organization.id,
+          database_path: organization.database_path,
+        });
+        return json(res, 201, publicOrganization(organization));
+      }
+      if (routePolicy.scope !== "tenant") throw problem("Not found", 404);
+      const ledger = tenantLedger(ledgers, session);
+      if (stateMethods.has(req.method) && idempotentRoutes.has(url.pathname)) {
+        const replayed = await prepareIdempotency(req, res, platform, session, url.pathname);
+        if (replayed) return;
+      }
+      return await api(req, res, url, ledger, platform, session);
+    } finally {
+      admissionLease.release();
     }
-    if (req.method === "POST" && url.pathname === "/api/admin/organizations") {
-      const organization = platform.createOrganization(await readJson(req), {
-        ...session,
-        request_id: requestId,
-      });
-      tenantLedger(ledgers, { org_id: organization.id, database_path: organization.database_path });
-      return json(res, 201, publicOrganization(organization));
-    }
-    if (routePolicy.scope !== "tenant") throw problem("Not found", 404);
-    const ledger = tenantLedger(ledgers, session);
-    if (stateMethods.has(req.method) && idempotentRoutes.has(url.pathname)) {
-      const replayed = await prepareIdempotency(req, res, platform, session, url.pathname);
-      if (replayed) return;
-    }
-    return await api(req, res, url, ledger, platform, session);
   });
 }
 
@@ -1069,9 +1094,10 @@ function health(platform, ledgers, runtime = { accepting: true }) {
     return { status: "unhealthy", database: "unavailable" };
   }
 }
-function prometheus(res, metrics, platform, ledgers, runtime) {
+function prometheus(res, metrics, platform, ledgers, runtime, admission) {
   const ready = health(platform, ledgers, runtime).status === "ok" ? 1 : 0;
   const webhookQueue = platform.webhookQueueMetrics();
+  const admissionMetrics = admission.snapshot();
   const lines = [
     "# HELP folio_up Whether the Folio process is running.",
     "# TYPE folio_up gauge",
@@ -1085,6 +1111,17 @@ function prometheus(res, metrics, platform, ledgers, runtime) {
     "# HELP folio_http_inflight_requests Requests currently executing.",
     "# TYPE folio_http_inflight_requests gauge",
     `folio_http_inflight_requests ${metrics.inflight}`,
+    "# HELP folio_admission_active_requests Authenticated requests holding admission leases.",
+    "# TYPE folio_admission_active_requests gauge",
+    `folio_admission_active_requests ${admissionMetrics.active}`,
+    "# HELP folio_admission_tracked_principals In-memory rate windows currently tracked.",
+    "# TYPE folio_admission_tracked_principals gauge",
+    `folio_admission_tracked_principals ${admissionMetrics.trackedPrincipals}`,
+    "# HELP folio_admission_rejections_total Rejected authenticated requests by bounded reason.",
+    "# TYPE folio_admission_rejections_total counter",
+    ...Object.entries(admissionMetrics.rejected).map(
+      ([reason, count]) => `folio_admission_rejections_total{reason="${reason}"} ${count}`,
+    ),
     "# HELP folio_tenant_connections Open tenant ledger connections.",
     "# TYPE folio_tenant_connections gauge",
     `folio_tenant_connections ${ledgers.size}`,

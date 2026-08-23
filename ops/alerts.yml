@@ -41,6 +41,14 @@ groups:
         annotations:
           summary: Folio webhook delivery queue has been stalled for more than five minutes
           runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
+      - alert: FolioAdmissionRejections
+        expr: sum(rate(folio_admission_rejections_total[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Folio is persistently rejecting authenticated work at admission
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
       - alert: FolioWebhookDeadLetters
         expr: folio_webhook_deliveries{status="dead_letter"} > 0
         for: 1m
