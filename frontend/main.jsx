@@ -51,6 +51,7 @@ const navigation = [
   ["revenue", "Revenue", "◎"],
   ["receivables", "Receivables", "▤"],
   ["bank-close", "Bank & close", "✓"],
+  ["integrations", "Integrations", "⇆"],
   ["investments", "Investments", "↗"],
   ["fixed-assets", "Fixed assets", "◇"],
   ["reports", "Reports", "⌁"],
@@ -217,6 +218,7 @@ function Module({ active, ...props }) {
     revenue: Revenue,
     receivables: Receivables,
     "bank-close": BankClose,
+    integrations: Integrations,
     investments: Investments,
     "fixed-assets": FixedAssets,
     reports: Reports,
@@ -224,6 +226,253 @@ function Module({ active, ...props }) {
   };
   const Component = modules[active];
   return <Component {...props} />;
+}
+
+function Integrations({ can, notify }) {
+  const resource = useLoad(() => api("/api/integrations/overview"), []);
+  const [showForm, setShowForm] = useState(false);
+  if (resource.loading) return <Loading />;
+  if (resource.error) return <LoadError error={resource.error} retry={resource.refresh} />;
+  const value = resource.data;
+  async function configure(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      await api("/api/integrations/connections", {
+        method: "POST",
+        body: {
+          provider: form.get("provider"),
+          display_name: form.get("display_name"),
+          environment: form.get("environment"),
+          external_account_id: form.get("external_account_id") || null,
+          credential_secret_ref: form.get("credential_secret_ref"),
+          webhook_secret_ref: form.get("webhook_secret_ref") || null,
+          scopes: [],
+          settings: {},
+        },
+      });
+      setShowForm(false);
+      await resource.refresh();
+      notify({
+        kind: "success",
+        message: "Connector configured without exposing its credentials.",
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function changeStatus(connection, status) {
+    try {
+      await api("/api/integrations/connections/status", {
+        method: "POST",
+        body: { connection_id: connection.id, status },
+      });
+      await resource.refresh();
+      notify({ kind: "success", message: `${connection.display_name} is now ${status}.` });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function resolveException(item) {
+    try {
+      await api("/api/integrations/exceptions/status", {
+        method: "POST",
+        body: {
+          id: item.id,
+          status: "resolved",
+          resolution: "Reviewed and resolved from the integration operations queue",
+        },
+      });
+      await resource.refresh();
+      notify({ kind: "success", message: "Integration exception resolved." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  return (
+    <div className="module-flow">
+      <ModuleBar
+        title="Connected systems"
+        detail="Observable, tenant-scoped data connections without browser-visible secrets"
+        action={
+          can("admin") && (
+            <button className="primary" onClick={() => setShowForm(true)}>
+              Configure connector
+            </button>
+          )
+        }
+      />
+      <section className="kpi-grid">
+        <Kpi label="Connections" value={value.connections.length} detail="Configured providers" />
+        <Kpi
+          label="Active"
+          value={value.metrics.active_connections}
+          detail="Eligible to synchronize"
+        />
+        <Kpi
+          label="Provider errors"
+          value={value.metrics.error_connections}
+          detail="Connections needing attention"
+          warning={value.metrics.error_connections > 0}
+        />
+        <Kpi
+          label="Exceptions"
+          value={value.metrics.open_exceptions}
+          detail="Open connector failures"
+          warning={value.metrics.open_exceptions > 0}
+        />
+      </section>
+      <div className="two-column">
+        <Panel
+          title="Connections"
+          subtitle="Status, environment and latest successful synchronization"
+        >
+          <Table
+            columns={["Provider", "Connection", "Environment", "Last sync", "Status", "Action"]}
+            rows={value.connections.map((item) => [
+              label(item.provider),
+              item.display_name,
+              label(item.environment),
+              item.last_synced_at ? new Date(item.last_synced_at).toLocaleString() : "Never",
+              <Status value={item.status} />,
+              can("admin") ? (
+                item.status === "configured" ||
+                item.status === "paused" ||
+                item.status === "error" ? (
+                  <button className="small-button" onClick={() => changeStatus(item, "active")}>
+                    Activate
+                  </button>
+                ) : item.status === "active" ? (
+                  <button className="small-button" onClick={() => changeStatus(item, "paused")}>
+                    Pause
+                  </button>
+                ) : (
+                  "—"
+                )
+              ) : (
+                "—"
+              ),
+            ])}
+          />
+        </Panel>
+        <Panel title="Initial connector catalog" subtitle="Approved production-integration targets">
+          <div className="attention-list">
+            {value.catalog.map((item) => (
+              <div className="attention" key={item.provider}>
+                <span className="workspace-avatar small">{item.name.slice(0, 1)}</span>
+                <div>
+                  <strong>{item.name}</strong>
+                  <small>
+                    {label(item.domain)} · {item.capabilities.length} capabilities
+                  </small>
+                </div>
+                <Status value="available" />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+      <Panel
+        title="Synchronization history"
+        subtitle="Cursors, pages and idempotent source-record outcomes"
+      >
+        <Table
+          columns={[
+            "Started",
+            "Provider connection",
+            "Trigger",
+            "Added",
+            "Modified",
+            "Removed",
+            "Status",
+          ]}
+          rows={value.runs.map((item) => [
+            new Date(`${item.started_at}Z`).toLocaleString(),
+            value.connections.find((connection) => connection.id === item.connection_id)
+              ?.display_name,
+            label(item.trigger),
+            item.added,
+            item.modified,
+            item.removed,
+            <Status value={item.status} />,
+          ])}
+        />
+      </Panel>
+      <Panel
+        title="Integration exception queue"
+        subtitle="Provider failures remain visible until an authorized operator records a disposition"
+      >
+        <Table
+          columns={["Created", "Connection", "Code", "Message", "Status", "Action"]}
+          rows={value.dead_letters.map((item) => [
+            new Date(`${item.created_at}Z`).toLocaleString(),
+            value.connections.find((connection) => connection.id === item.connection_id)
+              ?.display_name,
+            item.error_code,
+            item.error_message,
+            <Status value={item.status} />,
+            item.status === "open" && can("operate") ? (
+              <button className="small-button" onClick={() => resolveException(item)}>
+                Resolve
+              </button>
+            ) : (
+              "—"
+            ),
+          ])}
+        />
+      </Panel>
+      {showForm && (
+        <Dialog
+          title="Configure connector"
+          subtitle="Enter secret-manager reference names only. Tokens and client secrets never belong in this form."
+          close={() => setShowForm(false)}
+        >
+          <form className="form-stack" onSubmit={configure}>
+            <div className="form-grid">
+              <Field
+                label="Provider"
+                name="provider"
+                as="select"
+                options={value.catalog.map((item) => [item.provider, item.name])}
+              />
+              <Field
+                label="Environment"
+                name="environment"
+                as="select"
+                options={[
+                  ["sandbox", "Sandbox"],
+                  ["production", "Production"],
+                ]}
+              />
+            </div>
+            <Field label="Connection name" name="display_name" />
+            <Field
+              label="External account ID"
+              name="external_account_id"
+              required={false}
+              hint="Required for production; use the provider's tenant, account or company identifier."
+            />
+            <div className="form-grid">
+              <Field
+                label="Credential secret reference"
+                name="credential_secret_ref"
+                placeholder="STRIPE_OAUTH_CONNECTION_01"
+                pattern="[A-Z][A-Z0-9_]{2,79}"
+              />
+              <Field
+                label="Webhook secret reference"
+                name="webhook_secret_ref"
+                required={false}
+                placeholder="STRIPE_WEBHOOK_CONNECTION_01"
+                pattern="[A-Z][A-Z0-9_]{2,79}"
+              />
+            </div>
+            <DialogActions close={() => setShowForm(false)} label="Save configuration" />
+          </form>
+        </Dialog>
+      )}
+    </div>
+  );
 }
 
 function Overview() {

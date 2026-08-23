@@ -29,6 +29,8 @@ const idempotentRoutes = new Set([
   "/api/receivables/credits",
   "/api/receivables/write-offs",
   "/api/receivables/refunds",
+  "/api/integrations/connections",
+  "/api/integrations/sync-runs",
 ]);
 
 export function createFolioServer(options = {}) {
@@ -368,6 +370,63 @@ async function api(req, res, url, ledger, platform, session) {
     return json(res, 201, ledger.transitionInvestmentModel(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/investments/credit-losses")
     return json(res, 201, ledger.assessInvestmentCreditLoss(await readJson(req)));
+  if (req.method === "GET" && url.pathname === "/api/integrations/catalog")
+    return json(res, 200, ledger.providerCatalog());
+  if (req.method === "GET" && url.pathname === "/api/integrations/overview")
+    return json(res, 200, ledger.integrationsOverview());
+  if (req.method === "GET" && url.pathname === "/api/integrations/connections")
+    return json(res, 200, ledger.integrationConnections());
+  if (req.method === "GET" && url.pathname === "/api/integrations/sync-runs")
+    return json(
+      res,
+      200,
+      ledger.integrationSyncRuns(url.searchParams.get("connection_id") || null),
+    );
+  if (req.method === "GET" && url.pathname === "/api/integrations/exceptions")
+    return json(res, 200, ledger.integrationDeadLetters());
+  const integrationRecordsMatch = url.pathname.match(
+    /^\/api\/integrations\/connections\/([^/]+)\/records$/,
+  );
+  if (req.method === "GET" && integrationRecordsMatch)
+    return json(
+      res,
+      200,
+      ledger.integrationRecords(integrationRecordsMatch[1], url.searchParams.get("status") || null),
+    );
+  if (req.method === "POST" && url.pathname === "/api/integrations/connections")
+    return json(res, 201, ledger.configureIntegration(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/integrations/connections/status")
+    return json(res, 200, ledger.setIntegrationStatus(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/integrations/sync-runs")
+    return json(res, 201, ledger.startIntegrationSync(await readJson(req)));
+  const integrationPageMatch = url.pathname.match(
+    /^\/api\/integrations\/sync-runs\/([^/]+)\/page$/,
+  );
+  if (req.method === "POST" && integrationPageMatch)
+    return json(
+      res,
+      200,
+      ledger.ingestIntegrationPage({
+        ...(await readJson(req)),
+        sync_run_id: integrationPageMatch[1],
+      }),
+    );
+  const integrationFailureMatch = url.pathname.match(
+    /^\/api\/integrations\/sync-runs\/([^/]+)\/fail$/,
+  );
+  if (req.method === "POST" && integrationFailureMatch)
+    return json(
+      res,
+      200,
+      ledger.failIntegrationSync({
+        ...(await readJson(req)),
+        sync_run_id: integrationFailureMatch[1],
+      }),
+    );
+  if (req.method === "POST" && url.pathname === "/api/integrations/mappings")
+    return json(res, 201, ledger.createIntegrationMapping(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/integrations/exceptions/status")
+    return json(res, 200, ledger.resolveIntegrationDeadLetter(await readJson(req)));
   if (req.method === "GET" && url.pathname === "/api/fixed-assets/overview")
     return json(res, 200, ledger.fixedAssetsOverview(url.searchParams.get("as_of") || today()));
   if (req.method === "GET" && url.pathname === "/api/fixed-assets")
@@ -681,6 +740,12 @@ async function prepareIdempotency(req, res, platform, session, route) {
 }
 function requiredPermission(method, path) {
   if (method === "GET") return "read";
+  if (
+    path === "/api/integrations/connections" ||
+    path === "/api/integrations/connections/status" ||
+    path === "/api/integrations/mappings"
+  )
+    return "admin";
   if (/^\/api\/journals\/\d+\/post$/.test(path)) return "post";
   if (path === "/api/close" || path.startsWith("/api/close/")) return "close";
   if (path === "/api/journals" || path === "/api/ai/draft" || path === "/api/ai/disposition")

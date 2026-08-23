@@ -107,6 +107,35 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
     (await call(origin, "/api/journals", { date: "2026-08-22" }, viewer)).response.status,
     403,
   );
+  const configuredConnector = await call(
+    origin,
+    "/api/integrations/connections",
+    {
+      provider: "stripe",
+      display_name: "Stripe sandbox",
+      environment: "sandbox",
+      credential_secret_ref: "STRIPE_SANDBOX_REF",
+    },
+    { ...admin, idempotency: "connector-admin-1" },
+  );
+  assert.equal(configuredConnector.response.status, 201);
+  assert.equal(configuredConnector.body.provider, "stripe");
+  assert.equal(
+    (
+      await call(
+        origin,
+        "/api/integrations/connections",
+        {
+          provider: "plaid",
+          display_name: "Denied connector",
+          environment: "sandbox",
+          credential_secret_ref: "PLAID_SANDBOX_REF",
+        },
+        { ...viewer, idempotency: "connector-viewer-1" },
+      )
+    ).response.status,
+    403,
+  );
   assert.equal(
     (
       await call(
@@ -153,6 +182,7 @@ async function call(origin, path, body, auth = {}) {
       ...(body == null ? {} : { "Content-Type": "application/json" }),
       ...(auth.cookie ? { Cookie: auth.cookie } : {}),
       ...(auth.csrf ? { "X-CSRF-Token": auth.csrf } : {}),
+      ...(auth.idempotency ? { "Idempotency-Key": auth.idempotency } : {}),
     },
     ...(body == null ? {} : { body: JSON.stringify(body) }),
   });

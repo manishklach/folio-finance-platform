@@ -76,6 +76,17 @@ The detailed classification matrix, system flow, API inventory, and scope bounda
 
 The detailed fixed-assets matrix, lifecycle flowchart, API inventory, and scope boundaries are in [`docs/fixed-assets.md`](docs/fixed-assets.md).
 
+### Integration operations foundation
+
+- Tenant-scoped connection lifecycle for Plaid, Stripe, Gusto, and HubSpot targets
+- Secret-manager reference boundaries with no provider credential values in the browser or ledger
+- Cursor-based synchronization runs with idempotent added, modified, and removed source records
+- Versioned mapping definitions, payload hashes, run metrics, and resolvable exception/dead-letter queues
+- Administrator-only configuration and operator-scoped synchronization controls
+
+The exact implemented boundary, provider matrix, flowchart, API inventory, and remaining live-provider
+work are in [`docs/integrations.md`](docs/integrations.md).
+
 The exact supported and excluded scope is maintained in [`docs/gaap-coverage-matrix.md`](docs/gaap-coverage-matrix.md). The complete processing and close flow is illustrated in [`docs/gaap-system-flow.md`](docs/gaap-system-flow.md), and request contracts are in [`docs/gaap-api.md`](docs/gaap-api.md).
 
 AI suggestions never post automatically. The server validates account IDs, amount shape, and debit/credit equality before saving a draft, then validates again before posting.
