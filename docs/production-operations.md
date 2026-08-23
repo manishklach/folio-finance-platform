@@ -170,6 +170,22 @@ receiver using a secret-backed `url_file`, as described in the official
 [Prometheus alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)
 and [Alertmanager configuration](https://prometheus.io/docs/alerting/latest/configuration/).
 
+### Background job operations
+
+The `background-worker` claims report-export and provider-sync jobs with a two-minute lease, retries
+transient failures with capped exponential delay, and leaves exhausted work in `dead_letter`. Page on
+`FolioBackgroundJobBacklogStale`; review and ticket `FolioBackgroundJobDeadLetters`. Correlate only job
+and request IDs in logs. Inspect the safe error and associated integration exception, correct the
+underlying credential/provider/configuration issue, then retry from Reports & jobs. Never update queue
+rows or manufacture a successful result directly in SQLite.
+
+Provider secret files and their reference environment variables must be mounted into both the API and
+background-worker services through the environment-specific deployment overlay. Record a sandbox
+provider pull and a generated report download in release evidence. `JOB_ARTIFACT_DIR` contains
+sensitive derived financial statements; set an approved retention schedule and encrypted volume or
+object-storage policy before live use. Automatic artifact expiry is not implemented. See
+[`background-jobs.md`](background-jobs.md) for lifecycle and scope.
+
 ## Backup, recovery, and support schedule
 
 - Run encrypted control/tenant/attachment backups at least hourly to meet the one-hour ledger/control

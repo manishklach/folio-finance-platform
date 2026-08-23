@@ -111,6 +111,8 @@ test("liveness, dependency readiness, bounded Prometheus labels, and shutdown re
   assert.match(metrics, /folio_ready 1/);
   assert.match(metrics, /folio_webhook_deliveries\{status="pending"\} 0/);
   assert.match(metrics, /folio_webhook_oldest_unfinished_seconds 0/);
+  assert.match(metrics, /folio_background_jobs\{status="queued"\} 0/);
+  assert.match(metrics, /folio_background_job_oldest_unfinished_seconds 0/);
   assert.match(metrics, /folio_http_request_duration_seconds_bucket\{/);
   assert.match(metrics, /folio_admission_active_requests 0/);
   assert.match(metrics, /folio_admission_rejections_total\{reason="user_rate"\} 0/);

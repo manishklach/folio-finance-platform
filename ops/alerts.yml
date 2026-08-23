@@ -57,3 +57,19 @@ groups:
         annotations:
           summary: Folio has webhook deliveries requiring operator intervention
           runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
+      - alert: FolioBackgroundJobBacklogStale
+        expr: folio_background_job_oldest_unfinished_seconds > 300
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: Folio background jobs have been unfinished for more than five minutes
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
+      - alert: FolioBackgroundJobDeadLetters
+        expr: folio_background_jobs{status="dead_letter"} > 0
+        for: 1m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Folio has background jobs requiring operator review
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md

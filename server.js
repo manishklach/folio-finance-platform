@@ -20,6 +20,7 @@ import { verifyWebhookSignature } from "./lib/webhook-verification.js";
 import { apiRoutePolicy } from "./lib/api-route-policies.js";
 import { applyWebhookEvent } from "./lib/webhook-application.js";
 import { admissionClass, createAdmissionController } from "./lib/admission-control.js";
+import { z } from "zod";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -45,7 +46,26 @@ const idempotentRoutes = new Set([
   "/api/integrations/connections",
   "/api/integrations/sync-runs",
   "/api/imports/stage",
+  "/api/jobs/reports",
+  "/api/jobs/provider-syncs",
 ]);
+const reportJobSchema = z.object({
+  type: z.enum([
+    "trial_balance",
+    "income_statement",
+    "balance_sheet",
+    "cash_flow",
+    "comprehensive_income",
+    "changes_in_equity",
+  ]),
+  format: z.enum(["csv", "pdf"]),
+  as_of: z.iso.date().default(() => today()),
+  from: z.iso.date().optional(),
+});
+const providerJobSchema = z.object({
+  connection_id: z.string().min(1).max(200),
+  trigger: z.enum(["manual", "scheduled"]).default("manual"),
+});
 
 export function createFolioServer(options = {}) {
   const environment = options.environment || process.env;
@@ -288,14 +308,94 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
         const replayed = await prepareIdempotency(req, res, platform, session, url.pathname);
         if (replayed) return;
       }
-      return await api(req, res, url, ledger, platform, session);
+      return await api(req, res, url, ledger, platform, session, environment);
     } finally {
       admissionLease.release();
     }
   });
 }
 
-async function api(req, res, url, ledger, platform, session) {
+async function api(req, res, url, ledger, platform, session, environment) {
+  if (req.method === "GET" && url.pathname === "/api/jobs")
+    return json(
+      res,
+      200,
+      platform.backgroundJobs(session.org_id, {
+        status: url.searchParams.get("status"),
+        kind: url.searchParams.get("kind"),
+        limit: url.searchParams.get("limit"),
+      }),
+    );
+  if (req.method === "POST" && url.pathname === "/api/jobs/reports") {
+    const body = parseJobRequest(reportJobSchema, await readJson(req));
+    body.from ||= `${body.as_of.slice(0, 4)}-01-01`;
+    if (body.from > body.as_of) throw problem("Report start date must not follow its as-of date");
+    return json(
+      res,
+      202,
+      platform.enqueueBackgroundJob({
+        orgId: session.org_id,
+        userId: session.user_id,
+        kind: "report_export",
+        request: body,
+        idempotencyKey: req.headers["idempotency-key"],
+      }),
+    );
+  }
+  if (req.method === "POST" && url.pathname === "/api/jobs/provider-syncs") {
+    const body = parseJobRequest(providerJobSchema, await readJson(req));
+    const connection = ledger.integrationConnection(body.connection_id);
+    if (connection.status !== "active") throw problem("Integration connection is not active", 409);
+    return json(
+      res,
+      202,
+      platform.enqueueBackgroundJob({
+        orgId: session.org_id,
+        userId: session.user_id,
+        kind: "provider_sync",
+        request: body,
+        idempotencyKey: req.headers["idempotency-key"],
+      }),
+    );
+  }
+  const jobMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)$/);
+  if (req.method === "GET" && jobMatch) {
+    const job = platform.backgroundJob(jobMatch[1], session.org_id);
+    if (!job) throw problem("Background job not found", 404);
+    return json(res, 200, job);
+  }
+  const jobDownloadMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/download$/);
+  if (req.method === "GET" && jobDownloadMatch) {
+    const job = platform.backgroundJob(jobDownloadMatch[1], session.org_id, { internal: true });
+    if (!job || job.status !== "completed" || !job.artifact_path)
+      throw problem("Completed job artifact not found", 404);
+    const artifactRoot = resolve(environment.JOB_ARTIFACT_DIR || "data/job-artifacts");
+    const artifactPath = resolve(job.artifact_path);
+    const containment = relativePath(artifactRoot, artifactPath);
+    if (!containment || containment.startsWith("..") || isAbsolute(containment))
+      throw problem("Invalid job artifact", 500);
+    const content = await readFile(artifactPath);
+    res.writeHead(200, {
+      "Content-Type": job.artifact_content_type,
+      "Content-Disposition": `attachment; filename="${job.artifact_filename.replaceAll('"', "")}"`,
+      "Cache-Control": "private, no-store",
+    });
+    return res.end(content);
+  }
+  const jobCancelMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/cancel$/);
+  if (req.method === "POST" && jobCancelMatch)
+    return json(
+      res,
+      200,
+      platform.cancelBackgroundJob(jobCancelMatch[1], session.org_id, session.user_id),
+    );
+  const jobRetryMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/retry$/);
+  if (req.method === "POST" && jobRetryMatch)
+    return json(
+      res,
+      200,
+      platform.retryBackgroundJob(jobRetryMatch[1], session.org_id, session.user_id),
+    );
   if (req.method === "GET" && url.pathname === "/api/fiscal-config")
     return json(res, 200, ledger.fiscalConfig());
   if (req.method === "POST" && url.pathname === "/api/fiscal-config")
@@ -951,6 +1051,11 @@ function publicIntegrationConnection(value) {
 function publicIntegrationOverview(value) {
   return { ...value, connections: value.connections.map(publicIntegrationConnection) };
 }
+function parseJobRequest(schema, value) {
+  const result = schema.safeParse(value);
+  if (!result.success) throw problem("Invalid background job request");
+  return result.data;
+}
 async function readJson(req) {
   const contentType = String(req.headers["content-type"] || "");
   if (!/^application\/json(?:\s*;|$)/i.test(contentType))
@@ -1097,6 +1202,7 @@ function health(platform, ledgers, runtime = { accepting: true }) {
 function prometheus(res, metrics, platform, ledgers, runtime, admission) {
   const ready = health(platform, ledgers, runtime).status === "ok" ? 1 : 0;
   const webhookQueue = platform.webhookQueueMetrics();
+  const backgroundQueue = platform.backgroundJobMetrics();
   const admissionMetrics = admission.snapshot();
   const lines = [
     "# HELP folio_up Whether the Folio process is running.",
@@ -1134,6 +1240,15 @@ function prometheus(res, metrics, platform, ledgers, runtime, admission) {
     "# HELP folio_webhook_oldest_unfinished_seconds Age of the oldest unfinished delivery.",
     "# TYPE folio_webhook_oldest_unfinished_seconds gauge",
     `folio_webhook_oldest_unfinished_seconds ${webhookQueue.oldest_unfinished_seconds}`,
+    "# HELP folio_background_jobs Background jobs by durable queue status.",
+    "# TYPE folio_background_jobs gauge",
+    ...["queued", "processing", "retry", "completed", "dead_letter", "cancelled"].map(
+      (status) =>
+        `folio_background_jobs{status="${status}"} ${backgroundQueue.counts[status] || 0}`,
+    ),
+    "# HELP folio_background_job_oldest_unfinished_seconds Age of the oldest unfinished background job.",
+    "# TYPE folio_background_job_oldest_unfinished_seconds gauge",
+    `folio_background_job_oldest_unfinished_seconds ${backgroundQueue.oldest_unfinished_seconds}`,
     "# HELP folio_http_requests_total HTTP requests by bounded route and status.",
     "# TYPE folio_http_requests_total counter",
     "# HELP folio_http_request_duration_seconds Request duration by bounded route.",

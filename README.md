@@ -161,8 +161,11 @@ The single-node TLS/container topology, production preflight, Prometheus/Alertma
 backup and restore drills, release/rollback steps, SLOs and remaining external operations gates are in
 [`docs/production-operations.md`](docs/production-operations.md).
 Authenticated workloads have configurable per-user rate limits plus process, tenant, and expensive-job
-concurrency bulkheads. These are single-process safeguards; edge/WAF controls and durable queues remain
-deployment and architecture gates documented in the operations guide.
+concurrency bulkheads. These are single-process safeguards; edge/WAF controls and shared scale-out
+limiting remain deployment and architecture gates documented in the operations guide.
+Report exports and provider synchronization have tenant-scoped durable jobs with leases, retries,
+dead letters, audited operator actions, a separate worker, queue alerts, and a transactional Reports &
+jobs UI. See [`docs/background-jobs.md`](docs/background-jobs.md) for APIs and residual scope.
 Production first-administrator setup requires a secret-manager-mounted, 32-byte-or-longer bootstrap
 token entered once in the setup screen; local development may omit it.
 Platform upgrade, drift detection, rollback, and interrupted-migration guarantees are documented in

@@ -101,6 +101,10 @@ subledger reconciliation before they may create accounting effects.
 
 ## API inventory
 
+Interactive operators use `POST /api/jobs/provider-syncs` or **Sync now** in the integration workspace.
+That durable job executes the same adapter outside the HTTP process and is visible in Reports & jobs.
+The direct sync-run page API remains for adapter ingestion, controlled diagnostics, and compatibility.
+
 | Method and route                                | Purpose                                          | Permission |
 | ----------------------------------------------- | ------------------------------------------------ | ---------- |
 | `GET /api/integrations/catalog`                 | Approved provider capabilities                   | Read       |
@@ -115,6 +119,7 @@ subledger reconciliation before they may create accounting effects.
 | `POST /api/integrations/mappings`               | Create a versioned mapping                       | Admin      |
 | `GET /api/integrations/exceptions`              | Inspect integration dead letters                 | Read       |
 | `POST /api/integrations/exceptions/status`      | Retry, resolve or ignore an exception            | Operate    |
+| `POST /api/jobs/provider-syncs`                 | Queue a durable provider synchronization         | Operate    |
 
 ## Verification in this increment
 

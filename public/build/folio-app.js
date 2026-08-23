@@ -7915,7 +7915,7 @@ var oe = [
 	],
 	[
 		"reports",
-		"Reports",
+		"Reports & jobs",
 		"⌁"
 	],
 	[
@@ -8214,6 +8214,25 @@ function D({ can: e, notify: t }) {
 			});
 		}
 	}
+	async function l(e) {
+		try {
+			await T("/api/jobs/provider-syncs", {
+				method: "POST",
+				body: {
+					connection_id: e.id,
+					trigger: "manual"
+				}
+			}), t({
+				kind: "success",
+				message: `${e.display_name} synchronization was queued. Track it in Reports & jobs.`
+			});
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		}
+	}
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
@@ -8273,15 +8292,22 @@ function D({ can: e, notify: t }) {
 							w(t.environment),
 							t.last_synced_at ? new Date(t.last_synced_at).toLocaleString() : "Never",
 							/* @__PURE__ */ (0, b.jsx)(N, { value: t.status }),
-							e("admin") ? t.status === "configured" || t.status === "paused" || t.status === "error" ? /* @__PURE__ */ (0, b.jsx)("button", {
-								className: "small-button",
-								onClick: () => s(t, "active"),
-								children: "Activate"
-							}) : t.status === "active" ? /* @__PURE__ */ (0, b.jsx)("button", {
-								className: "small-button",
-								onClick: () => s(t, "paused"),
-								children: "Pause"
-							}) : "—" : "—"
+							/* @__PURE__ */ (0, b.jsxs)("div", {
+								className: "button-row",
+								children: [t.status === "active" && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
+									className: "small-button",
+									onClick: () => l(t),
+									children: "Sync now"
+								}), e("admin") && (t.status === "configured" || t.status === "paused" || t.status === "error" ? /* @__PURE__ */ (0, b.jsx)("button", {
+									className: "small-button",
+									onClick: () => s(t, "active"),
+									children: "Activate"
+								}) : t.status === "active" ? /* @__PURE__ */ (0, b.jsx)("button", {
+									className: "small-button",
+									onClick: () => s(t, "paused"),
+									children: "Pause"
+								}) : null)]
+							})
 						])
 					})
 				}), /* @__PURE__ */ (0, b.jsx)(M, {
@@ -10184,44 +10210,147 @@ function A() {
 		]
 	});
 }
-function he() {
+function he({ can: e, notify: t }) {
+	let n = [
+		"trial_balance",
+		"income_statement",
+		"balance_sheet",
+		"cash_flow",
+		"comprehensive_income",
+		"changes_in_equity"
+	], r = ae(() => T("/api/jobs?limit=100"), []), [i, a] = (0, _.useState)(x);
+	(0, _.useEffect)(() => {
+		let e = setInterval(() => void r.refresh(), 3e3);
+		return () => clearInterval(e);
+	}, []);
+	async function o(e, n) {
+		try {
+			await T("/api/jobs/reports", {
+				method: "POST",
+				body: {
+					type: e,
+					format: n,
+					as_of: i
+				}
+			}), await r.refresh(), t({
+				kind: "success",
+				message: `${w(e)} ${n.toUpperCase()} was queued.`
+			});
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		}
+	}
+	async function s(e, n) {
+		try {
+			await T(`/api/jobs/${e.id}/${n}`, {
+				method: "POST",
+				idempotent: !1
+			}), await r.refresh(), t({
+				kind: "success",
+				message: `Job ${n === "retry" ? "requeued" : "cancelled"}.`
+			});
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		}
+	}
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
-		children: [/* @__PURE__ */ (0, b.jsx)(ve, {
-			title: "Financial statements",
-			detail: "Date-bounded, posted-ledger reports in reviewable and portable formats"
-		}), /* @__PURE__ */ (0, b.jsx)("div", {
-			className: "report-grid",
-			children: [
-				"trial_balance",
-				"income_statement",
-				"balance_sheet",
-				"cash_flow",
-				"comprehensive_income",
-				"changes_in_equity"
-			].map((e) => /* @__PURE__ */ (0, b.jsxs)("article", {
-				className: "report-card",
-				children: [
-					/* @__PURE__ */ (0, b.jsx)("span", {
-						"aria-hidden": "true",
-						children: "⌁"
-					}),
-					/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("h2", { children: w(e) }), /* @__PURE__ */ (0, b.jsx)("p", { children: "Generated from posted journals with current report mappings." })] }),
-					/* @__PURE__ */ (0, b.jsxs)("div", {
-						className: "button-row",
-						children: [/* @__PURE__ */ (0, b.jsx)("a", {
-							className: "secondary",
-							href: `/api/reports/${e}.pdf`,
-							children: "PDF"
-						}), /* @__PURE__ */ (0, b.jsx)("a", {
-							className: "secondary",
-							href: `/api/reports/${e}.csv`,
-							children: "CSV"
-						})]
-					})
-				]
-			}, e))
-		})]
+		children: [
+			/* @__PURE__ */ (0, b.jsx)(ve, {
+				title: "Financial statements",
+				detail: "Queue durable statement exports and track all report and connector work"
+			}),
+			/* @__PURE__ */ (0, b.jsx)(M, {
+				title: "Export date",
+				subtitle: "Reports use posted entries through this as-of date",
+				children: /* @__PURE__ */ (0, b.jsx)(P, {
+					label: "As-of date",
+					name: "as_of",
+					type: "date",
+					value: i,
+					onChange: (e) => a(e.target.value)
+				})
+			}),
+			/* @__PURE__ */ (0, b.jsx)("div", {
+				className: "report-grid",
+				children: n.map((t) => /* @__PURE__ */ (0, b.jsxs)("article", {
+					className: "report-card",
+					children: [
+						/* @__PURE__ */ (0, b.jsx)("span", {
+							"aria-hidden": "true",
+							children: "⌁"
+						}),
+						/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("h2", { children: w(t) }), /* @__PURE__ */ (0, b.jsx)("p", { children: "Generated from posted journals with current report mappings." })] }),
+						/* @__PURE__ */ (0, b.jsxs)("div", {
+							className: "button-row",
+							children: [/* @__PURE__ */ (0, b.jsx)("button", {
+								className: "secondary",
+								disabled: !e("operate"),
+								onClick: () => o(t, "pdf"),
+								children: "Queue PDF"
+							}), /* @__PURE__ */ (0, b.jsx)("button", {
+								className: "secondary",
+								disabled: !e("operate"),
+								onClick: () => o(t, "csv"),
+								children: "Queue CSV"
+							})]
+						})
+					]
+				}, t))
+			}),
+			/* @__PURE__ */ (0, b.jsx)(M, {
+				title: "Background work",
+				subtitle: "Durable status, retry evidence and completed downloads",
+				children: r.loading ? /* @__PURE__ */ (0, b.jsx)(Se, {}) : r.error ? /* @__PURE__ */ (0, b.jsx)(we, {
+					error: r.error,
+					retry: r.refresh
+				}) : /* @__PURE__ */ (0, b.jsx)(ye, {
+					columns: [
+						"Created",
+						"Kind",
+						"Output",
+						"Attempts",
+						"Status",
+						"Result or error",
+						"Action"
+					],
+					rows: r.data.map((t) => [
+						(/* @__PURE__ */ new Date(`${t.created_at}Z`)).toLocaleString(),
+						w(t.kind),
+						t.artifact_filename || t.result?.sync_run_id || "—",
+						`${t.attempts} / ${t.max_attempts}`,
+						/* @__PURE__ */ (0, b.jsx)(N, { value: t.status }),
+						t.last_error || (t.result ? `${t.result.rows ?? ""} ${t.result.rows ? "rows" : t.result.status || "complete"}` : "—"),
+						/* @__PURE__ */ (0, b.jsxs)("div", {
+							className: "button-row",
+							children: [
+								t.has_artifact && /* @__PURE__ */ (0, b.jsx)("a", {
+									className: "small-button",
+									href: `/api/jobs/${t.id}/download`,
+									children: "Download"
+								}),
+								["queued", "retry"].includes(t.status) && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
+									className: "small-button",
+									onClick: () => s(t, "cancel"),
+									children: "Cancel"
+								}),
+								t.status === "dead_letter" && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
+									className: "small-button",
+									onClick: () => s(t, "retry"),
+									children: "Retry"
+								})
+							]
+						})
+					])
+				})
+			})
+		]
 	});
 }
 function ge({ auth: e, setAuth: t, notify: n }) {

@@ -118,7 +118,7 @@ const navigation = [
   ["imports", "Imports", "⇩"],
   ["investments", "Investments", "↗"],
   ["fixed-assets", "Fixed assets", "◇"],
-  ["reports", "Reports", "⌁"],
+  ["reports", "Reports & jobs", "⌁"],
   ["administration", "Administration", "⚙"],
 ];
 
@@ -365,6 +365,20 @@ function Integrations({ can, notify }) {
       notify({ kind: "error", message: error.message });
     }
   }
+  async function queueSync(connection) {
+    try {
+      await api("/api/jobs/provider-syncs", {
+        method: "POST",
+        body: { connection_id: connection.id, trigger: "manual" },
+      });
+      notify({
+        kind: "success",
+        message: `${connection.display_name} synchronization was queued. Track it in Reports & jobs.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
 
   return (
     <div className="module-flow">
@@ -412,23 +426,25 @@ function Integrations({ can, notify }) {
               label(item.environment),
               item.last_synced_at ? new Date(item.last_synced_at).toLocaleString() : "Never",
               <Status value={item.status} />,
-              can("admin") ? (
-                item.status === "configured" ||
-                item.status === "paused" ||
-                item.status === "error" ? (
-                  <button className="small-button" onClick={() => changeStatus(item, "active")}>
-                    Activate
+              <div className="button-row">
+                {item.status === "active" && can("operate") && (
+                  <button className="small-button" onClick={() => queueSync(item)}>
+                    Sync now
                   </button>
-                ) : item.status === "active" ? (
-                  <button className="small-button" onClick={() => changeStatus(item, "paused")}>
-                    Pause
-                  </button>
-                ) : (
-                  "—"
-                )
-              ) : (
-                "—"
-              ),
+                )}
+                {can("admin") &&
+                  (item.status === "configured" ||
+                  item.status === "paused" ||
+                  item.status === "error" ? (
+                    <button className="small-button" onClick={() => changeStatus(item, "active")}>
+                      Activate
+                    </button>
+                  ) : item.status === "active" ? (
+                    <button className="small-button" onClick={() => changeStatus(item, "paused")}>
+                      Pause
+                    </button>
+                  ) : null)}
+              </div>,
             ])}
           />
         </Panel>
@@ -2241,7 +2257,7 @@ function FixedAssets() {
     </div>
   );
 }
-function Reports() {
+function Reports({ can, notify }) {
   const reports = [
     "trial_balance",
     "income_statement",
@@ -2250,12 +2266,45 @@ function Reports() {
     "comprehensive_income",
     "changes_in_equity",
   ];
+  const jobs = useLoad(() => api("/api/jobs?limit=100"), []);
+  const [asOf, setAsOf] = useState(today);
+  useEffect(() => {
+    const timer = setInterval(() => void jobs.refresh(), 3000);
+    return () => clearInterval(timer);
+  }, []);
+  async function queueReport(type, format) {
+    try {
+      await api("/api/jobs/reports", { method: "POST", body: { type, format, as_of: asOf } });
+      await jobs.refresh();
+      notify({ kind: "success", message: `${label(type)} ${format.toUpperCase()} was queued.` });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function jobAction(job, action) {
+    try {
+      await api(`/api/jobs/${job.id}/${action}`, { method: "POST", idempotent: false });
+      await jobs.refresh();
+      notify({ kind: "success", message: `Job ${action === "retry" ? "requeued" : "cancelled"}.` });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
   return (
     <div className="module-flow">
       <ModuleBar
         title="Financial statements"
-        detail="Date-bounded, posted-ledger reports in reviewable and portable formats"
+        detail="Queue durable statement exports and track all report and connector work"
       />
+      <Panel title="Export date" subtitle="Reports use posted entries through this as-of date">
+        <Field
+          label="As-of date"
+          name="as_of"
+          type="date"
+          value={asOf}
+          onChange={(event) => setAsOf(event.target.value)}
+        />
+      </Panel>
       <div className="report-grid">
         {reports.map((report) => (
           <article className="report-card" key={report}>
@@ -2265,16 +2314,74 @@ function Reports() {
               <p>Generated from posted journals with current report mappings.</p>
             </div>
             <div className="button-row">
-              <a className="secondary" href={`/api/reports/${report}.pdf`}>
-                PDF
-              </a>
-              <a className="secondary" href={`/api/reports/${report}.csv`}>
-                CSV
-              </a>
+              <button
+                className="secondary"
+                disabled={!can("operate")}
+                onClick={() => queueReport(report, "pdf")}
+              >
+                Queue PDF
+              </button>
+              <button
+                className="secondary"
+                disabled={!can("operate")}
+                onClick={() => queueReport(report, "csv")}
+              >
+                Queue CSV
+              </button>
             </div>
           </article>
         ))}
       </div>
+      <Panel
+        title="Background work"
+        subtitle="Durable status, retry evidence and completed downloads"
+      >
+        {jobs.loading ? (
+          <Loading />
+        ) : jobs.error ? (
+          <LoadError error={jobs.error} retry={jobs.refresh} />
+        ) : (
+          <Table
+            columns={[
+              "Created",
+              "Kind",
+              "Output",
+              "Attempts",
+              "Status",
+              "Result or error",
+              "Action",
+            ]}
+            rows={jobs.data.map((job) => [
+              new Date(`${job.created_at}Z`).toLocaleString(),
+              label(job.kind),
+              job.artifact_filename || job.result?.sync_run_id || "—",
+              `${job.attempts} / ${job.max_attempts}`,
+              <Status value={job.status} />,
+              job.last_error ||
+                (job.result
+                  ? `${job.result.rows ?? ""} ${job.result.rows ? "rows" : job.result.status || "complete"}`
+                  : "—"),
+              <div className="button-row">
+                {job.has_artifact && (
+                  <a className="small-button" href={`/api/jobs/${job.id}/download`}>
+                    Download
+                  </a>
+                )}
+                {["queued", "retry"].includes(job.status) && can("operate") && (
+                  <button className="small-button" onClick={() => jobAction(job, "cancel")}>
+                    Cancel
+                  </button>
+                )}
+                {job.status === "dead_letter" && can("operate") && (
+                  <button className="small-button" onClick={() => jobAction(job, "retry")}>
+                    Retry
+                  </button>
+                )}
+              </div>,
+            ])}
+          />
+        )}
+      </Panel>
     </div>
   );
 }

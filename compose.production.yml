@@ -20,6 +20,7 @@ services:
       PLATFORM_DB_PATH: /var/lib/folio/platform.db
       TENANT_DB_DIR: /var/lib/folio/tenants
       ATTACHMENT_DIR: /var/lib/folio/attachments
+      JOB_ARTIFACT_DIR: /var/lib/folio/job-artifacts
       SENTRY_DSN_FILE: /run/secrets/sentry_dsn
       OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
       BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
@@ -99,6 +100,31 @@ services:
       folio:
         condition: service_healthy
     command: [npm, run, webhooks:worker]
+
+  background-worker:
+    image: ${FOLIO_IMAGE:-folio:local}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    stop_grace_period: 30s
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      NODE_ENV: production
+      PLATFORM_DB_PATH: /var/lib/folio/platform.db
+      TENANT_DB_DIR: /var/lib/folio/tenants
+      JOB_ARTIFACT_DIR: /var/lib/folio/job-artifacts
+      BACKGROUND_WORKER_POLL_MS: ${BACKGROUND_WORKER_POLL_MS:-1000}
+      BACKGROUND_WORKER_LEASE_SECONDS: ${BACKGROUND_WORKER_LEASE_SECONDS:-120}
+    volumes:
+      - folio_data:/var/lib/folio
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    networks: [backend]
+    depends_on:
+      folio:
+        condition: service_healthy
+    command: [npm, run, jobs:worker]
 
   prometheus:
     image: prom/prometheus:v3.5.0
