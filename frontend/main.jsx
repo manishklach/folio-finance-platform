@@ -325,6 +325,9 @@ function Integrations({ can, notify }) {
   const [applicationPreview, setApplicationPreview] = useState(null);
   const [bankPreview, setBankPreview] = useState(null);
   const [stripePreview, setStripePreview] = useState(null);
+  const [payrollPreview, setPayrollPreview] = useState(null);
+  const [payrollSettlement, setPayrollSettlement] = useState(null);
+  const [payrollReconcile, setPayrollReconcile] = useState(null);
   const [applicationBusy, setApplicationBusy] = useState(false);
   useEffect(() => {
     if (!selectedConnectionId && resource.data?.connections?.length)
@@ -337,8 +340,10 @@ function Integrations({ can, notify }) {
             api(`/api/integrations/connections/${selectedConnectionId}/records`),
             api(`/api/integrations/mappings?connection_id=${selectedConnectionId}`),
             api(`/api/integrations/stripe-reconciliation?connection_id=${selectedConnectionId}`),
+            api(`/api/payroll?connection_id=${selectedConnectionId}`),
+            api("/api/accounts"),
           ])
-        : Promise.resolve([[], [], { records: [], metrics: {} }]),
+        : Promise.resolve([[], [], { records: [], metrics: {} }, { runs: [], metrics: {} }, []]),
     [selectedConnectionId],
   );
   if (resource.loading) return <Loading />;
@@ -575,10 +580,105 @@ function Integrations({ can, notify }) {
     }
   }
 
-  const [records, mappings, stripeReconciliation] = workbench.data || [
+  async function previewPayrollApplication(record) {
+    try {
+      const preview = await api(`/api/integrations/records/${record.id}/payroll-preview`, {
+        method: "POST",
+        body: {},
+      });
+      setPayrollPreview(preview);
+      if (!preview.ready) await Promise.all([resource.refresh(), workbench.refresh()]);
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+
+  async function approvePayrollApplication(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      const result = await api(
+        `/api/integrations/records/${payrollPreview.record.id}/payroll-apply`,
+        {
+          method: "POST",
+          body: { approved: true, approval_note: form.get("approval_note") },
+        },
+      );
+      setPayrollPreview(null);
+      await Promise.all([resource.refresh(), workbench.refresh()]);
+      notify(
+        result.status === "applied"
+          ? {
+              kind: "success",
+              message: result.journal
+                ? `Payroll draft ${result.journal.id} created for independent posting.`
+                : "Unposted payroll source version removed with lineage retained.",
+            }
+          : { kind: "error", message: "Payroll entered the controlled exception queue." },
+      );
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  async function preparePayrollSettlement(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      const result = await api(`/api/payroll/settlements/${payrollSettlement.id}/draft`, {
+        method: "POST",
+        body: {
+          approved: true,
+          cash_account_id: Number(form.get("cash_account_id")),
+          settlement_date: form.get("settlement_date"),
+          approval_note: form.get("approval_note"),
+        },
+      });
+      setPayrollSettlement(null);
+      await workbench.refresh();
+      notify({
+        kind: "success",
+        message: `Settlement draft ${result.journal.id} created for independent posting and bank matching.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  async function reconcilePayrollSettlement(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      await api(`/api/payroll/settlements/${payrollReconcile.id}/reconcile`, {
+        method: "POST",
+        body: { approved: true, approval_note: form.get("approval_note") },
+      });
+      setPayrollReconcile(null);
+      await workbench.refresh();
+      notify({
+        kind: "success",
+        message: "Gusto settlement reconciled to the native bank feed and posted cash.",
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  const [records, mappings, stripeReconciliation, payroll, accounts] = workbench.data || [
     [],
     [],
     { records: [], metrics: {} },
+    { runs: [], metrics: {} },
+    [],
   ];
   const selectedConnection = value.connections.find((item) => item.id === selectedConnectionId);
 
@@ -699,7 +799,7 @@ function Integrations({ can, notify }) {
         action={
           can("admin") &&
           selectedConnection &&
-          !["plaid", "stripe"].includes(selectedConnection.provider) ? (
+          !["plaid", "stripe", "gusto"].includes(selectedConnection.provider) ? (
             <button className="secondary" onClick={() => setShowMapping(true)}>
               Add mapping
             </button>
@@ -722,7 +822,9 @@ function Integrations({ can, notify }) {
                   ? "Plaid bank transactions reconcile to posted cash through the native bank feed"
                   : selectedConnection?.provider === "stripe"
                     ? "Stripe billing and payment objects reconcile to Folio subledgers; payouts prove net settlement through the bank feed"
-                    : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
+                    : selectedConnection?.provider === "gusto"
+                      ? "Gusto payrolls accrue wages, taxes, benefits and deductions before each disclosed cash component reconciles independently"
+                      : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
               </span>
             </div>
             {workbench.loading ? (
@@ -755,6 +857,14 @@ function Integrations({ can, notify }) {
                       >
                         Reconcile Stripe
                       </button>
+                    ) : selectedConnection?.provider === "gusto" &&
+                      item.object_type === "payroll_run" ? (
+                      <button
+                        className="small-button"
+                        onClick={() => previewPayrollApplication(item)}
+                      >
+                        Review payroll
+                      </button>
                     ) : (
                       <button className="small-button" onClick={() => previewApplication(item)}>
                         Review mapping
@@ -765,6 +875,8 @@ function Integrations({ can, notify }) {
                       "Bank feed applied"
                     ) : item.applied_entity_type === "stripe_reconciliation" ? (
                       "Stripe reconciled"
+                    ) : item.applied_entity_type === "payroll_run" ? (
+                      "Payroll subledger applied"
                     ) : (
                       `Draft ${item.applied_entity_id}`
                     )
@@ -813,6 +925,109 @@ function Integrations({ can, notify }) {
             ])}
           />
         </Panel>
+      )}
+      {selectedConnection?.provider === "gusto" && (
+        <>
+          <Panel
+            title="Payroll accrual ledger"
+            subtitle="Gross wages, employer costs and employee deductions with source-version and journal lineage"
+          >
+            <div className="workflow-toolbar">
+              <span>
+                {payroll.metrics?.runs || 0} current runs · {payroll.metrics?.draft_accruals || 0}{" "}
+                accrual drafts · {payroll.metrics?.open_settlements || 0} settlement actions
+              </span>
+              <button className="secondary" onClick={workbench.refresh}>
+                Refresh posting state
+              </button>
+            </div>
+            <Table
+              caption="Native payroll subledger"
+              emptyTitle="No applied payroll runs"
+              emptyDetail="Synchronize Gusto and approve a validated payroll source version above."
+              columns={[
+                "Check date",
+                "Gusto payroll",
+                "Gross pay",
+                "Employer cost",
+                "Journal",
+                "Status",
+              ]}
+              rows={payroll.runs.map((run) => [
+                run.check_date,
+                run.external_id,
+                money(run.gross_pay_cents),
+                money(
+                  run.gross_pay_cents +
+                    run.employer_taxes_cents +
+                    run.employer_benefits_cents +
+                    run.reimbursements_cents,
+                ),
+                run.accounting_journal_id
+                  ? `${label(run.accounting_status)} · ${run.accounting_journal_id}`
+                  : "No journal",
+                <Status value={run.status} />,
+              ])}
+            />
+          </Panel>
+          <Panel
+            title="Payroll settlement queue"
+            subtitle="Each provider-disclosed debit clears its own liability, posts independently, then ties to Plaid"
+          >
+            <Table
+              caption="Gusto cash and liability settlements"
+              emptyTitle="No provider-initiated payroll debits"
+              emptyDetail="Manual checks and employer-paid liabilities remain in the GL; Gusto bank debits appear here."
+              columns={["Payroll", "Component", "Expected", "Liability", "State", "Action"]}
+              rows={payroll.runs.flatMap((run) =>
+                run.settlements.map((item) => [
+                  `${run.external_id} · ${run.check_date}`,
+                  label(item.component_type),
+                  money(item.expected_cents),
+                  item.liability_account_code,
+                  <Status value={item.effective_status} />,
+                  can("operate") && item.effective_status === "open" ? (
+                    run.accounting_status === "posted" ? (
+                      <button
+                        className="small-button"
+                        onClick={() =>
+                          setPayrollSettlement({
+                            ...item,
+                            payroll_external_id: run.external_id,
+                            check_date: run.check_date,
+                          })
+                        }
+                      >
+                        Prepare settlement
+                      </button>
+                    ) : (
+                      "Post accrual first"
+                    )
+                  ) : can("operate") && item.effective_status === "posted" ? (
+                    <button
+                      className="small-button"
+                      onClick={() =>
+                        setPayrollReconcile({
+                          ...item,
+                          payroll_external_id: run.external_id,
+                          check_date: run.check_date,
+                        })
+                      }
+                    >
+                      Reconcile bank match
+                    </button>
+                  ) : item.effective_status === "draft" ? (
+                    `Post draft ${item.journal_entry_id}`
+                  ) : item.effective_status === "reconciled" ? (
+                    `Plaid ${item.bank_feed_transaction_id}`
+                  ) : (
+                    "—"
+                  ),
+                ]),
+              )}
+            />
+          </Panel>
+        </>
       )}
       <Panel
         title="Integration exception queue"
@@ -1137,6 +1352,144 @@ function Integrations({ can, notify }) {
               <DialogActions close={() => setStripePreview(null)} label="Close and resolve" />
             )}
           </div>
+        </Dialog>
+      )}
+      {payrollPreview && (
+        <Dialog
+          title="Review native payroll accrual"
+          subtitle={`Gusto payroll · ${payrollPreview.record.external_id}`}
+          close={() => setPayrollPreview(null)}
+        >
+          <div className="application-review">
+            <div className="source-summary">
+              <ReviewValue label="Check date" value={payrollPreview.normalized.check_date || "—"} />
+              <ReviewValue
+                label="Gross pay"
+                value={money(payrollPreview.normalized.gross_pay_cents)}
+              />
+              <ReviewValue
+                label="Employer taxes"
+                value={money(payrollPreview.normalized.employer_taxes_cents)}
+              />
+              <ReviewValue
+                label="Company debit"
+                value={money(payrollPreview.normalized.company_debit_cents)}
+              />
+            </div>
+            <div className={payrollPreview.ready ? "control-note" : "control-note warning-note"}>
+              <strong>{payrollPreview.ready ? "Crossfoot passed" : "Payroll blocked"}</strong>
+              <span>
+                {payrollPreview.ready
+                  ? `${payrollPreview.journal_lines.length || "Reversal"} controlled journal lines · ${payrollPreview.settlement_components.length} disclosed bank-debit components`
+                  : payrollPreview.issues.join(" · ")}
+              </span>
+            </div>
+            {payrollPreview.ready ? (
+              <form className="form-stack" onSubmit={approvePayrollApplication}>
+                {payrollPreview.journal_lines.length > 0 && (
+                  <Table
+                    caption="Payroll journal blueprint"
+                    columns={["Account", "Description", "Debit", "Credit"]}
+                    rows={payrollPreview.journal_lines.map((line) => [
+                      line.account_code,
+                      line.description,
+                      line.side === "debit" ? money(line.amount_cents) : "—",
+                      line.side === "credit" ? money(line.amount_cents) : "—",
+                    ])}
+                  />
+                )}
+                <Field
+                  label="Controller rationale"
+                  name="approval_note"
+                  as="textarea"
+                  minLength="5"
+                  placeholder="Document the payroll register, totals crossfoot, period, taxes, benefits and debit evidence reviewed."
+                />
+                <p className="form-hint">
+                  Approval creates an accrual or reversal draft only. Another authorized user must
+                  post it before settlement can begin.
+                </p>
+                <DialogActions
+                  close={() => setPayrollPreview(null)}
+                  label={applicationBusy ? "Applying…" : "Approve payroll draft"}
+                  disabled={applicationBusy}
+                />
+              </form>
+            ) : (
+              <DialogActions close={() => setPayrollPreview(null)} label="Close and resolve" />
+            )}
+          </div>
+        </Dialog>
+      )}
+      {payrollSettlement && (
+        <Dialog
+          title="Prepare payroll settlement"
+          subtitle={`${payrollSettlement.payroll_external_id} · ${label(payrollSettlement.component_type)} · ${money(payrollSettlement.expected_cents)}`}
+          close={() => setPayrollSettlement(null)}
+        >
+          <form className="form-stack" onSubmit={preparePayrollSettlement}>
+            <div className="form-grid">
+              <Field
+                label="Cash account"
+                name="cash_account_id"
+                as="select"
+                options={accounts
+                  .filter((account) => account.active && account.type === "asset")
+                  .map((account) => [account.id, `${account.code} · ${account.name}`])}
+              />
+              <Field
+                label="Settlement date"
+                name="settlement_date"
+                type="date"
+                defaultValue={payrollSettlement.check_date}
+              />
+            </div>
+            <Field
+              label="Preparation rationale"
+              name="approval_note"
+              as="textarea"
+              minLength="5"
+              placeholder="Confirm the Gusto debit component, liability account, cash account and expected date."
+            />
+            <p className="form-hint">
+              This creates a draft liability-clearing entry. A different user posts it; Plaid then
+              matches the posted cash line.
+            </p>
+            <DialogActions
+              close={() => setPayrollSettlement(null)}
+              label={applicationBusy ? "Preparing…" : "Create settlement draft"}
+              disabled={applicationBusy}
+            />
+          </form>
+        </Dialog>
+      )}
+      {payrollReconcile && (
+        <Dialog
+          title="Reconcile payroll settlement"
+          subtitle={`${payrollReconcile.payroll_external_id} · ${label(payrollReconcile.component_type)} · ${money(payrollReconcile.expected_cents)}`}
+          close={() => setPayrollReconcile(null)}
+        >
+          <form className="form-stack" onSubmit={reconcilePayrollSettlement}>
+            <div className="control-note">
+              <strong>Exact three-way evidence required</strong>
+              <span>
+                Folio will accept only one matched Plaid transaction tied to this settlement
+                journal's posted cash line.
+              </span>
+            </div>
+            <Field
+              label="Reconciliation rationale"
+              name="approval_note"
+              as="textarea"
+              minLength="5"
+              placeholder="Confirm the Gusto component, posted liability clearing and Plaid bank evidence."
+            />
+            <DialogActions
+              close={() => setPayrollReconcile(null)}
+              label={applicationBusy ? "Reconciling…" : "Approve three-way match"}
+              disabled={applicationBusy}
+            />
+          </form>
         </Dialog>
       )}
     </div>

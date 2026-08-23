@@ -284,7 +284,20 @@ test("Gusto adapter honors response pagination metadata and normalizes payroll t
             processed_date: `2026-08-2${page}T18:00:00Z`,
             payroll_type: "regular",
             pay_period: { start_date: "2026-08-01", end_date: "2026-08-15" },
-            totals: { gross_pay: "1000.25", net_pay: "780.10", employer_taxes: "80.00" },
+            totals: {
+              gross_pay: "1000.25",
+              net_pay: "780.10",
+              employer_taxes: "80.00",
+              employee_taxes: "170.15",
+              employee_benefits_deductions: "50.00",
+              benefits: "25.00",
+              reimbursements: "10.00",
+              company_debit: "1040.25",
+              net_pay_debit: "780.10",
+              tax_debit: "250.15",
+              reimbursement_debit: "10.00",
+              child_support_debit: "0.00",
+            },
           },
         ],
         { headers: { "x-total-pages": "2" } },
@@ -294,6 +307,8 @@ test("Gusto adapter honors response pagination metadata and normalizes payroll t
   assert.equal(run.pages, 2);
   assert.match(urls[1], /page=2/);
   assert.equal(ledger.integrationRecords(configured.id)[0].normalized.gross_pay_cents, 100025);
+  assert.equal(ledger.integrationRecords(configured.id)[0].normalized.company_debit_cents, 104025);
+  assert.match(urls[0], /include=totals%2Ctaxes%2Cpayroll_status_meta%2Creversals/);
   ledger.close();
 });
 

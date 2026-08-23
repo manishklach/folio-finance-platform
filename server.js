@@ -640,6 +640,8 @@ async function api(req, res, url, ledger, platform, session, environment) {
       200,
       ledger.stripeReconciliationOverview(url.searchParams.get("connection_id") || null),
     );
+  if (req.method === "GET" && url.pathname === "/api/payroll")
+    return json(res, 200, ledger.payrollOverview(url.searchParams.get("connection_id") || null));
   const integrationRecordsMatch = url.pathname.match(
     /^\/api\/integrations\/connections\/([^/]+)\/records$/,
   );
@@ -756,6 +758,54 @@ async function api(req, res, url, ledger, platform, session, environment) {
       ledger.applyStripeRecordApplication({
         ...(await readJson(req)),
         record_id: stripeApplyMatch[1],
+      }),
+    );
+  const payrollPreviewMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/payroll-preview$/,
+  );
+  if (req.method === "POST" && payrollPreviewMatch)
+    return json(
+      res,
+      200,
+      ledger.previewPayrollRecordApplication({
+        record_id: payrollPreviewMatch[1],
+        classify: true,
+      }),
+    );
+  const payrollApplyMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/payroll-apply$/,
+  );
+  if (req.method === "POST" && payrollApplyMatch)
+    return json(
+      res,
+      200,
+      ledger.applyPayrollRecordApplication({
+        ...(await readJson(req)),
+        record_id: payrollApplyMatch[1],
+      }),
+    );
+  const payrollSettlementDraftMatch = url.pathname.match(
+    /^\/api\/payroll\/settlements\/([^/]+)\/draft$/,
+  );
+  if (req.method === "POST" && payrollSettlementDraftMatch)
+    return json(
+      res,
+      201,
+      ledger.createPayrollSettlementDraft({
+        ...(await readJson(req)),
+        settlement_id: payrollSettlementDraftMatch[1],
+      }),
+    );
+  const payrollSettlementReconcileMatch = url.pathname.match(
+    /^\/api\/payroll\/settlements\/([^/]+)\/reconcile$/,
+  );
+  if (req.method === "POST" && payrollSettlementReconcileMatch)
+    return json(
+      res,
+      200,
+      ledger.reconcilePayrollSettlement({
+        ...(await readJson(req)),
+        settlement_id: payrollSettlementReconcileMatch[1],
       }),
     );
   if (req.method === "POST" && url.pathname === "/api/integrations/exceptions/status")

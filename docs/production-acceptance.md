@@ -92,6 +92,17 @@ payout to matched bank-feed cash within seven days. An unresolved payout blocks 
 OAuth/restricted-key lifecycle, provider sandbox certification, credentialed staging and deployed soak
 remain production acceptance gates.
 
+Repository acceptance for Gusto now includes immutable processed-payroll source versions; required
+whole-cent wage, tax, benefit, reimbursement and bank-debit totals; employee-deduction and company-
+debit crossfoots; a balanced accrual or removal-reversal draft; maker-checker posting; separate
+liability-clearing drafts for every provider-disclosed net-pay, tax, reimbursement and child-support
+debit; exact reconciliation to a Plaid transaction and the settlement journal's posted cash line;
+idempotency; source-change/removal controls; and accrual/bank close blockers. Employee-level receipts,
+department allocations, hosted OAuth, verified native events, settled-payroll recovery workflows,
+provider sandbox certification, credentialed staging and deployed soak remain production acceptance
+gates. Gusto remains the payroll calculator and payment/tax-filing system; Folio records and
+reconciles the accounting result and never calculates employee payroll or files taxes.
+
 ## 3. Imports, mappings and exception operations
 
 Repository acceptance now includes versioned tenant fuzzy-match policies for one configured text field,
