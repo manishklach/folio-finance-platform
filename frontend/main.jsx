@@ -10,6 +10,7 @@ const modules = {
   Reports: "/api/saas/overview",
   "Close & Controls": "/api/reconciliation-exceptions",
   "GAAP Compliance": "/api/gaap/overview",
+  Investments: "/api/investments/overview",
   "Admin & Users": "/api/ai/history",
 };
 
@@ -43,6 +44,7 @@ function App() {
         "Receivables & Collections",
         "Reports",
         "GAAP Compliance",
+        "Investments",
       ].includes(name),
   );
   return (

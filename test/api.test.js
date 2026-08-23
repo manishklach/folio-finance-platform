@@ -44,6 +44,25 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   assert.equal(assessment.response.status, 201);
   const gaap = await call(origin, "/api/gaap/overview", null, admin);
   assert.equal(gaap.body.assessments[0].assessment_key, "API-LICENSE-1");
+  const investment = await call(
+    origin,
+    "/api/investments",
+    {
+      instrument_number: "API-EQ-1",
+      name: "API investment",
+      issuer: "Example issuer",
+      security_type: "equity",
+      accounting_model: "equity_fair_value",
+      acquisition_date: "2026-08-22",
+      readily_determinable_fair_value: true,
+      fair_value_level: 1,
+      policy_basis: "Quoted shares are measured through earnings under ASC 321.",
+    },
+    admin,
+  );
+  assert.equal(investment.response.status, 201);
+  const investments = await call(origin, "/api/investments/overview", null, admin);
+  assert.equal(investments.body.instruments[0].instrument_number, "API-EQ-1");
   assert.equal(
     (
       await call(

@@ -329,6 +329,45 @@ async function api(req, res, url, ledger, platform, session) {
     return json(res, 200, ledger.gaapOverview(url.searchParams.get("as_of") || today()));
   if (req.method === "GET" && url.pathname === "/api/gaap/disclosures")
     return json(res, 200, ledger.gaapDisclosures(url.searchParams.get("as_of") || today()));
+  if (req.method === "GET" && url.pathname === "/api/investments/overview")
+    return json(res, 200, ledger.investmentsOverview(url.searchParams.get("as_of") || today()));
+  if (req.method === "GET" && url.pathname === "/api/investments")
+    return json(res, 200, ledger.listInvestments());
+  if (req.method === "GET" && url.pathname === "/api/investments/disclosures")
+    return json(res, 200, ledger.investmentDisclosures(url.searchParams.get("as_of") || today()));
+  if (req.method === "GET" && url.pathname === "/api/investments/reconciliation")
+    return json(
+      res,
+      200,
+      ledger.investmentReconciliation(url.searchParams.get("as_of") || today()),
+    );
+  const investmentMatch = url.pathname.match(/^\/api\/investments\/(\d+)$/);
+  if (req.method === "GET" && investmentMatch)
+    return json(res, 200, ledger.investment(Number(investmentMatch[1])));
+  if (req.method === "POST" && url.pathname === "/api/investments")
+    return json(res, 201, ledger.createInvestment(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/purchases")
+    return json(res, 201, ledger.purchaseInvestment(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/sales")
+    return json(res, 201, ledger.sellInvestment(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/income")
+    return json(res, 201, ledger.recordInvestmentIncome(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/measurements")
+    return json(res, 201, ledger.measureInvestment(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/yield/recognize")
+    return json(res, 200, ledger.recognizeInvestmentYieldThrough((await readJson(req)).as_of));
+  if (req.method === "POST" && url.pathname === "/api/investments/interest/accruals")
+    return json(res, 201, ledger.accrueInvestmentInterest(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/equity-method")
+    return json(res, 201, ledger.recordEquityMethodPeriod(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/equity-method/impairment")
+    return json(res, 201, ledger.assessEquityMethodImpairment(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/proportional-amortization")
+    return json(res, 201, ledger.recordProportionalAmortizationPeriod(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/transitions")
+    return json(res, 201, ledger.transitionInvestmentModel(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/investments/credit-losses")
+    return json(res, 201, ledger.assessInvestmentCreditLoss(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/gaap/policies")
     return json(res, 201, ledger.setGaapPolicy(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/gaap/assessments")
