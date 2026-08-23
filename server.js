@@ -18,6 +18,7 @@ import {
 } from "./lib/runtime-config.js";
 import { verifyWebhookSignature } from "./lib/webhook-verification.js";
 import { stripeWebhookPage } from "./lib/provider-adapters.js";
+import { apiRoutePolicy } from "./lib/api-route-policies.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -160,6 +161,7 @@ export function createFolioServer(options = {}) {
 }
 
 async function apiRequest(req, res, url, platform, ledgers, requestId, environment) {
+  const routePolicy = apiRoutePolicy(req.method, url.pathname);
   if (stateMethods.has(req.method)) validateBrowserOrigin(req.headers);
   const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
   if (
@@ -190,6 +192,7 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
   const token = parseCookies(req.headers.cookie || "").folio_session;
   const session = platform.resolveSession(token);
   if (!session) throw problem("Authentication required", 401);
+  if (!routePolicy) throw problem("Not found", 404);
   const context = {
     actor: session.email,
     userId: session.user_id,
@@ -199,8 +202,9 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
   };
   req.folioContext = context;
   return runWithRequestContext(context, async () => {
-    if (stateMethods.has(req.method) && !platform.verifyCsrf(session, req.headers["x-csrf-token"]))
+    if (routePolicy.csrf && !platform.verifyCsrf(session, req.headers["x-csrf-token"]))
       throw problem("Invalid CSRF token", 403);
+    if (routePolicy.permission) requirePermission(session, routePolicy.permission);
     if (req.method === "GET" && url.pathname === "/api/auth/me")
       return json(res, 200, authPayload(platform, session, platform.issueCsrf(session.id)));
     if (req.method === "POST" && url.pathname === "/api/auth/logout") {
@@ -214,7 +218,6 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
       return json(res, 200, authPayload(platform, result.session, result.csrf));
     }
     if (req.method === "POST" && url.pathname === "/api/admin/users") {
-      requirePermission(session, "admin");
       return json(
         res,
         201,
@@ -222,7 +225,6 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
       );
     }
     if (req.method === "POST" && url.pathname === "/api/auth/register") {
-      requirePermission(session, "admin");
       const body = await readJson(req);
       return json(
         res,
@@ -240,7 +242,6 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
     }
     const resetPasswordMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
     if (req.method === "POST" && resetPasswordMatch) {
-      requirePermission(session, "admin");
       return json(
         res,
         200,
@@ -251,7 +252,6 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
       );
     }
     if (req.method === "POST" && url.pathname === "/api/admin/organizations") {
-      requirePermission(session, "admin");
       const organization = platform.createOrganization(await readJson(req), {
         ...session,
         request_id: requestId,
@@ -259,8 +259,8 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
       tenantLedger(ledgers, { org_id: organization.id, database_path: organization.database_path });
       return json(res, 201, publicOrganization(organization));
     }
+    if (routePolicy.scope !== "tenant") throw problem("Not found", 404);
     const ledger = tenantLedger(ledgers, session);
-    requirePermission(session, requiredPermission(req.method, url.pathname));
     if (stateMethods.has(req.method) && idempotentRoutes.has(url.pathname)) {
       const replayed = await prepareIdempotency(req, res, platform, session, url.pathname);
       if (replayed) return;
@@ -854,22 +854,6 @@ async function prepareIdempotency(req, res, platform, session, route) {
     throw problem("An identical request with this idempotency key is still processing", 409);
   res.folioIdempotency = { platform, orgId: session.org_id, route, key };
   return false;
-}
-function requiredPermission(method, path) {
-  if (method === "GET") return "read";
-  if (
-    path === "/api/integrations/connections" ||
-    path === "/api/integrations/connections/status" ||
-    path === "/api/integrations/mappings" ||
-    path === "/api/imports/mapping-profiles"
-  )
-    return "admin";
-  if (/^\/api\/journals\/\d+\/post$/.test(path)) return "post";
-  if (path === "/api/close" || path.startsWith("/api/close/")) return "close";
-  if (path === "/api/journals" || path === "/api/ai/draft" || path === "/api/ai/disposition")
-    return "draft";
-  if (path === "/api/accounts") return "admin";
-  return "operate";
 }
 function requirePermission(session, permission) {
   if (!permissionsFor(session.role).includes(permission))

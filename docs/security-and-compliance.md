@@ -3,7 +3,7 @@
 ## Implemented engineering controls
 
 - Argon2id passwords, server-side expiring sessions, secure cookie options, CSRF tokens, login throttling and lockout.
-- Server-side admin/bookkeeper/approver/read-only authorization and physically separated organization databases. Organization selection comes only from a verified membership.
+- Server-side admin/bookkeeper/approver/read-only authorization and physically separated organization databases. Organization selection comes only from a verified membership. A fail-closed route manifest declares the scope and minimum permission for every API method/path; undeclared handlers cannot execute.
 - SQLite foreign keys, WAL/busy timeout, posted-entry immutability triggers, journal hash verification, backups with SHA-256 manifests, and a restore verifier.
 - Request/body limits, CSP and defensive headers, signed/idempotent webhooks, attachment type/size checks and non-public storage.
 - Request/user/org correlated JSON logs, readiness latency, metrics, and optional Sentry error capture without default PII.
@@ -12,14 +12,14 @@
 
 ## SOC 2 evidence map
 
-| Control area            | Repository evidence                                                              | Operational evidence still required                   |
-| ----------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Logical access          | Roles, memberships, sessions, CSRF and auth integration tests                    | Quarterly access review and termination samples       |
-| Change management       | Pull-request CI, pinned runtime, migrations                                      | Protected branch settings and approval records        |
-| Processing integrity    | Double entry validation, immutable postings, hash verifier, reconciliation queue | Monthly close and exception-resolution samples        |
-| Availability            | Health, metrics, backup/restore tooling                                          | Uptime reports, restore drills, on-call records       |
-| Confidentiality/privacy | Tenant databases, safe attachments, secret mounts, export/delete tool            | Retention schedule, DPA inventory, completed requests |
-| Incident response       | Runbook and structured diagnostics                                               | Tabletop exercise and incident/postmortem records     |
+| Control area            | Repository evidence                                                                                                   | Operational evidence still required                   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Logical access          | Roles, memberships, sessions, fail-closed route manifest, generated auth/CSRF/role denials and tenant-isolation tests | Quarterly access review and termination samples       |
+| Change management       | Pull-request CI, pinned runtime, migrations                                                                           | Protected branch settings and approval records        |
+| Processing integrity    | Double entry validation, immutable postings, hash verifier, reconciliation queue                                      | Monthly close and exception-resolution samples        |
+| Availability            | Health, metrics, backup/restore tooling                                                                               | Uptime reports, restore drills, on-call records       |
+| Confidentiality/privacy | Tenant databases, safe attachments, secret mounts, export/delete tool                                                 | Retention schedule, DPA inventory, completed requests |
+| Incident response       | Runbook and structured diagnostics                                                                                    | Tabletop exercise and incident/postmortem records     |
 
 ## Required external launch gates
 
