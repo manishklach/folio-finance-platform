@@ -773,15 +773,19 @@ async function webhook(req, res, url, platform, ledgers, requestId, environment)
   }
   if (!event.id || !event.type || !event.data)
     throw problem("Webhook id, type, and data are required");
-  const existing = platform.webhookLookup(provider, event.id);
+  const payloadHash = digest(raw);
+  const existing = platform.webhookLookup(provider, event.id, org.id, payloadHash);
   if (existing) return json(res, 200, { duplicate: true, result: existing.result });
   const ledger = tenantLedger(ledgers, { org_id: org.id, database_path: org.database_path });
-  const result = await runWithRequestContext(
+  const application = await runWithRequestContext(
     { actor: `webhook.${provider}`, orgId: org.id, role: "system", requestId },
-    () => applyWebhook(provider, event, ledger),
+    () =>
+      ledger.applyExternalEvent(provider, event.id, payloadHash, () =>
+        applyWebhook(provider, event, ledger),
+      ),
   );
-  platform.webhookRecord(provider, event.id, org.id, digest(raw), "processed", result);
-  return json(res, 200, { duplicate: false, result });
+  platform.webhookRecord(provider, event.id, org.id, payloadHash, "processed", application.result);
+  return json(res, 200, application);
 }
 
 function applyWebhook(provider, event, ledger) {
