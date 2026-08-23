@@ -21,6 +21,7 @@ services:
       TENANT_DB_DIR: /var/lib/folio/tenants
       ATTACHMENT_DIR: /var/lib/folio/attachments
       JOB_ARTIFACT_DIR: /var/lib/folio/job-artifacts
+      IMPORT_SOURCE_RETENTION_DAYS: ${IMPORT_SOURCE_RETENTION_DAYS:-7}
       SENTRY_DSN_FILE: /run/secrets/sentry_dsn
       OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
       BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
@@ -116,6 +117,8 @@ services:
       JOB_ARTIFACT_DIR: /var/lib/folio/job-artifacts
       JOB_ARTIFACT_RETENTION_DAYS: ${JOB_ARTIFACT_RETENTION_DAYS:-30}
       JOB_ARTIFACT_SWEEP_MINUTES: ${JOB_ARTIFACT_SWEEP_MINUTES:-60}
+      IMPORT_SOURCE_RETENTION_DAYS: ${IMPORT_SOURCE_RETENTION_DAYS:-7}
+      IMPORT_ORPHAN_GRACE_MINUTES: ${IMPORT_ORPHAN_GRACE_MINUTES:-60}
       BACKGROUND_WORKER_POLL_MS: ${BACKGROUND_WORKER_POLL_MS:-1000}
       BACKGROUND_WORKER_LEASE_SECONDS: ${BACKGROUND_WORKER_LEASE_SECONDS:-120}
     volumes:

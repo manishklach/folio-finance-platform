@@ -1,9 +1,22 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { processNextBackgroundJob, purgeExpiredJobArtifacts } from "../lib/background-worker.js";
+import {
+  processNextBackgroundJob,
+  purgeBackgroundJobSources,
+  purgeExpiredJobArtifacts,
+  purgeOrphanedImportSources,
+} from "../lib/background-worker.js";
 import { createLedger } from "../lib/db.js";
 import { createPlatform } from "../lib/platform.js";
 import { createFolioServer } from "../server.js";
@@ -99,7 +112,7 @@ test("durable report jobs are idempotent, tenant-bound, leased, and artifact-bac
 });
 
 test("expired job leases retry, dead letters are explicit, and operator retry/cancel is audited", async (t) => {
-  const { platform, setup } = await fixture(t, "job-recovery");
+  const { artifactDir, platform, setup } = await fixture(t, "job-recovery");
   const enqueue = (key) =>
     platform.enqueueBackgroundJob({
       orgId: setup.session.org_id,
@@ -128,12 +141,47 @@ test("expired job leases retry, dead letters are explicit, and operator retry/ca
     platform.cancelBackgroundJob(queued.id, setup.session.org_id, setup.session.user_id).status,
     "cancelled",
   );
+  const expiredSource = platform.enqueueBackgroundJob({
+    orgId: setup.session.org_id,
+    userId: setup.session.user_id,
+    kind: "import_stage",
+    request: { source_sha256: "a".repeat(64) },
+    idempotencyKey: "expired-import-source",
+    source: {
+      path: join(artifactDir, setup.session.org_id, "import-sources", "expired.json"),
+      sha256: "a".repeat(64),
+      expiresAt: "2000-01-01T00:00:00.000Z",
+    },
+  });
+  assert.deepEqual(purgeBackgroundJobSources(platform, artifactDir), {
+    candidates: 1,
+    deleted: 1,
+  });
+  const expired = platform.backgroundJob(expiredSource.id, setup.session.org_id);
+  assert.equal(expired.status, "dead_letter");
+  assert.match(expired.last_error, /source expired/);
+  assert.throws(
+    () => platform.retryBackgroundJob(expired.id, setup.session.org_id, setup.session.user_id),
+    /submit the file again/,
+  );
+  const sourceDirectory = join(artifactDir, setup.session.org_id, "import-sources");
+  mkdirSync(sourceDirectory, { recursive: true });
+  const orphanPath = join(sourceDirectory, "orphan.json");
+  writeFileSync(orphanPath, "{}", { mode: 0o600 });
+  utimesSync(orphanPath, new Date("2000-01-01"), new Date("2000-01-01"));
+  assert.deepEqual(purgeOrphanedImportSources(platform, artifactDir), {
+    candidates: 1,
+    deleted: 1,
+  });
+  assert.equal(existsSync(orphanPath), false);
   const actions = platform.db
     .prepare("SELECT action FROM platform_audit WHERE action LIKE 'background_job_%'")
     .all()
     .map(({ action }) => action);
   assert.ok(actions.includes("background_job_retried"));
   assert.ok(actions.includes("background_job_cancelled"));
+  assert.ok(actions.includes("background_job_source_deleted"));
+  assert.ok(actions.includes("background_job_orphan_source_deleted"));
 });
 
 test("provider jobs run the connection adapter and persist cursor/source-run results", async (t) => {
@@ -180,6 +228,95 @@ test("provider jobs run the connection adapter and persist cursor/source-run res
   });
   assert.equal(verified.integrationConnection(connection.id).cursor, "queued-complete");
   assert.equal(verified.integrationSyncRun(processed.job.result.sync_run_id).status, "succeeded");
+  verified.close();
+});
+
+test("authenticated import jobs stage source artifacts and apply approved batches durably", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "import-job-api-"));
+  const artifactDir = join(root, "artifacts");
+  const app = createFolioServer({
+    platformDbPath: join(root, "platform.db"),
+    tenantDir: join(root, "tenants"),
+    environment: { JOB_ARTIFACT_DIR: artifactDir, IMPORT_SOURCE_RETENTION_DAYS: "7" },
+  });
+  const setup = await app.platform.setup({
+    organization_name: "Import Job API Test",
+    name: "Controller",
+    email: "import-job-api@example.test",
+    password: "StrongPassword123",
+  });
+  createLedger(setup.session.database_path, { seed: true, orgId: setup.session.org_id }).close();
+  await new Promise((resolve) => app.server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${app.server.address().port}`;
+  t.after(async () => {
+    await new Promise((resolve) => app.close(resolve));
+    rmSync(root, { recursive: true, force: true });
+  });
+  const headers = {
+    cookie: `folio_session=${setup.token}`,
+    "content-type": "application/json",
+    "x-csrf-token": setup.csrf,
+  };
+  const stagedResponse = await fetch(`${origin}/api/jobs/imports/stage`, {
+    method: "POST",
+    headers: { ...headers, "idempotency-key": "queued-import-stage-1" },
+    body: JSON.stringify({
+      template_key: "journals",
+      filename: "queued-journals.csv",
+      csv: "date,memo,debit_account_code,credit_account_code,amount_cents,external_id\n2026-08-23,Queued import,1000,3000,1250,queued-import-1",
+      options: {},
+    }),
+  });
+  assert.equal(stagedResponse.status, 202);
+  const stagedJob = await stagedResponse.json();
+  assert.equal("source_path" in stagedJob, false);
+  const internal = app.platform.backgroundJob(stagedJob.id, setup.session.org_id, {
+    internal: true,
+  });
+  assert.equal(existsSync(internal.source_path), true);
+  const staged = await processNextBackgroundJob(app.platform, { artifactDir });
+  assert.equal(staged.job.status, "completed", staged.cause?.stack);
+  const batchId = staged.job.result.batch_id;
+  assert.equal(staged.job.result.valid_count, 1);
+
+  app.platform.db
+    .prepare("UPDATE background_jobs SET status='retry',completed_at=NULL WHERE id=?")
+    .run(stagedJob.id);
+  const recovered = await processNextBackgroundJob(app.platform, { artifactDir });
+  assert.equal(recovered.job.result.batch_id, batchId, "staging retry reuses the exact batch");
+
+  const approval = await fetch(`${origin}/api/imports/batches/${batchId}/approve`, {
+    method: "POST",
+    headers: { ...headers, "idempotency-key": "queued-import-approve-1" },
+    body: JSON.stringify({ apply_valid_rows: false }),
+  });
+  assert.equal(approval.status, 200);
+  const applyResponse = await fetch(`${origin}/api/jobs/imports/apply`, {
+    method: "POST",
+    headers: { ...headers, "idempotency-key": "queued-import-apply-1" },
+    body: JSON.stringify({ batch_id: batchId }),
+  });
+  assert.equal(applyResponse.status, 202);
+  const applyJob = await applyResponse.json();
+  const applied = await processNextBackgroundJob(app.platform, { artifactDir });
+  assert.equal(applied.job.id, applyJob.id);
+  assert.equal(applied.job.result.applied_count, 1);
+  assert.equal(applied.job.status, "completed", applied.cause?.stack);
+
+  assert.deepEqual(purgeBackgroundJobSources(app.platform, artifactDir), {
+    candidates: 1,
+    deleted: 1,
+  });
+  assert.equal(existsSync(internal.source_path), false);
+  assert.equal(
+    app.platform.backgroundJob(stagedJob.id, setup.session.org_id, { internal: true }).source_path,
+    null,
+  );
+  const verified = createLedger(setup.session.database_path, {
+    seed: false,
+    orgId: setup.session.org_id,
+  });
+  assert.equal(verified.importBatch(batchId).status, "applied");
   verified.close();
 });
 

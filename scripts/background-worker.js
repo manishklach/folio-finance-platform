@@ -1,5 +1,10 @@
 import { resolve } from "node:path";
-import { processNextBackgroundJob, purgeExpiredJobArtifacts } from "../lib/background-worker.js";
+import {
+  processNextBackgroundJob,
+  purgeBackgroundJobSources,
+  purgeExpiredJobArtifacts,
+  purgeOrphanedImportSources,
+} from "../lib/background-worker.js";
 import { createPlatform } from "../lib/platform.js";
 import { secret } from "../lib/secrets.js";
 
@@ -11,6 +16,8 @@ const artifactDir = resolve(process.env.JOB_ARTIFACT_DIR || "data/job-artifacts"
 const artifactRetentionDays = boundedNumber(process.env.JOB_ARTIFACT_RETENTION_DAYS, 1, 3_650, 30);
 const artifactSweepMilliseconds =
   boundedNumber(process.env.JOB_ARTIFACT_SWEEP_MINUTES, 1, 1_440, 60) * 60_000;
+const importOrphanGraceSeconds =
+  boundedNumber(process.env.IMPORT_ORPHAN_GRACE_MINUTES, 10, 1_440, 60) * 60;
 let stopping = false;
 let nextArtifactSweep = 0;
 
@@ -22,6 +29,16 @@ try {
       const purge = purgeExpiredJobArtifacts(platform, artifactDir);
       if (purge.candidates)
         process.stdout.write(`${JSON.stringify({ event: "artifact_purge", ...purge })}\n`);
+      const sourcePurge = purgeBackgroundJobSources(platform, artifactDir);
+      if (sourcePurge.candidates)
+        process.stdout.write(`${JSON.stringify({ event: "job_source_purge", ...sourcePurge })}\n`);
+      const orphanPurge = purgeOrphanedImportSources(platform, artifactDir, {
+        olderThanSeconds: importOrphanGraceSeconds,
+      });
+      if (orphanPurge.candidates)
+        process.stdout.write(
+          `${JSON.stringify({ event: "orphan_source_purge", ...orphanPurge })}\n`,
+        );
       nextArtifactSweep = Date.now() + artifactSweepMilliseconds;
     }
     const result = await processNextBackgroundJob(platform, {

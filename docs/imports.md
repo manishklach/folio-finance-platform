@@ -9,7 +9,8 @@ values, validation results, natural key, outcome, created entity, approval, and 
 ```mermaid
 flowchart LR
   F[Select versioned template and source CSV] --> M[Map canonical fields to source headers]
-  M --> V[Parse and normalize in a tenant-scoped batch]
+  M --> Q[Secure tenant source artifact and enqueue validation]
+  Q --> V[Worker verifies hash, parses and normalizes in a tenant-scoped batch]
   V --> H[Hash file and every normalized row]
   H --> D{Validation and exact natural-key checks}
   D -->|Structurally valid and exact-key unique| FZ{Active fuzzy policy?}
@@ -24,8 +25,9 @@ flowchart LR
   P[Preview valid row and intended entity]
   P --> A{Explicit operator approval}
   E --> A
-  A -->|All rows clean| T[Atomic apply]
-  A -->|Explicit valid-row subset| T
+  A -->|All rows clean| AQ[Queue approved application]
+  A -->|Explicit valid-row subset| AQ
+  AQ --> T[Worker executes atomic apply]
   T -->|Success| L[Record created-entity lineage and applied key]
   T -->|Any runtime failure| R[Roll back entire valid subset and open blocking exception]
   L --> C[Subledger and GL reconciliation]
@@ -112,8 +114,10 @@ misrepresenting an unrelated or incomplete file as the correction.
 | `GET /api/imports/batches/:id`                     | Review a paged row set, mapping, hashes and outcomes | Read                                  |
 | `GET /api/imports/batches/:id/correction-source`   | Reconstruct eligible rows and source lineage         | Read                                  |
 | `POST /api/imports/stage`                          | Parse, map, validate and stage a file                | Operate + CSRF + idempotency key      |
+| `POST /api/jobs/imports/stage`                     | Secure a source and queue worker validation          | Operate + CSRF + idempotency key      |
 | `POST /api/imports/batches/:id/approve`            | Approve all clean rows or explicit valid subset      | Operate + CSRF                        |
 | `POST /api/imports/batches/:id/apply`              | Atomically apply an approved batch                   | Operate + CSRF; repository idempotent |
+| `POST /api/jobs/imports/apply`                     | Queue atomic application of an approved batch        | Operate + CSRF + idempotency key      |
 | `GET /api/imports/mapping-profiles`                | List active mapping versions                         | Read                                  |
 | `POST /api/imports/mapping-profiles`               | Save a validated mapping profile                     | Admin + CSRF                          |
 | `GET /api/imports/duplicate-policies`              | List fuzzy policies, versions and indexed row counts | Read                                  |
@@ -127,7 +131,8 @@ misrepresenting an unrelated or incomplete file as the correction.
 Automated tests cover all ten templates, custom source mappings, formula-like input, validation errors,
 within-file and cross-batch duplicate behavior, explicit valid-row subsets, exact-file replay,
 whole-batch rollback, blocking exceptions, balanced draft creation, posted subledger transactions,
-bank matching, correction scope and parent/child lineage, row-count safeguards, row/exception
+bank matching, durable source hashing/containment/expiry and orphan cleanup, staging crash recovery, queued approved
+application, correction scope and parent/child lineage, row-count safeguards, row/exception
 pagination, fuzzy policy versioning, indexed historical and in-file candidates, exact-duplicate
 non-override, reviewed distinct-record disposition, schema upgrades, journal integrity, API
 authentication, CSRF, authorization, and tenant database isolation. `npm run test:load` additionally
@@ -136,7 +141,6 @@ candidate, and enforces a configurable per-step ceiling in CI.
 
 The fuzzy index intentionally covers the current file and applied import lineage, not manually-created
 master records or provider-native records. It uses one configured text field per template and provides
-candidates rather than entity merge logic. Before pilot use, Folio still needs large-file worker
-processing, approval segregation policies, production-shaped migration/load/soak evidence and a
-controller review of threshold behavior. These boundaries remain tracked by the production acceptance
-specification.
+candidates rather than entity merge logic. Before pilot use, Folio still needs configurable approval
+segregation policies, production-shaped multi-tenant soak evidence and a controller review of
+threshold behavior. These boundaries remain tracked by the production acceptance specification.

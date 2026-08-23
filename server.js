@@ -1,6 +1,6 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLedger } from "./lib/db.js";
@@ -48,6 +48,8 @@ const idempotentRoutes = new Set([
   "/api/imports/stage",
   "/api/jobs/reports",
   "/api/jobs/provider-syncs",
+  "/api/jobs/imports/stage",
+  "/api/jobs/imports/apply",
 ]);
 const reportJobSchema = z.object({
   type: z.enum([
@@ -66,6 +68,16 @@ const providerJobSchema = z.object({
   connection_id: z.string().min(1).max(200),
   trigger: z.enum(["manual", "scheduled"]).default("manual"),
 });
+const importStageJobSchema = z.object({
+  template_key: z.string().min(1).max(80),
+  filename: z.string().min(1).max(255),
+  csv: z.string().min(1).max(5_000_000),
+  mapping: z.record(z.string(), z.string()).optional(),
+  mapping_profile_id: z.string().uuid().optional(),
+  restaged_from_batch_id: z.string().uuid().optional(),
+  options: z.record(z.string(), z.unknown()).default({}),
+});
+const importApplyJobSchema = z.object({ batch_id: z.string().uuid() });
 
 export function createFolioServer(options = {}) {
   const environment = options.environment || process.env;
@@ -353,6 +365,47 @@ async function api(req, res, url, ledger, platform, session, environment) {
         orgId: session.org_id,
         userId: session.user_id,
         kind: "provider_sync",
+        request: body,
+        idempotencyKey: req.headers["idempotency-key"],
+      }),
+    );
+  }
+  if (req.method === "POST" && url.pathname === "/api/jobs/imports/stage") {
+    const body = parseJobRequest(importStageJobSchema, await readJson(req));
+    const idempotencyKey = req.headers["idempotency-key"];
+    const artifactRoot = resolve(environment.JOB_ARTIFACT_DIR || "data/job-artifacts");
+    const source = await persistImportJobSource({
+      artifactRoot,
+      orgId: session.org_id,
+      idempotencyKey,
+      body,
+      retentionDays: environment.IMPORT_SOURCE_RETENTION_DAYS,
+    });
+    return json(
+      res,
+      202,
+      platform.enqueueBackgroundJob({
+        orgId: session.org_id,
+        userId: session.user_id,
+        kind: "import_stage",
+        request: { source_sha256: source.sha256 },
+        idempotencyKey,
+        source,
+      }),
+    );
+  }
+  if (req.method === "POST" && url.pathname === "/api/jobs/imports/apply") {
+    const body = parseJobRequest(importApplyJobSchema, await readJson(req));
+    const batch = ledger.importBatch(body.batch_id);
+    if (!["approved", "applied"].includes(batch.status))
+      throw problem("Import batch must be approved before queued application", 409);
+    return json(
+      res,
+      202,
+      platform.enqueueBackgroundJob({
+        orgId: session.org_id,
+        userId: session.user_id,
+        kind: "import_apply",
         request: body,
         idempotencyKey: req.headers["idempotency-key"],
       }),
@@ -1012,7 +1065,7 @@ async function prepareIdempotency(req, res, platform, session, route) {
   const key = String(req.headers["idempotency-key"] || "");
   if (!/^[A-Za-z0-9._:-]{8,128}$/.test(key))
     throw problem("A valid Idempotency-Key header is required");
-  const body = await readBody(req, 1_000_000);
+  const body = await readBody(req, route === "/api/jobs/imports/stage" ? 6_000_000 : 1_000_000);
   req.bodyCache = body;
   const requestHash = digest(body);
   const prior = platform.idempotencyLookup(session.org_id, route, key, requestHash);
@@ -1066,6 +1119,40 @@ async function readJson(req) {
   } catch {
     throw problem("Invalid JSON");
   }
+}
+async function persistImportJobSource({
+  artifactRoot,
+  orgId,
+  idempotencyKey,
+  body,
+  retentionDays,
+}) {
+  const rootPath = resolve(artifactRoot);
+  const directory = resolve(rootPath, orgId, "import-sources");
+  if (!directory.startsWith(`${rootPath}${sep}`)) throw problem("Invalid import source path", 500);
+  await mkdir(directory, { recursive: true });
+  const stableName = digest(`${orgId}\0${idempotencyKey}`);
+  const path = resolve(directory, `${stableName}.json`);
+  const content = Buffer.from(JSON.stringify(body));
+  const sha256 = digest(content);
+  try {
+    await writeFile(path, content, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    const existing = await readFile(path);
+    if (!existing.equals(content)) throw problem("Import source key was reused", 409);
+  }
+  const days = boundedNumber(retentionDays, 1, 30, 7);
+  return {
+    path,
+    sha256,
+    expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
+function boundedNumber(value, minimum, maximum, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(minimum, Math.min(maximum, Math.trunc(parsed)));
 }
 async function readBody(req, limit) {
   if (req.bodyCache) return req.bodyCache;

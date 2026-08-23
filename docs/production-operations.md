@@ -64,7 +64,7 @@ mismatch.
 
 Authenticated requests are admitted using trusted session organization/user IDs. Defaults allow 64
 active requests process-wide, 8 per tenant, and 240 requests per user per minute. Synchronous report
-exports, import stage/apply, integration sync creation, and AI drafting also share a 2-request
+compatibility exports, synchronous import endpoints, integration sync creation, and AI drafting also share a 2-request
 concurrency and 30-request-per-minute pool per tenant. Configure these with the six
 `ADMISSION_*` variables in `.env.example`; invalid, zero, or out-of-range values fail startup. Tune
 only from staging/load evidence, and keep the per-tenant values below the capacity at which one
@@ -138,7 +138,8 @@ freshness because this application process cannot observe those systems reliably
 
 These in-process limits are a bulkhead, not a distributed edge defense. The production owner must
 still configure connection and anonymous-request limits at the load balancer/WAF. Report generation,
-import application, and provider sync remain synchronous in this release; a horizontally scaled
+compatibility report/import endpoints remain synchronous in this release; transactional report,
+import, and provider-sync workflows use the durable worker queue. A horizontally scaled
 deployment requires a shared limiter plus durable job queues. Restarting the process resets rate
 windows, and no claim is made that admission control supplies billing quotas or storage quotas.
 

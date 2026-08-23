@@ -88,7 +88,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		throw e;
 	}
-	function oe(e, r, i, a, o) {
+	function E(e, r, i, a, o) {
 		var s = typeof e;
 		(s === "undefined" || s === "boolean") && (e = null);
 		var c = !1;
@@ -104,30 +104,30 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				case n:
 					c = !0;
 					break;
-				case d: return c = e._init, oe(c(e._payload), r, i, a, o);
+				case d: return c = e._init, E(c(e._payload), r, i, a, o);
 			}
 		}
-		if (c) return o = o(e), c = a === "" ? "." + ie(e, 0) : a, ee(o) ? (i = "", c != null && (i = c.replace(re, "$&/") + "/"), oe(o, r, i, "", function(e) {
+		if (c) return o = o(e), c = a === "" ? "." + ie(e, 0) : a, ee(o) ? (i = "", c != null && (i = c.replace(re, "$&/") + "/"), E(o, r, i, "", function(e) {
 			return e;
 		})) : o != null && (te(o) && (o = w(o, i + (o.key == null || e && e.key === o.key ? "" : ("" + o.key).replace(re, "$&/") + "/") + c)), r.push(o)), 1;
 		c = 0;
 		var l = a === "" ? "." : a + ":";
-		if (ee(e)) for (var u = 0; u < e.length; u++) a = e[u], s = l + ie(a, u), c += oe(a, r, i, s, o);
-		else if (u = p(e), typeof u == "function") for (e = u.call(e), u = 0; !(a = e.next()).done;) a = a.value, s = l + ie(a, u++), c += oe(a, r, i, s, o);
+		if (ee(e)) for (var u = 0; u < e.length; u++) a = e[u], s = l + ie(a, u), c += E(a, r, i, s, o);
+		else if (u = p(e), typeof u == "function") for (e = u.call(e), u = 0; !(a = e.next()).done;) a = a.value, s = l + ie(a, u++), c += E(a, r, i, s, o);
 		else if (s === "object") {
-			if (typeof e.then == "function") return oe(ae(e), r, i, a, o);
+			if (typeof e.then == "function") return E(ae(e), r, i, a, o);
 			throw r = String(e), Error("Objects are not valid as a React child (found: " + (r === "[object Object]" ? "object with keys {" + Object.keys(e).join(", ") + "}" : r) + "). If you meant to render a collection of children, use an array instead.");
 		}
 		return c;
 	}
-	function se(e, t, n) {
+	function oe(e, t, n) {
 		if (e == null) return e;
 		var r = [], i = 0;
-		return oe(e, r, "", "", function(e) {
+		return E(e, r, "", "", function(e) {
 			return t.call(n, e, i++);
 		}), r;
 	}
-	function ce(e) {
+	function se(e) {
 		if (e._status === -1) {
 			var t = e._result;
 			t = t(), t.then(function(t) {
@@ -139,7 +139,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (e._status === 1) return e._result.default;
 		throw e._result;
 	}
-	var le = typeof reportError == "function" ? reportError : function(e) {
+	var ce = typeof reportError == "function" ? reportError : function(e) {
 		if (typeof window == "object" && typeof window.ErrorEvent == "function") {
 			var t = new window.ErrorEvent("error", {
 				bubbles: !0,
@@ -154,22 +154,22 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		console.error(e);
 	};
-	function E() {}
+	function D() {}
 	e.Children = {
-		map: se,
+		map: oe,
 		forEach: function(e, t, n) {
-			se(e, function() {
+			oe(e, function() {
 				t.apply(this, arguments);
 			}, n);
 		},
 		count: function(e) {
 			var t = 0;
-			return se(e, function() {
+			return oe(e, function() {
 				t++;
 			}), t;
 		},
 		toArray: function(e) {
-			return se(e, function(e) {
+			return oe(e, function(e) {
 				return e;
 			}) || [];
 		},
@@ -234,7 +234,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				_status: -1,
 				_result: e
 			},
-			_init: ce
+			_init: se
 		};
 	}, e.memo = function(e, t) {
 		return {
@@ -247,9 +247,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		x.T = n;
 		try {
 			var r = e(), i = x.S;
-			i !== null && i(n, r), typeof r == "object" && r && typeof r.then == "function" && r.then(E, le);
+			i !== null && i(n, r), typeof r == "object" && r && typeof r.then == "function" && r.then(D, ce);
 		} catch (e) {
-			le(e);
+			ce(e);
 		} finally {
 			x.T = t;
 		}
@@ -726,13 +726,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return null;
 	}
 	var p = Object.assign, h = Symbol.for("react.element"), g = Symbol.for("react.transitional.element"), _ = Symbol.for("react.portal"), v = Symbol.for("react.fragment"), y = Symbol.for("react.strict_mode"), b = Symbol.for("react.profiler"), ee = Symbol.for("react.provider"), x = Symbol.for("react.consumer"), S = Symbol.for("react.context"), C = Symbol.for("react.forward_ref"), w = Symbol.for("react.suspense"), te = Symbol.for("react.suspense_list"), ne = Symbol.for("react.memo"), re = Symbol.for("react.lazy"), ie = Symbol.for("react.activity"), T = Symbol.for("react.memo_cache_sentinel"), ae = Symbol.iterator;
-	function oe(e) {
+	function E(e) {
 		return typeof e != "object" || !e ? null : (e = ae && e[ae] || e["@@iterator"], typeof e == "function" ? e : null);
 	}
-	var se = Symbol.for("react.client.reference");
-	function ce(e) {
+	var oe = Symbol.for("react.client.reference");
+	function se(e) {
 		if (e == null) return null;
-		if (typeof e == "function") return e.$$typeof === se ? null : e.displayName || e.name || null;
+		if (typeof e == "function") return e.$$typeof === oe ? null : e.displayName || e.name || null;
 		if (typeof e == "string") return e;
 		switch (e) {
 			case v: return "Fragment";
@@ -749,33 +749,33 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case C:
 				var t = e.render;
 				return e = e.displayName, e ||= (e = t.displayName || t.name || "", e === "" ? "ForwardRef" : "ForwardRef(" + e + ")"), e;
-			case ne: return t = e.displayName || null, t === null ? ce(e.type) || "Memo" : t;
+			case ne: return t = e.displayName || null, t === null ? se(e.type) || "Memo" : t;
 			case re:
 				t = e._payload, e = e._init;
 				try {
-					return ce(e(t));
+					return se(e(t));
 				} catch {}
 		}
 		return null;
 	}
-	var le = Array.isArray, E = n.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, D = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, ue = {
+	var ce = Array.isArray, D = n.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, O = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, le = {
 		pending: !1,
 		data: null,
 		method: null,
 		action: null
-	}, de = [], fe = -1;
-	function pe(e) {
+	}, ue = [], de = -1;
+	function fe(e) {
 		return { current: e };
 	}
-	function O(e) {
-		0 > fe || (e.current = de[fe], de[fe] = null, fe--);
+	function pe(e) {
+		0 > de || (e.current = ue[de], ue[de] = null, de--);
 	}
 	function k(e, t) {
-		fe++, de[fe] = e.current, e.current = t;
+		de++, ue[de] = e.current, e.current = t;
 	}
-	var me = pe(null), A = pe(null), he = pe(null), ge = pe(null);
-	function _e(e, t) {
-		switch (k(he, t), k(A, e), k(me, null), t.nodeType) {
+	var me = fe(null), he = fe(null), ge = fe(null), _e = fe(null);
+	function A(e, t) {
+		switch (k(ge, t), k(he, e), k(me, null), t.nodeType) {
 			case 9:
 			case 11:
 				e = (e = t.documentElement) && (e = e.namespaceURI) ? Dd(e) : 0;
@@ -791,22 +791,22 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				default: e = 0;
 			}
 		}
-		O(me), k(me, e);
+		pe(me), k(me, e);
 	}
-	function j() {
-		O(me), O(A), O(he);
+	function ve() {
+		pe(me), pe(he), pe(ge);
+	}
+	function j(e) {
+		e.memoizedState !== null && k(_e, e);
+		var t = me.current, n = Od(t, e.type);
+		t !== n && (k(he, e), k(me, n));
 	}
 	function M(e) {
-		e.memoizedState !== null && k(ge, e);
-		var t = me.current, n = Od(t, e.type);
-		t !== n && (k(A, e), k(me, n));
+		he.current === e && (pe(me), pe(he)), _e.current === e && (pe(_e), Ff._currentValue = le);
 	}
-	function ve(e) {
-		A.current === e && (O(me), O(A)), ge.current === e && (O(ge), Ff._currentValue = ue);
-	}
-	var ye = Object.prototype.hasOwnProperty, N = t.unstable_scheduleCallback, be = t.unstable_cancelCallback, xe = t.unstable_shouldYield, Se = t.unstable_requestPaint, Ce = t.unstable_now, we = t.unstable_getCurrentPriorityLevel, Te = t.unstable_ImmediatePriority, Ee = t.unstable_UserBlockingPriority, De = t.unstable_NormalPriority, Oe = t.unstable_LowPriority, P = t.unstable_IdlePriority, ke = t.log, Ae = t.unstable_setDisableYieldValue, je = null, Me = null;
+	var ye = Object.prototype.hasOwnProperty, be = t.unstable_scheduleCallback, N = t.unstable_cancelCallback, xe = t.unstable_shouldYield, Se = t.unstable_requestPaint, Ce = t.unstable_now, we = t.unstable_getCurrentPriorityLevel, Te = t.unstable_ImmediatePriority, Ee = t.unstable_UserBlockingPriority, De = t.unstable_NormalPriority, Oe = t.unstable_LowPriority, ke = t.unstable_IdlePriority, P = t.log, Ae = t.unstable_setDisableYieldValue, je = null, Me = null;
 	function Ne(e) {
-		if (typeof ke == "function" && Ae(e), Me && typeof Me.setStrictMode == "function") try {
+		if (typeof P == "function" && Ae(e), Me && typeof Me.setStrictMode == "function") try {
 			Me.setStrictMode(je, e);
 		} catch {}
 	}
@@ -985,15 +985,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return e &= -e, 2 < e ? 8 < e ? e & 134217727 ? 32 : 268435456 : 8 : 2;
 	}
 	function $e() {
-		var e = D.p;
+		var e = O.p;
 		return e === 0 ? (e = window.event, e === void 0 ? 32 : Xf(e.type)) : e;
 	}
 	function et(e, t) {
-		var n = D.p;
+		var n = O.p;
 		try {
-			return D.p = e, t();
+			return O.p = e, t();
 		} finally {
-			D.p = n;
+			O.p = n;
 		}
 	}
 	var tt = Math.random().toString(36).slice(2), nt = "__reactFiber$" + tt, rt = "__reactProps$" + tt, it = "__reactContainer$" + tt, at = "__reactEvents$" + tt, ot = "__reactListeners$" + tt, st = "__reactHandles$" + tt, ct = "__reactResources$" + tt, lt = "__reactMarker$" + tt;
@@ -1305,7 +1305,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (t == null) {
 			if (r != null) {
 				if (n != null) throw Error(i(92));
-				if (le(r)) {
+				if (ce(r)) {
 					if (1 < r.length) throw Error(i(93));
 					r = r[0];
 				}
@@ -2173,12 +2173,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function Hi(e) {
 		Ni === null ? Ni = [e] : Ni.push(e);
 	}
-	var Ui = pe(null), Wi = null, Gi = null;
+	var Ui = fe(null), Wi = null, Gi = null;
 	function Ki(e, t, n) {
 		k(Ui, t._currentValue), t._currentValue = n;
 	}
 	function qi(e) {
-		e._currentValue = Ui.current, O(Ui);
+		e._currentValue = Ui.current, pe(Ui);
 	}
 	function Ji(e, t, n) {
 		for (; e !== null;) {
@@ -2236,7 +2236,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					var c = a.type;
 					wr(a.pendingProps.value, s.value) || (e === null ? e = [c] : e.push(c));
 				}
-			} else if (a === ge.current) {
+			} else if (a === _e.current) {
 				if (s = a.alternate, s === null) throw Error(i(387));
 				s.memoizedState.memoizedState !== a.memoizedState.memoizedState && (e === null ? e = [Ff] : e.push(Ff));
 			}
@@ -2345,11 +2345,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			for (r.status = "rejected", r.reason = e, e = 0; e < n.length; e++) (0, n[e])(void 0);
 		}), r;
 	}
-	var ha = E.S;
-	E.S = function(e, t) {
+	var ha = D.S;
+	D.S = function(e, t) {
 		typeof t == "object" && t && typeof t.then == "function" && fa(e, t), ha !== null && ha(e, t);
 	};
-	var ga = pe(null);
+	var ga = fe(null);
 	function _a() {
 		var e = ga.current;
 		return e === null ? K.pooledCache : e;
@@ -2556,7 +2556,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var n = e.callbacks;
 		if (n !== null) for (e.callbacks = null, e = 0; e < n.length; e++) Ba(n[e], t);
 	}
-	var Ha = pe(null), Ua = pe(0);
+	var Ha = fe(null), Ua = fe(0);
 	function Wa(e, t) {
 		e = Nl, k(Ua, e), k(Ha, t), Nl = e | t.baseLanes;
 	}
@@ -2564,7 +2564,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		k(Ua, Nl), k(Ha, Ha.current);
 	}
 	function Ka() {
-		Nl = Ua.current, O(Ha), O(Ua);
+		Nl = Ua.current, pe(Ha), pe(Ua);
 	}
 	var qa = 0, L = null, R = null, z = null, Ja = !1, Ya = !1, Xa = !1, Za = 0, Qa = 0, $a = null, eo = 0;
 	function B() {
@@ -2576,10 +2576,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return !0;
 	}
 	function no(e, t, n, r, i, a) {
-		return qa = a, L = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, E.H = e === null || e.memoizedState === null ? vs : ys, Xa = !1, a = n(r, i), Xa = !1, Ya && (a = io(t, n, r, i)), ro(e), a;
+		return qa = a, L = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, D.H = e === null || e.memoizedState === null ? vs : ys, Xa = !1, a = n(r, i), Xa = !1, Ya && (a = io(t, n, r, i)), ro(e), a;
 	}
 	function ro(e) {
-		E.H = _s;
+		D.H = _s;
 		var t = R !== null && R.next !== null;
 		if (qa = 0, z = R = L = null, Ja = !1, Qa = 0, $a = null, t) throw Error(i(300));
 		e === null || ec || (e = e.dependencies, e !== null && Zi(e) && (ec = !0));
@@ -2593,12 +2593,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				var o = e.updateQueue;
 				o.lastEffect = null, o.events = null, o.stores = null, o.memoCache != null && (o.memoCache.index = 0);
 			}
-			E.H = bs, o = t(n, r);
+			D.H = bs, o = t(n, r);
 		} while (Ya);
 		return o;
 	}
 	function ao() {
-		var e = E.H, t = e.useState()[0];
+		var e = D.H, t = e.useState()[0];
 		return t = typeof t.then == "function" ? fo(t) : t, e = e.useState()[0], (R === null ? null : R.memoizedState) !== e && (L.flags |= 1024), t;
 	}
 	function oo() {
@@ -2657,7 +2657,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function fo(e) {
 		var t = Qa;
-		return Qa += 1, $a === null && ($a = []), e = Ea($a, e, t), t = L, (z === null ? t.memoizedState : z.next) === null && (t = t.alternate, E.H = t === null || t.memoizedState === null ? vs : ys), e;
+		return Qa += 1, $a === null && ($a = []), e = Ea($a, e, t), t = L, (z === null ? t.memoizedState : z.next) === null && (t = t.alternate, D.H = t === null || t.memoizedState === null ? vs : ys), e;
 	}
 	function po(e) {
 		if (typeof e == "object" && e) {
@@ -2840,21 +2840,21 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					o.listeners.push(e);
 				}
 			};
-			E.T === null ? o.isTransition = !1 : n(!0), r(o), n = t.pending, n === null ? (o.next = t.pending = o, Oo(t, o)) : (o.next = n.next, t.pending = n.next = o);
+			D.T === null ? o.isTransition = !1 : n(!0), r(o), n = t.pending, n === null ? (o.next = t.pending = o, Oo(t, o)) : (o.next = n.next, t.pending = n.next = o);
 		}
 	}
 	function Oo(e, t) {
 		var n = t.action, r = t.payload, i = e.state;
 		if (t.isTransition) {
-			var a = E.T, o = {};
-			E.T = o;
+			var a = D.T, o = {};
+			D.T = o;
 			try {
-				var s = n(i, r), c = E.S;
+				var s = n(i, r), c = D.S;
 				c !== null && c(o, s), ko(e, t, s);
 			} catch (n) {
 				jo(e, t, n);
 			} finally {
-				E.T = a;
+				D.T = a;
 			}
 		} else try {
 			a = n(i, r), ko(e, t, a);
@@ -3055,12 +3055,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return wr(n, t) ? n : Ha.current === null ? qa & 42 ? (e = nu(), L.lanes |= e, Pl |= e, t) : (ec = !0, e.memoizedState = n) : (e = $o(e, n, r), wr(e, t) || (ec = !0), e);
 	}
 	function ts(e, t, n, r, i) {
-		var a = D.p;
-		D.p = a !== 0 && 8 > a ? a : 8;
-		var o = E.T, s = {};
-		E.T = s, ps(e, !1, t, n);
+		var a = O.p;
+		O.p = a !== 0 && 8 > a ? a : 8;
+		var o = D.T, s = {};
+		D.T = s, ps(e, !1, t, n);
 		try {
-			var c = i(), l = E.S;
+			var c = i(), l = D.S;
 			l !== null && l(s, c), typeof c == "object" && c && typeof c.then == "function" ? fs(e, t, ma(c, r), tu(e)) : fs(e, t, r, tu(e));
 		} catch (n) {
 			fs(e, t, {
@@ -3069,14 +3069,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				reason: n
 			}, tu());
 		} finally {
-			D.p = a, E.T = o;
+			O.p = a, D.T = o;
 		}
 	}
 	function ns() {}
 	function rs(e, t, n, r) {
 		if (e.tag !== 5) throw Error(i(476));
 		var a = is(e).queue;
-		ts(e, a, t, ue, n === null ? ns : function() {
+		ts(e, a, t, le, n === null ? ns : function() {
 			return as(e), n(r);
 		});
 	}
@@ -3084,15 +3084,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var t = e.memoizedState;
 		if (t !== null) return t;
 		t = {
-			memoizedState: ue,
-			baseState: ue,
+			memoizedState: le,
+			baseState: le,
 			baseQueue: null,
 			queue: {
 				pending: null,
 				lanes: 0,
 				dispatch: null,
 				lastRenderedReducer: ho,
-				lastRenderedState: ue
+				lastRenderedState: le
 			},
 			next: null
 		};
@@ -3466,7 +3466,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						var r = t._init;
 						return t = r(t._payload), f(e, t, n);
 				}
-				if (le(t) || oe(t)) return t = gi(t, e.mode, n, null), t.return = e, t;
+				if (ce(t) || E(t)) return t = gi(t, e.mode, n, null), t.return = e, t;
 				if (typeof t.then == "function") return f(e, Cs(t), n);
 				if (t.$$typeof === S) return f(e, ea(e, t), n);
 				Ts(e, t);
@@ -3482,7 +3482,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					case _: return n.key === i ? u(e, t, n, r) : null;
 					case re: return i = n._init, n = i(n._payload), p(e, t, n, r);
 				}
-				if (le(n) || oe(n)) return i === null ? d(e, t, n, r, null) : null;
+				if (ce(n) || E(n)) return i === null ? d(e, t, n, r, null) : null;
 				if (typeof n.then == "function") return p(e, t, Cs(n), r);
 				if (n.$$typeof === S) return p(e, t, ea(e, n), r);
 				Ts(e, n);
@@ -3499,7 +3499,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						var a = r._init;
 						return r = a(r._payload), m(e, t, n, r, i);
 				}
-				if (le(r) || oe(r)) return e = e.get(n) || null, d(t, e, r, i, null);
+				if (ce(r) || E(r)) return e = e.get(n) || null, d(t, e, r, i, null);
 				if (typeof r.then == "function") return m(e, t, n, Cs(r), i);
 				if (r.$$typeof === S) return m(e, t, n, ea(t, r), i);
 				Ts(t, r);
@@ -3589,9 +3589,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						return s(e);
 					case re: return l = o._init, o = l(o._payload), b(e, r, o, c);
 				}
-				if (le(o)) return h(e, r, o, c);
-				if (oe(o)) {
-					if (l = oe(o), typeof l != "function") throw Error(i(150));
+				if (ce(o)) return h(e, r, o, c);
+				if (E(o)) {
+					if (l = E(o), typeof l != "function") throw Error(i(150));
 					return o = l.call(o), y(e, r, o, c);
 				}
 				if (typeof o.then == "function") return b(e, r, Cs(o), c);
@@ -3612,7 +3612,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			}
 		};
 	}
-	var Os = Ds(!0), ks = Ds(!1), As = pe(null), js = null;
+	var Os = Ds(!0), ks = Ds(!1), As = fe(null), js = null;
 	function Ms(e) {
 		var t = e.alternate;
 		k(Is, Is.current & 1), k(As, e), js === null && (t === null || Ha.current !== null || t.memoizedState !== null) && (js = e);
@@ -3629,9 +3629,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		k(Is, Is.current), k(As, As.current);
 	}
 	function Fs(e) {
-		O(As), js === e && (js = null), O(Is);
+		pe(As), js === e && (js = null), pe(Is);
 	}
-	var Is = pe(0);
+	var Is = fe(0);
 	function Ls(e) {
 		for (var t = e; t !== null;) {
 			if (t.tag === 13) {
@@ -4065,14 +4065,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function wc(e, t, n) {
 		switch (t.tag) {
 			case 3:
-				_e(t, t.stateNode.containerInfo), Ki(t, aa, e.memoizedState.cache), Bi();
+				A(t, t.stateNode.containerInfo), Ki(t, aa, e.memoizedState.cache), Bi();
 				break;
 			case 27:
 			case 5:
-				M(t);
+				j(t);
 				break;
 			case 4:
-				_e(t, t.stateNode.containerInfo);
+				A(t, t.stateNode.containerInfo);
 				break;
 			case 10:
 				Ki(t, t.type, t.memoizedProps.value);
@@ -4121,7 +4121,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 								break a;
 							}
 						}
-						throw t = ce(r) || r, Error(i(306, t, ""));
+						throw t = se(r) || r, Error(i(306, t, ""));
 					}
 				}
 				return t;
@@ -4129,7 +4129,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 1: return r = t.type, a = Hs(r, t.pendingProps), uc(e, t, r, a, n);
 			case 3:
 				a: {
-					if (_e(t, t.stateNode.containerInfo), e === null) throw Error(i(387));
+					if (A(t, t.stateNode.containerInfo), e === null) throw Error(i(387));
 					r = t.pendingProps;
 					var o = t.memoizedState;
 					a = o.element, Ma(e, t), za(t, r, null, n);
@@ -4164,12 +4164,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					t = t.child;
 				}
 				return t;
-			case 26: return sc(e, t), e === null ? (n = df(t.type, null, t.pendingProps, null)) ? t.memoizedState = n : I || (n = t.type, e = t.pendingProps, r = Ed(he.current).createElement(n), r[nt] = t, r[rt] = e, Sd(r, n, e), ht(r), t.stateNode = r) : t.memoizedState = df(t.type, e.memoizedProps, t.pendingProps, e.memoizedState), null;
-			case 27: return M(t), e === null && I && (r = t.stateNode = qd(t.type, t.pendingProps, he.current), Mi = t, Pi = !0, a = F, Ld(t.type) ? (Gd = a, F = Wd(r.firstChild)) : F = a), tc(e, t, t.pendingProps.children, n), sc(e, t), e === null && (t.flags |= 4194304), t.child;
-			case 5: return e === null && I && ((a = r = F) && (r = Bd(r, t.type, t.pendingProps, Pi), r === null ? a = !1 : (t.stateNode = r, Mi = t, F = Wd(r.firstChild), Pi = !1, a = !0)), a || Ii(t)), M(t), a = t.type, o = t.pendingProps, s = e === null ? null : e.memoizedProps, r = o.children, kd(a, o) ? r = null : s !== null && kd(a, s) && (t.flags |= 32), t.memoizedState !== null && (a = no(e, t, ao, null, null, n), Ff._currentValue = a), sc(e, t), tc(e, t, r, n), t.child;
+			case 26: return sc(e, t), e === null ? (n = df(t.type, null, t.pendingProps, null)) ? t.memoizedState = n : I || (n = t.type, e = t.pendingProps, r = Ed(ge.current).createElement(n), r[nt] = t, r[rt] = e, Sd(r, n, e), ht(r), t.stateNode = r) : t.memoizedState = df(t.type, e.memoizedProps, t.pendingProps, e.memoizedState), null;
+			case 27: return j(t), e === null && I && (r = t.stateNode = qd(t.type, t.pendingProps, ge.current), Mi = t, Pi = !0, a = F, Ld(t.type) ? (Gd = a, F = Wd(r.firstChild)) : F = a), tc(e, t, t.pendingProps.children, n), sc(e, t), e === null && (t.flags |= 4194304), t.child;
+			case 5: return e === null && I && ((a = r = F) && (r = Bd(r, t.type, t.pendingProps, Pi), r === null ? a = !1 : (t.stateNode = r, Mi = t, F = Wd(r.firstChild), Pi = !1, a = !0)), a || Ii(t)), j(t), a = t.type, o = t.pendingProps, s = e === null ? null : e.memoizedProps, r = o.children, kd(a, o) ? r = null : s !== null && kd(a, s) && (t.flags |= 32), t.memoizedState !== null && (a = no(e, t, ao, null, null, n), Ff._currentValue = a), sc(e, t), tc(e, t, r, n), t.child;
 			case 6: return e === null && I && ((e = n = F) && (n = Vd(n, t.pendingProps, Pi), n === null ? e = !1 : (t.stateNode = n, Mi = t, F = null, e = !0)), e || Ii(t)), null;
 			case 13: return hc(e, t, n);
-			case 4: return _e(t, t.stateNode.containerInfo), r = t.pendingProps, e === null ? t.child = Os(t, null, r, n) : tc(e, t, r, n), t.child;
+			case 4: return A(t, t.stateNode.containerInfo), r = t.pendingProps, e === null ? t.child = Os(t, null, r, n) : tc(e, t, r, n), t.child;
 			case 11: return nc(e, t, t.type, t.pendingProps, n);
 			case 7: return tc(e, t, t.pendingProps, n), t.child;
 			case 8: return tc(e, t, t.pendingProps.children, n), t.child;
@@ -4241,10 +4241,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 9:
 			case 14: return H(t), null;
 			case 1: return H(t), null;
-			case 3: return n = t.stateNode, r = null, e !== null && (r = e.memoizedState.cache), t.memoizedState.cache !== r && (t.flags |= 2048), qi(aa), j(), n.pendingContext && (n.context = n.pendingContext, n.pendingContext = null), (e === null || e.child === null) && (zi(t) ? Ec(t) : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, Vi())), H(t), null;
+			case 3: return n = t.stateNode, r = null, e !== null && (r = e.memoizedState.cache), t.memoizedState.cache !== r && (t.flags |= 2048), qi(aa), ve(), n.pendingContext && (n.context = n.pendingContext, n.pendingContext = null), (e === null || e.child === null) && (zi(t) ? Ec(t) : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, Vi())), H(t), null;
 			case 26: return n = t.memoizedState, e === null ? (Ec(t), n === null ? (H(t), t.flags &= -16777217) : (H(t), Dc(t, n))) : n ? n === e.memoizedState ? (H(t), t.flags &= -16777217) : (Ec(t), H(t), Dc(t, n)) : (e.memoizedProps !== r && Ec(t), H(t), t.flags &= -16777217), null;
 			case 27:
-				ve(t), n = he.current;
+				M(t), n = ge.current;
 				var a = t.type;
 				if (e !== null && t.stateNode != null) e.memoizedProps !== r && Ec(t);
 				else {
@@ -4256,7 +4256,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				}
 				return H(t), null;
 			case 5:
-				if (ve(t), n = t.type, e !== null && t.stateNode != null) e.memoizedProps !== r && Ec(t);
+				if (M(t), n = t.type, e !== null && t.stateNode != null) e.memoizedProps !== r && Ec(t);
 				else {
 					if (!r) {
 						if (t.stateNode === null) throw Error(i(166));
@@ -4264,7 +4264,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					}
 					if (e = me.current, zi(t)) Li(t, e);
 					else {
-						switch (a = Ed(he.current), e) {
+						switch (a = Ed(ge.current), e) {
 							case 1:
 								e = a.createElementNS("http://www.w3.org/2000/svg", n);
 								break;
@@ -4322,7 +4322,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				if (e && t.stateNode != null) e.memoizedProps !== r && Ec(t);
 				else {
 					if (typeof r != "string" && t.stateNode === null) throw Error(i(166));
-					if (e = he.current, zi(t)) {
+					if (e = ge.current, zi(t)) {
 						if (e = t.stateNode, n = t.memoizedProps, r = null, a = Mi, a !== null) switch (a.tag) {
 							case 27:
 							case 5: r = a.memoizedProps;
@@ -4350,10 +4350,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					r.memoizedState !== null && r.memoizedState.cachePool !== null && (o = r.memoizedState.cachePool.pool), o !== a && (r.flags |= 2048);
 				}
 				return n !== e && n && (t.child.flags |= 8192), Oc(t, t.updateQueue), H(t), null;
-			case 4: return j(), e === null && ld(t.stateNode.containerInfo), H(t), null;
+			case 4: return ve(), e === null && ld(t.stateNode.containerInfo), H(t), null;
 			case 10: return qi(t.type), H(t), null;
 			case 19:
-				if (O(Is), a = t.memoizedState, a === null) return H(t), null;
+				if (pe(Is), a = t.memoizedState, a === null) return H(t), null;
 				if (r = !!(t.flags & 128), o = a.rendering, o === null) {
 					if (r) kc(a, !1);
 					else {
@@ -4376,7 +4376,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				}
 				return a.tail === null ? (H(t), null) : (t = a.tail, a.rendering = t, a.tail = t.sibling, a.renderingStartTime = Ce(), t.sibling = null, e = Is.current, k(Is, r ? e & 1 | 2 : e & 1), t);
 			case 22:
-			case 23: return Fs(t), Ka(), r = t.memoizedState !== null, e === null ? r && (t.flags |= 8192) : e.memoizedState !== null !== r && (t.flags |= 8192), r ? n & 536870912 && !(t.flags & 128) && (H(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : H(t), n = t.updateQueue, n !== null && Oc(t, n.retryQueue), n = null, e !== null && e.memoizedState !== null && e.memoizedState.cachePool !== null && (n = e.memoizedState.cachePool.pool), r = null, t.memoizedState !== null && t.memoizedState.cachePool !== null && (r = t.memoizedState.cachePool.pool), r !== n && (t.flags |= 2048), e !== null && O(ga), null;
+			case 23: return Fs(t), Ka(), r = t.memoizedState !== null, e === null ? r && (t.flags |= 8192) : e.memoizedState !== null !== r && (t.flags |= 8192), r ? n & 536870912 && !(t.flags & 128) && (H(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : H(t), n = t.updateQueue, n !== null && Oc(t, n.retryQueue), n = null, e !== null && e.memoizedState !== null && e.memoizedState.cachePool !== null && (n = e.memoizedState.cachePool.pool), r = null, t.memoizedState !== null && t.memoizedState.cachePool !== null && (r = t.memoizedState.cachePool.pool), r !== n && (t.flags |= 2048), e !== null && pe(ga), null;
 			case 24: return n = null, e !== null && (n = e.memoizedState.cache), t.memoizedState.cache !== n && (t.flags |= 2048), qi(aa), H(t), null;
 			case 25: return null;
 			case 30: return null;
@@ -4386,21 +4386,21 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function jc(e, t) {
 		switch (ji(t), t.tag) {
 			case 1: return e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
-			case 3: return qi(aa), j(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
+			case 3: return qi(aa), ve(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
 			case 26:
 			case 27:
-			case 5: return ve(t), null;
+			case 5: return M(t), null;
 			case 13:
 				if (Fs(t), e = t.memoizedState, e !== null && e.dehydrated !== null) {
 					if (t.alternate === null) throw Error(i(340));
 					Bi();
 				}
 				return e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
-			case 19: return O(Is), null;
-			case 4: return j(), null;
+			case 19: return pe(Is), null;
+			case 4: return ve(), null;
 			case 10: return qi(t.type), null;
 			case 22:
-			case 23: return Fs(t), Ka(), e !== null && O(ga), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
+			case 23: return Fs(t), Ka(), e !== null && pe(ga), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
 			case 24: return qi(aa), null;
 			case 25: return null;
 			default: return null;
@@ -4409,28 +4409,28 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function Mc(e, t) {
 		switch (ji(t), t.tag) {
 			case 3:
-				qi(aa), j();
+				qi(aa), ve();
 				break;
 			case 26:
 			case 27:
 			case 5:
-				ve(t);
+				M(t);
 				break;
 			case 4:
-				j();
+				ve();
 				break;
 			case 13:
 				Fs(t);
 				break;
 			case 19:
-				O(Is);
+				pe(Is);
 				break;
 			case 10:
 				qi(t.type);
 				break;
 			case 22:
 			case 23:
-				Fs(t), Ka(), e !== null && O(ga);
+				Fs(t), Ka(), e !== null && pe(ga);
 				break;
 			case 24: qi(aa);
 		}
@@ -5340,7 +5340,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	} }, Ol = typeof WeakMap == "function" ? WeakMap : Map, G = 0, K = null, q = null, J = 0, Y = 0, kl = null, Al = !1, jl = !1, Ml = !1, Nl = 0, X = 0, Pl = 0, Fl = 0, Il = 0, Ll = 0, Rl = 0, zl = null, Bl = null, Vl = !1, Hl = 0, Ul = Infinity, Wl = null, Gl = null, Kl = 0, ql = null, Jl = null, Yl = 0, Xl = 0, Zl = null, Ql = null, $l = 0, eu = null;
 	function tu() {
 		if (G & 2 && J !== 0) return J & -J;
-		if (E.T !== null) {
+		if (D.T !== null) {
 			var e = ua;
 			return e === 0 ? Qu() : e;
 		}
@@ -5482,15 +5482,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		return Nl = t, ri(), n;
 	}
 	function du(e, t) {
-		L = null, E.H = _s, t === ba || t === Sa ? (t = Oa(), Y = 3) : t === xa ? (t = Oa(), Y = 4) : Y = t === $s ? 8 : typeof t == "object" && t && typeof t.then == "function" ? 6 : 1, kl = t, q === null && (X = 1, qs(e, $r(t, e.current)));
+		L = null, D.H = _s, t === ba || t === Sa ? (t = Oa(), Y = 3) : t === xa ? (t = Oa(), Y = 4) : Y = t === $s ? 8 : typeof t == "object" && t && typeof t.then == "function" ? 6 : 1, kl = t, q === null && (X = 1, qs(e, $r(t, e.current)));
 	}
 	function fu() {
-		var e = E.H;
-		return E.H = _s, e === null ? _s : e;
+		var e = D.H;
+		return D.H = _s, e === null ? _s : e;
 	}
 	function pu() {
-		var e = E.A;
-		return E.A = Dl, e;
+		var e = D.A;
+		return D.A = Dl, e;
 	}
 	function mu() {
 		X = 4, Al || (J & 4194048) !== J && As.current !== null || (jl = !0), !(Pl & 134217727) && !(Fl & 134217727) || K === null || su(K, J, Ll, !1);
@@ -5529,7 +5529,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				du(e, t);
 			}
 		while (1);
-		return t && e.shellSuspendCounter++, Gi = Wi = null, G = r, E.H = i, E.A = a, q === null && (K = null, J = 0, ri()), o;
+		return t && e.shellSuspendCounter++, Gi = Wi = null, G = r, D.H = i, D.A = a, q === null && (K = null, J = 0, ri()), o;
 	}
 	function gu() {
 		for (; q !== null;) yu(q);
@@ -5602,7 +5602,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				du(e, t);
 			}
 		while (1);
-		return Gi = Wi = null, E.H = r, E.A = a, G = n, q === null ? (K = null, J = 0, ri(), X) : 0;
+		return Gi = Wi = null, D.H = r, D.A = a, G = n, q === null ? (K = null, J = 0, ri(), X) : 0;
 	}
 	function vu() {
 		for (; q !== null && !xe();) yu(q);
@@ -5688,11 +5688,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			if (o = t.lanes | t.childLanes, o |= ni, Je(e, n, o, s, c, l), e === K && (q = K = null, J = 0), Jl = t, ql = e, Yl = n, Xl = o, Zl = a, Ql = r, t.subtreeFlags & 10256 || t.flags & 10256 ? (e.callbackNode = null, e.callbackPriority = 0, Lu(De, function() {
 				return Au(!0), null;
 			})) : (e.callbackNode = null, e.callbackPriority = 0), r = !!(t.flags & 13878), t.subtreeFlags & 13878 || r) {
-				r = E.T, E.T = null, a = D.p, D.p = 2, s = G, G |= 4;
+				r = D.T, D.T = null, a = O.p, O.p = 2, s = G, G |= 4;
 				try {
 					Xc(e, t, n);
 				} finally {
-					G = s, D.p = a, E.T = r;
+					G = s, O.p = a, D.T = r;
 				}
 			}
 			Kl = 1, Tu(), Eu(), Du();
@@ -5703,9 +5703,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			Kl = 0;
 			var e = ql, t = Jl, n = !!(t.flags & 13878);
 			if (t.subtreeFlags & 13878 || n) {
-				n = E.T, E.T = null;
-				var r = D.p;
-				D.p = 2;
+				n = D.T, D.T = null;
+				var r = O.p;
+				O.p = 2;
 				var i = G;
 				G |= 4;
 				try {
@@ -5740,7 +5740,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					}
 					Uf = !!wd, Td = wd = null;
 				} finally {
-					G = i, D.p = r, E.T = n;
+					G = i, O.p = r, D.T = n;
 				}
 			}
 			e.current = t, Kl = 2;
@@ -5751,15 +5751,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			Kl = 0;
 			var e = ql, t = Jl, n = !!(t.flags & 8772);
 			if (t.subtreeFlags & 8772 || n) {
-				n = E.T, E.T = null;
-				var r = D.p;
-				D.p = 2;
+				n = D.T, D.T = null;
+				var r = O.p;
+				O.p = 2;
 				var i = G;
 				G |= 4;
 				try {
 					Zc(e, t.alternate, t);
 				} finally {
-					G = i, D.p = r, E.T = n;
+					G = i, O.p = r, D.T = n;
 				}
 			}
 			Kl = 3;
@@ -5775,14 +5775,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				Me.onCommitFiberRoot(je, t, void 0, (t.current.flags & 128) == 128);
 			} catch {}
 			if (r !== null) {
-				t = E.T, i = D.p, D.p = 2, E.T = null;
+				t = D.T, i = O.p, O.p = 2, D.T = null;
 				try {
 					for (var a = e.onRecoverableError, o = 0; o < r.length; o++) {
 						var s = r[o];
 						a(s.value, { componentStack: s.stack });
 					}
 				} finally {
-					E.T = t, D.p = i;
+					D.T = t, O.p = i;
 				}
 			}
 			Yl & 3 && ku(), Wu(e), i = e.pendingLanes, n & 4194090 && i & 42 ? e === eu ? $l++ : ($l = 0, eu = e) : $l = 0, Gu(0, !1);
@@ -5798,9 +5798,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (Kl !== 5) return !1;
 		var e = ql, t = Xl;
 		Xl = 0;
-		var n = Qe(Yl), r = E.T, a = D.p;
+		var n = Qe(Yl), r = D.T, a = O.p;
 		try {
-			D.p = 32 > n ? 32 : n, E.T = null, n = Zl, Zl = null;
+			O.p = 32 > n ? 32 : n, D.T = null, n = Zl, Zl = null;
 			var o = ql, s = Yl;
 			if (Kl = 0, Jl = ql = null, Yl = 0, G & 6) throw Error(i(331));
 			var c = G;
@@ -5809,7 +5809,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			} catch {}
 			return !0;
 		} finally {
-			D.p = a, E.T = r, Ou(e, t);
+			O.p = a, D.T = r, Ou(e, t);
 		}
 	}
 	function ju(e, t, n) {
@@ -5870,7 +5870,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		r !== null && r.delete(t), Pu(e, n);
 	}
 	function Lu(e, t) {
-		return N(e, t);
+		return be(e, t);
 	}
 	var Ru = null, zu = null, Bu = !1, Vu = !1, Hu = !1, Uu = 0;
 	function Wu(e) {
@@ -5916,10 +5916,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			var o = 31 - Pe(a), s = 1 << o, c = i[o];
 			c === -1 ? ((s & n) === 0 || (s & r) !== 0) && (i[o] = Ue(s, t)) : c <= t && (e.expiredLanes |= s), a &= ~s;
 		}
-		if (t = K, n = J, n = Ve(e, e === t ? n : 0, e.cancelPendingCommit !== null || e.timeoutHandle !== -1), r = e.callbackNode, n === 0 || e === t && (Y === 2 || Y === 9) || e.cancelPendingCommit !== null) return r !== null && r !== null && be(r), e.callbackNode = null, e.callbackPriority = 0;
+		if (t = K, n = J, n = Ve(e, e === t ? n : 0, e.cancelPendingCommit !== null || e.timeoutHandle !== -1), r = e.callbackNode, n === 0 || e === t && (Y === 2 || Y === 9) || e.cancelPendingCommit !== null) return r !== null && r !== null && N(r), e.callbackNode = null, e.callbackPriority = 0;
 		if (!(n & 3) || He(e, n)) {
 			if (t = n & -n, t === e.callbackPriority) return t;
-			switch (r !== null && be(r), Qe(n)) {
+			switch (r !== null && N(r), Qe(n)) {
 				case 2:
 				case 8:
 					n = Ee;
@@ -5928,13 +5928,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					n = De;
 					break;
 				case 268435456:
-					n = P;
+					n = ke;
 					break;
 				default: n = De;
 			}
-			return r = Yu.bind(null, e), n = N(n, r), e.callbackPriority = t, e.callbackNode = n, t;
+			return r = Yu.bind(null, e), n = be(n, r), e.callbackPriority = t, e.callbackNode = n, t;
 		}
-		return r !== null && r !== null && be(r), e.callbackPriority = 2, e.callbackNode = null, 2;
+		return r !== null && r !== null && N(r), e.callbackPriority = 2, e.callbackNode = null, 2;
 	}
 	function Yu(e, t) {
 		if (Kl !== 0 && Kl !== 5) return e.callbackNode = null, e.callbackPriority = 0, null;
@@ -5949,7 +5949,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function Zu() {
 		Fd(function() {
-			G & 6 ? N(Te, Ku) : qu();
+			G & 6 ? be(Te, Ku) : qu();
 		});
 	}
 	function Qu() {
@@ -6983,8 +6983,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function Zd(e) {
 		return typeof e.getRootNode == "function" ? e.getRootNode() : e.nodeType === 9 ? e : e.ownerDocument;
 	}
-	var Qd = D.d;
-	D.d = {
+	var Qd = O.d;
+	O.d = {
 		f: $d,
 		r: ef,
 		D: rf,
@@ -7141,7 +7141,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}
 	function df(e, t, n, r) {
-		var a = (a = he.current) ? Zd(a) : null;
+		var a = (a = ge.current) ? Zd(a) : null;
 		if (!a) throw Error(i(446));
 		switch (e) {
 			case "meta":
@@ -7374,8 +7374,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		$$typeof: S,
 		Provider: null,
 		Consumer: null,
-		_currentValue: ue,
-		_currentValue2: ue,
+		_currentValue: le,
+		_currentValue2: le,
 		_threadCount: 0
 	};
 	function If(e, t, n, r, i, a, o, s) {
@@ -7411,23 +7411,23 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	var Uf = !0;
 	function Wf(e, t, n, r) {
-		var i = E.T;
-		E.T = null;
-		var a = D.p;
+		var i = D.T;
+		D.T = null;
+		var a = O.p;
 		try {
-			D.p = 2, Kf(e, t, n, r);
+			O.p = 2, Kf(e, t, n, r);
 		} finally {
-			D.p = a, E.T = i;
+			O.p = a, D.T = i;
 		}
 	}
 	function Gf(e, t, n, r) {
-		var i = E.T;
-		E.T = null;
-		var a = D.p;
+		var i = D.T;
+		D.T = null;
+		var a = O.p;
 		try {
-			D.p = 8, Kf(e, t, n, r);
+			O.p = 8, Kf(e, t, n, r);
 		} finally {
-			D.p = a, E.T = i;
+			O.p = a, D.T = i;
 		}
 	}
 	function Kf(e, t, n, r) {
@@ -7560,7 +7560,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				case Ee: return 8;
 				case De:
 				case Oe: return 32;
-				case P: return 268435456;
+				case ke: return 268435456;
 				default: return 32;
 			}
 			default: return 32;
@@ -7733,7 +7733,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	};
 	var vp = n.version;
 	if (vp !== "19.1.1") throw Error(i(527, vp, "19.1.1"));
-	D.findDOMNode = function(e) {
+	O.findDOMNode = function(e) {
 		var t = e._reactInternals;
 		if (t === void 0) throw typeof e.render == "function" ? Error(i(188)) : (e = Object.keys(e).join(","), Error(i(268, e)));
 		return e = l(t), e = e === null ? null : d(e), e = e === null ? null : e.stateNode, e;
@@ -7742,7 +7742,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		bundleType: 0,
 		version: "19.1.1",
 		rendererPackageName: "react-dom",
-		currentDispatcherRef: E,
+		currentDispatcherRef: D,
 		reconcilerVersion: "19.1.1"
 	};
 	if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u") {
@@ -7837,7 +7837,17 @@ async function T(e, { method: t = "GET", body: n, idempotent: r = !0, headers: i
 	}
 	return s.csrf_token && (ee = s.csrf_token), s;
 }
-function ae(e, t = []) {
+async function ae(e, t, n = 12e4) {
+	let r = Date.now() + n;
+	for (; Date.now() < r;) {
+		let n = await T(`/api/jobs/${e}`);
+		if (t?.(n), n.status === "completed") return n;
+		if (["dead_letter", "cancelled"].includes(n.status)) throw Error(n.last_error || `Background job ${w(n.status)}.`);
+		await new Promise((e) => window.setTimeout(e, 750));
+	}
+	throw Error("The job is still running. Continue tracking it in Reports & jobs.");
+}
+function E(e, t = []) {
 	let [n, r] = (0, _.useState)({
 		loading: !0,
 		data: null,
@@ -7931,10 +7941,10 @@ function se() {
 			if (e.status !== 401) throw e;
 			r((await T("/setup/status")).needs_setup);
 		}).finally(() => a(!1));
-	}, []), i ? /* @__PURE__ */ (0, b.jsx)(Ce, {
+	}, []), i ? /* @__PURE__ */ (0, b.jsx)(we, {
 		title: "Opening Folio",
 		detail: "Checking your secure session…"
-	}) : e ? /* @__PURE__ */ (0, b.jsx)(le, {
+	}) : e ? /* @__PURE__ */ (0, b.jsx)(D, {
 		auth: e,
 		setAuth: t
 	}) : /* @__PURE__ */ (0, b.jsx)(ce, {
@@ -7972,7 +7982,7 @@ function ce({ needsSetup: e, onAuthenticated: t }) {
 			className: "auth-story",
 			"aria-label": "Folio product summary",
 			children: [
-				/* @__PURE__ */ (0, b.jsx)(_e, {}),
+				/* @__PURE__ */ (0, b.jsx)(ve, {}),
 				/* @__PURE__ */ (0, b.jsx)("p", {
 					className: "eyebrow",
 					children: "CONTROLLED ACCOUNTING OPERATIONS"
@@ -8036,7 +8046,7 @@ function ce({ needsSetup: e, onAuthenticated: t }) {
 							autoComplete: e ? "new-password" : "current-password",
 							hint: e ? "At least 12 characters with upper/lowercase and a number." : ""
 						}),
-						i && /* @__PURE__ */ (0, b.jsx)(Te, { children: i }),
+						i && /* @__PURE__ */ (0, b.jsx)(Ee, { children: i }),
 						/* @__PURE__ */ (0, b.jsx)("button", {
 							className: "primary block",
 							disabled: n,
@@ -8048,7 +8058,7 @@ function ce({ needsSetup: e, onAuthenticated: t }) {
 		})]
 	});
 }
-function le({ auth: e, setAuth: t }) {
+function D({ auth: e, setAuth: t }) {
 	let [n, r] = (0, _.useState)("overview"), [i, a] = (0, _.useState)(null), o = oe.find(([e]) => e === n), s = (t) => e.permissions.includes(t);
 	async function c() {
 		await T("/api/auth/logout", {
@@ -8061,7 +8071,7 @@ function le({ auth: e, setAuth: t }) {
 		children: [/* @__PURE__ */ (0, b.jsxs)("aside", {
 			className: "sidebar",
 			children: [
-				/* @__PURE__ */ (0, b.jsx)(_e, {}),
+				/* @__PURE__ */ (0, b.jsx)(ve, {}),
 				/* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "workspace-card",
 					children: [/* @__PURE__ */ (0, b.jsx)("span", {
@@ -8109,11 +8119,11 @@ function le({ auth: e, setAuth: t }) {
 						children: w(e.role)
 					})]
 				}),
-				i && /* @__PURE__ */ (0, b.jsx)(Ee, {
+				i && /* @__PURE__ */ (0, b.jsx)(De, {
 					notice: i,
 					onClose: () => a(null)
 				}),
-				/* @__PURE__ */ (0, b.jsx)(E, {
+				/* @__PURE__ */ (0, b.jsx)(O, {
 					active: n,
 					auth: e,
 					can: s,
@@ -8124,26 +8134,26 @@ function le({ auth: e, setAuth: t }) {
 		})]
 	});
 }
-function E({ active: e, ...t }) {
+function O({ active: e, ...t }) {
 	let n = {
 		overview: de,
 		journals: fe,
 		revenue: pe,
-		receivables: O,
-		"bank-close": k,
-		integrations: D,
+		receivables: k,
+		"bank-close": me,
+		integrations: le,
 		imports: ue,
-		investments: me,
-		"fixed-assets": A,
-		reports: he,
-		administration: ge
+		investments: he,
+		"fixed-assets": ge,
+		reports: _e,
+		administration: A
 	}[e];
 	return /* @__PURE__ */ (0, b.jsx)(n, { ...t });
 }
-function D({ can: e, notify: t }) {
-	let n = ae(() => T("/api/integrations/overview"), []), [r, i] = (0, _.useState)(!1);
-	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+function le({ can: e, notify: t }) {
+	let n = E(() => T("/api/integrations/overview"), []), [r, i] = (0, _.useState)(!1);
+	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (n.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: n.error,
 		retry: n.refresh
 	});
@@ -8236,7 +8246,7 @@ function D({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Connected systems",
 				detail: "Observable, tenant-scoped data connections without browser-visible secrets",
 				action: e("admin") && /* @__PURE__ */ (0, b.jsx)("button", {
@@ -8277,7 +8287,7 @@ function D({ can: e, notify: t }) {
 				children: [/* @__PURE__ */ (0, b.jsx)(M, {
 					title: "Connections",
 					subtitle: "Status, environment and latest successful synchronization",
-					children: /* @__PURE__ */ (0, b.jsx)(ye, {
+					children: /* @__PURE__ */ (0, b.jsx)(be, {
 						columns: [
 							"Provider",
 							"Connection",
@@ -8337,7 +8347,7 @@ function D({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Synchronization history",
 				subtitle: "Cursors, pages and idempotent source-record outcomes",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Started",
 						"Provider connection",
@@ -8361,7 +8371,7 @@ function D({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Integration exception queue",
 				subtitle: "Provider failures remain visible until an authorized operator records a disposition",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Created",
 						"Connection",
@@ -8384,7 +8394,7 @@ function D({ can: e, notify: t }) {
 					])
 				})
 			}),
-			r && /* @__PURE__ */ (0, b.jsx)(De, {
+			r && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: "Configure connector",
 				subtitle: "Enter secret-manager reference names only. Tokens and client secrets never belong in this form.",
 				close: () => i(!1),
@@ -8431,7 +8441,7 @@ function D({ can: e, notify: t }) {
 								pattern: "[A-Z][A-Z0-9_]{2,79}"
 							})]
 						}),
-						/* @__PURE__ */ (0, b.jsx)(Oe, {
+						/* @__PURE__ */ (0, b.jsx)(ke, {
 							close: () => i(!1),
 							label: "Save configuration"
 						})
@@ -8442,38 +8452,38 @@ function D({ can: e, notify: t }) {
 	});
 }
 function ue({ can: e, notify: t }) {
-	let [n, r] = (0, _.useState)("open"), [i, a] = (0, _.useState)(1), o = ae(() => Promise.all([
+	let [n, r] = (0, _.useState)("open"), [i, a] = (0, _.useState)(1), o = E(() => Promise.all([
 		T("/api/imports/templates"),
 		T("/api/imports/batches"),
 		T("/api/accounts"),
 		T("/api/imports/mapping-profiles"),
 		T("/api/imports/duplicate-policies")
-	]), []), s = ae(() => T(`/api/imports/exceptions?status=${encodeURIComponent(n)}&page=${i}&page_size=20`), [n, i]), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(1), [f, p] = (0, _.useState)(te()), [m, h] = (0, _.useState)(null), [g, v] = (0, _.useState)(!1), [y, ee] = (0, _.useState)(""), [x, S] = (0, _.useState)(!1), [C, oe] = (0, _.useState)({
+	]), []), s = E(() => T(`/api/imports/exceptions?status=${encodeURIComponent(n)}&page=${i}&page_size=20`), [n, i]), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(1), [f, p] = (0, _.useState)(te()), [m, h] = (0, _.useState)(null), [g, v] = (0, _.useState)(!1), [y, ee] = (0, _.useState)(""), [x, S] = (0, _.useState)(!1), [C, oe] = (0, _.useState)({
 		template_key: "customers",
 		field_key: "name",
 		threshold_percent: "88",
 		active: !0
-	}), [se, ce] = (0, _.useState)(null), [le, E] = (0, _.useState)("");
-	if (o.loading || s.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (o.error || s.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+	}), [se, ce] = (0, _.useState)(null), [D, O] = (0, _.useState)(""), [le, ue] = (0, _.useState)(null);
+	if (o.loading || s.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (o.error || s.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: o.error || s.error,
 		retry: () => Promise.all([o.refresh(), s.refresh()])
 	});
-	let [D, ue, de, fe, pe] = o.data, { items: O, page: k, open_total: me } = s.data, A = D.find((e) => e.key === f.template_key) || D[0], he = fe.find((e) => e.id === f.mapping_profile_id), ge = ne(f.csv), _e = A.fields.filter((e) => e.required).every((e) => f.mapping[e.key]), xe = ue.filter((e) => `${e.filename} ${e.template_key} ${e.status}`.toLowerCase().includes(y.trim().toLowerCase())), Ce = m?.mapping_profile_id ? fe.find((e) => e.id === m.mapping_profile_id) : null, Ee = (D.find((e) => e.key === C.template_key) || D[0]).fields.filter((e) => e.type === "string");
-	function ke() {
+	let [de, fe, pe, k, me] = o.data, { items: he, page: ge, open_total: _e } = s.data, A = de.find((e) => e.key === f.template_key) || de[0], ve = k.find((e) => e.id === f.mapping_profile_id), Se = ne(f.csv), we = A.fields.filter((e) => e.required).every((e) => f.mapping[e.key]), De = fe.filter((e) => `${e.filename} ${e.template_key} ${e.status}`.toLowerCase().includes(y.trim().toLowerCase())), Ae = m?.mapping_profile_id ? k.find((e) => e.id === m.mapping_profile_id) : null, je = (de.find((e) => e.key === C.template_key) || de[0]).fields.filter((e) => e.type === "string");
+	function Me() {
 		p(te()), d(1), l(!0);
 	}
-	function Ae(e) {
+	function Ne(e) {
 		p((t) => ({
 			...t,
 			...e
 		}));
 	}
-	function je(e) {
+	function Pe(e) {
 		p(te(e));
 	}
-	function Me(e = "customers") {
-		let t = D.find((t) => t.key === e) || D[0], n = pe.find((e) => e.template_key === t.key), r = t.fields.filter((e) => e.type === "string");
+	function Fe(e = "customers") {
+		let t = de.find((t) => t.key === e) || de[0], n = me.find((e) => e.template_key === t.key), r = t.fields.filter((e) => e.type === "string");
 		oe({
 			template_key: t.key,
 			field_key: n?.field_key || r[0]?.key || "",
@@ -8481,7 +8491,7 @@ function ue({ can: e, notify: t }) {
 			active: n?.active ?? !0
 		}), S(!0);
 	}
-	async function Ne(e) {
+	async function Ie(e) {
 		e.preventDefault(), v(!0);
 		try {
 			let e = await T("/api/imports/duplicate-policies", {
@@ -8504,7 +8514,7 @@ function ue({ can: e, notify: t }) {
 			v(!1);
 		}
 	}
-	async function Pe(e) {
+	async function Le(e) {
 		let n = e.target.files?.[0];
 		if (!n) return;
 		if (n.size > 5e6) {
@@ -8515,17 +8525,17 @@ function ue({ can: e, notify: t }) {
 			return;
 		}
 		let r = await n.text();
-		Ae({
+		Ne({
 			filename: n.name,
 			csv: r,
-			mapping: ie(ge, ne(r)) ? f.mapping : {}
+			mapping: ie(Se, ne(r)) ? f.mapping : {}
 		});
 	}
-	function Fe() {
+	function Re() {
 		let e = new Blob([`${A.sample_header}\n`], { type: "text/csv;charset=utf-8" }), t = URL.createObjectURL(e), n = document.createElement("a");
 		n.href = t, n.download = `${A.key}-v${A.version}-template.csv`, document.body.append(n), n.click(), n.remove(), URL.revokeObjectURL(t);
 	}
-	function Ie() {
+	function ze() {
 		if (!f.filename.trim() || !f.csv.trim()) {
 			t({
 				kind: "error",
@@ -8533,7 +8543,7 @@ function ue({ can: e, notify: t }) {
 			});
 			return;
 		}
-		if (!ge.length) {
+		if (!Se.length) {
 			t({
 				kind: "error",
 				message: "The CSV header row could not be read."
@@ -8553,16 +8563,16 @@ function ue({ can: e, notify: t }) {
 			});
 			return;
 		}
-		Ae({ mapping: re(A, ge, f.mapping) }), d(2);
+		Ne({ mapping: re(A, Se, f.mapping) }), d(2);
 	}
-	function Le(e) {
-		let t = fe.find((t) => t.id === e);
-		Ae({
+	function Be(e) {
+		let t = k.find((t) => t.id === e);
+		Ne({
 			mapping_profile_id: t?.id || "",
-			mapping: t ? re(A, ge, t.mapping) : re(A, ge, f.mapping)
+			mapping: t ? re(A, Se, t.mapping) : re(A, Se, f.mapping)
 		});
 	}
-	async function Re(e) {
+	async function Ve(e) {
 		if (e.preventDefault(), u === 3) {
 			v(!0);
 			try {
@@ -8572,7 +8582,7 @@ function ue({ can: e, notify: t }) {
 					end_date: f.end_date,
 					opening_cents: Math.round(Number(f.opening) * 100),
 					closing_cents: Math.round(Number(f.closing) * 100)
-				} : {}, n = await T("/api/imports/stage", {
+				} : {}, n = await T("/api/jobs/imports/stage", {
 					method: "POST",
 					body: {
 						template_key: f.template_key,
@@ -8583,7 +8593,12 @@ function ue({ can: e, notify: t }) {
 						restaged_from_batch_id: f.restaged_from_batch_id || void 0,
 						options: e
 					}
-				}), r = !1, i = "";
+				});
+				ue(n), l(!1), t({
+					kind: "success",
+					message: "Import source secured and queued for validation. No accounting records were created."
+				});
+				let r = await T(`/api/imports/batches/${(await ae(n.id, ue)).result.batch_id}?page=1&page_size=100`), i = !1, a = "";
 				if (f.mapping_profile_name.trim()) try {
 					await T("/api/imports/mapping-profiles", {
 						method: "POST",
@@ -8592,13 +8607,13 @@ function ue({ can: e, notify: t }) {
 							template_key: f.template_key,
 							mapping: f.mapping
 						}
-					}), r = !0;
+					}), i = !0;
 				} catch (e) {
-					i = e.message;
+					a = e.message;
 				}
-				h(n), l(!1), await Promise.all([o.refresh(), s.refresh()]), t({
-					kind: i ? "error" : "success",
-					message: i ? `Import staged, but the optional mapping profile was not saved: ${i}` : `Import validated and staged for review${r ? "; mapping profile saved" : ""}.`
+				h(r), await Promise.all([o.refresh(), s.refresh()]), t({
+					kind: a ? "error" : "success",
+					message: a ? `Import validated, but the optional mapping profile was not saved: ${a}` : `Import validation completed and is ready for review${i ? "; mapping profile saved" : ""}.`
 				});
 			} catch (e) {
 				t({
@@ -8610,7 +8625,7 @@ function ue({ can: e, notify: t }) {
 			}
 		}
 	}
-	async function ze(e, n = 1) {
+	async function He(e, n = 1) {
 		try {
 			h(await T(`/api/imports/batches/${e}?page=${n}&page_size=100`));
 		} catch (e) {
@@ -8620,7 +8635,7 @@ function ue({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function Be() {
+	async function Ue() {
 		v(!0);
 		try {
 			let e = await T(`/api/imports/batches/${m.id}/correction-source`);
@@ -8651,7 +8666,7 @@ function ue({ can: e, notify: t }) {
 			v(!1);
 		}
 	}
-	async function Ve() {
+	async function We() {
 		v(!0);
 		try {
 			let e = m.error_count > 0 || m.duplicate_count > 0;
@@ -8659,13 +8674,18 @@ function ue({ can: e, notify: t }) {
 				method: "POST",
 				body: { apply_valid_rows: e }
 			});
-			let n = await T(`/api/imports/batches/${m.id}/apply`, {
+			let n = await T("/api/jobs/imports/apply", {
 				method: "POST",
-				body: {}
+				body: { batch_id: m.id }
 			});
-			h(n), await Promise.all([o.refresh(), s.refresh()]), t({
+			ue(n), t({
 				kind: "success",
-				message: `${n.applied_count} validated rows applied with retained lineage.`
+				message: "Approved import queued for controlled application."
+			});
+			let r = await T(`/api/imports/batches/${(await ae(n.id, ue)).result.batch_id}?page=1&page_size=100`);
+			h(r), await Promise.all([o.refresh(), s.refresh()]), t({
+				kind: "success",
+				message: `${r.applied_count} validated rows applied with retained lineage.`
 			});
 		} catch (e) {
 			try {
@@ -8680,7 +8700,7 @@ function ue({ can: e, notify: t }) {
 			v(!1);
 		}
 	}
-	async function He(e) {
+	async function Ge(e) {
 		try {
 			await T("/api/imports/exceptions/status", {
 				method: "POST",
@@ -8700,14 +8720,14 @@ function ue({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function Ue(e) {
+	async function Ke(e) {
 		e.preventDefault(), v(!0);
 		try {
 			let e = await T(`/api/imports/exceptions/${se.id}/accept-distinct`, {
 				method: "POST",
-				body: { resolution: le }
+				body: { resolution: D }
 			});
-			m?.id === e.batch.id && h(e.batch), await Promise.all([o.refresh(), s.refresh()]), ce(null), E(""), t({
+			m?.id === e.batch.id && h(e.batch), await Promise.all([o.refresh(), s.refresh()]), ce(null), O(""), t({
 				kind: "success",
 				message: "Candidate accepted as distinct; the reviewer rationale and match evidence were retained."
 			});
@@ -8723,19 +8743,37 @@ function ue({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Controlled imports",
 				detail: "Versioned templates, validation previews, duplicate controls and traceable application",
 				action: (e("operate") || e("admin")) && /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "button-row",
 					children: [e("admin") && /* @__PURE__ */ (0, b.jsx)("button", {
 						className: "secondary",
-						onClick: () => Me(),
+						onClick: () => Fe(),
 						children: "Matching policies"
 					}), e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
 						className: "primary",
-						onClick: ke,
+						onClick: Me,
 						children: "New import"
+					})]
+				})
+			}),
+			le && /* @__PURE__ */ (0, b.jsx)(M, {
+				title: "Import processing",
+				subtitle: "Durable work continues if this page closes; retry and failure details remain auditable.",
+				children: /* @__PURE__ */ (0, b.jsxs)("div", {
+					className: "review-strip",
+					"aria-live": "polite",
+					children: [/* @__PURE__ */ (0, b.jsx)(xe, { items: [
+						["Operation", w(le.kind)],
+						["Status", /* @__PURE__ */ (0, b.jsx)(N, { value: le.status })],
+						["Attempts", `${le.attempts} of ${le.max_attempts}`],
+						["Outcome", le.result?.batch_id ? `Batch ${le.result.batch_id.slice(0, 8)}…` : le.last_error || "Waiting for a worker"]
+					] }), le.status === "completed" && /* @__PURE__ */ (0, b.jsx)("button", {
+						className: "secondary",
+						onClick: () => ue(null),
+						children: "Dismiss"
 					})]
 				})
 			}),
@@ -8744,31 +8782,31 @@ function ue({ can: e, notify: t }) {
 				children: [
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Templates",
-						value: D.length,
+						value: de.length,
 						detail: "Versioned entity formats"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Staged",
-						value: ue.filter((e) => e.status === "staged").length,
+						value: fe.filter((e) => e.status === "staged").length,
 						detail: "Awaiting approval"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Applied rows",
-						value: ue.reduce((e, t) => e + t.applied_count, 0),
+						value: fe.reduce((e, t) => e + t.applied_count, 0),
 						detail: "With entity lineage"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Open exceptions",
-						value: me,
+						value: _e,
 						detail: "Validation or apply issues",
-						warning: me > 0
+						warning: _e > 0
 					})
 				]
 			}),
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Duplicate candidate controls",
 				subtitle: "Versioned tenant policies compare normalized text without auto-merging records",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Template",
 						"Match field",
@@ -8780,7 +8818,7 @@ function ue({ can: e, notify: t }) {
 					caption: "Configured duplicate candidate policies",
 					emptyTitle: "Exact-key checks only",
 					emptyDetail: "An administrator can add a fuzzy candidate policy for a text field.",
-					rows: pe.map((t) => [
+					rows: me.map((t) => [
 						w(t.template_key),
 						w(t.field_key),
 						`${t.threshold_percent}% · v${t.version}`,
@@ -8788,7 +8826,7 @@ function ue({ can: e, notify: t }) {
 						/* @__PURE__ */ (0, b.jsx)(N, { value: t.active ? "active" : "disabled" }),
 						e("admin") ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => Me(t.template_key),
+							onClick: () => Fe(t.template_key),
 							children: "Configure"
 						}) : "—"
 					])
@@ -8808,8 +8846,8 @@ function ue({ can: e, notify: t }) {
 							onChange: (e) => ee(e.target.value),
 							placeholder: "Filename, template or status",
 							required: !1
-						}), /* @__PURE__ */ (0, b.jsxs)("span", { children: [xe.length, " shown"] })]
-					}), /* @__PURE__ */ (0, b.jsx)(ye, {
+						}), /* @__PURE__ */ (0, b.jsxs)("span", { children: [De.length, " shown"] })]
+					}), /* @__PURE__ */ (0, b.jsx)(be, {
 						columns: [
 							"File",
 							"Template",
@@ -8822,7 +8860,7 @@ function ue({ can: e, notify: t }) {
 						caption: "Import batches",
 						emptyTitle: "No matching batches",
 						emptyDetail: "Change the search or start a new controlled import.",
-						rows: xe.map((e) => [
+						rows: De.map((e) => [
 							e.filename,
 							w(e.template_key),
 							e.row_count,
@@ -8831,7 +8869,7 @@ function ue({ can: e, notify: t }) {
 							/* @__PURE__ */ (0, b.jsx)(N, { value: e.status }),
 							/* @__PURE__ */ (0, b.jsx)("button", {
 								className: "small-button",
-								onClick: () => ze(e.id),
+								onClick: () => He(e.id),
 								children: "Review"
 							})
 						])
@@ -8856,9 +8894,9 @@ function ue({ can: e, notify: t }) {
 									["ignored", "Ignored"],
 									["all", "All statuses"]
 								]
-							}), /* @__PURE__ */ (0, b.jsx)("span", { children: k.total ? `${k.from}–${k.to} of ${k.total}` : "Queue clear" })]
+							}), /* @__PURE__ */ (0, b.jsx)("span", { children: ge.total ? `${ge.from}–${ge.to} of ${ge.total}` : "Queue clear" })]
 						}),
-						/* @__PURE__ */ (0, b.jsx)(ye, {
+						/* @__PURE__ */ (0, b.jsx)(be, {
 							columns: [
 								"Code",
 								"Severity",
@@ -8870,7 +8908,7 @@ function ue({ can: e, notify: t }) {
 							caption: "Import exception queue",
 							emptyTitle: "No matching exceptions",
 							emptyDetail: "This queue is clear for the selected status.",
-							rows: O.map((t) => [
+							rows: he.map((t) => [
 								w(t.code),
 								/* @__PURE__ */ (0, b.jsx)(N, { value: t.severity }),
 								t.message,
@@ -8879,23 +8917,23 @@ function ue({ can: e, notify: t }) {
 								t.status === "open" && e("operate") ? t.code === "FUZZY_DUPLICATE" ? /* @__PURE__ */ (0, b.jsx)("button", {
 									className: "small-button",
 									onClick: () => {
-										ce(t), E("");
+										ce(t), O("");
 									},
 									children: "Compare"
 								}) : /* @__PURE__ */ (0, b.jsx)("button", {
 									className: "small-button",
-									onClick: () => He(t),
+									onClick: () => Ge(t),
 									children: "Resolve"
 								}) : "—"
 							])
 						}),
-						k.total_pages > 1 && /* @__PURE__ */ (0, b.jsxs)("nav", {
+						ge.total_pages > 1 && /* @__PURE__ */ (0, b.jsxs)("nav", {
 							className: "table-pagination",
 							"aria-label": "Import exception pages",
 							children: [
 								/* @__PURE__ */ (0, b.jsx)("button", {
 									className: "secondary",
-									disabled: k.page === 1,
+									disabled: ge.page === 1,
 									onClick: () => a((e) => e - 1),
 									children: "Previous"
 								}),
@@ -8903,14 +8941,14 @@ function ue({ can: e, notify: t }) {
 									"aria-live": "polite",
 									children: [
 										"Page ",
-										k.page,
+										ge.page,
 										" of ",
-										k.total_pages
+										ge.total_pages
 									]
 								}),
 								/* @__PURE__ */ (0, b.jsx)("button", {
 									className: "secondary",
-									disabled: k.page === k.total_pages,
+									disabled: ge.page === ge.total_pages,
 									onClick: () => a((e) => e + 1),
 									children: "Next"
 								})
@@ -8925,13 +8963,13 @@ function ue({ can: e, notify: t }) {
 				children: [
 					/* @__PURE__ */ (0, b.jsxs)("div", {
 						className: "review-strip",
-						children: [/* @__PURE__ */ (0, b.jsx)(be, { items: [
+						children: [/* @__PURE__ */ (0, b.jsx)(xe, { items: [
 							["Rows", m.row_count],
 							["Valid", m.valid_count],
 							["Errors", m.error_count],
 							["Duplicates", m.duplicate_count],
 							["Candidate policy", m.duplicate_policy ? `${w(m.duplicate_policy.field_key)} · ${m.duplicate_policy.threshold_percent}% · v${m.duplicate_policy.version}` : "Exact natural keys only"],
-							["Mapping", Ce ? `${Ce.name} · v${m.mapping_profile_version}` : "Exact batch snapshot"],
+							["Mapping", Ae ? `${Ae.name} · v${m.mapping_profile_version}` : "Exact batch snapshot"],
 							["Correction lineage", m.restaged_from_batch_id ? `Restaged from ${m.restaged_from_batch_id.slice(0, 8)}…` : "Original source batch"],
 							["Status", /* @__PURE__ */ (0, b.jsx)(N, { value: m.status })]
 						] }), /* @__PURE__ */ (0, b.jsxs)("div", {
@@ -8939,17 +8977,17 @@ function ue({ can: e, notify: t }) {
 							children: [(m.error_count > 0 || m.duplicate_count > 0 || m.status === "failed") && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
 								className: "secondary",
 								disabled: g,
-								onClick: Be,
+								onClick: Ue,
 								children: "Correct and restage"
 							}), m.status === "staged" && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
 								className: "primary",
 								disabled: g || !m.valid_count,
-								onClick: Ve,
+								onClick: We,
 								children: g ? "Applying…" : m.error_count || m.duplicate_count ? "Apply valid rows only" : "Approve and apply"
 							})]
 						})]
 					}),
-					/* @__PURE__ */ (0, b.jsx)(ye, {
+					/* @__PURE__ */ (0, b.jsx)(be, {
 						columns: [
 							"CSV row",
 							"Natural key",
@@ -8973,7 +9011,7 @@ function ue({ can: e, notify: t }) {
 							/* @__PURE__ */ (0, b.jsx)("button", {
 								className: "secondary",
 								disabled: m.row_page.page === 1 || g,
-								onClick: () => ze(m.id, m.row_page.page - 1),
+								onClick: () => He(m.id, m.row_page.page - 1),
 								children: "Previous 100"
 							}),
 							/* @__PURE__ */ (0, b.jsxs)("span", {
@@ -8995,27 +9033,27 @@ function ue({ can: e, notify: t }) {
 							/* @__PURE__ */ (0, b.jsx)("button", {
 								className: "secondary",
 								disabled: m.row_page.page === m.row_page.total_pages || g,
-								onClick: () => ze(m.id, m.row_page.page + 1),
+								onClick: () => He(m.id, m.row_page.page + 1),
 								children: "Next 100"
 							})
 						]
 					})
 				]
 			}),
-			x && /* @__PURE__ */ (0, b.jsx)(De, {
+			x && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: "Duplicate candidate policy",
 				subtitle: "Choose one text field and a review threshold. Changes are versioned and rebuild the applied-import index.",
 				close: () => S(!1),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: Ne,
+					onSubmit: Ie,
 					children: [
 						/* @__PURE__ */ (0, b.jsx)(P, {
 							label: "Import template",
 							as: "select",
 							value: C.template_key,
 							onChange: (e) => {
-								let t = D.find((t) => t.key === e.target.value), n = pe.find((t) => t.template_key === e.target.value), r = t.fields.filter((e) => e.type === "string");
+								let t = de.find((t) => t.key === e.target.value), n = me.find((t) => t.template_key === e.target.value), r = t.fields.filter((e) => e.type === "string");
 								oe({
 									template_key: t.key,
 									field_key: n?.field_key || r[0]?.key || "",
@@ -9023,7 +9061,7 @@ function ue({ can: e, notify: t }) {
 									active: n?.active ?? !0
 								});
 							},
-							options: D.filter((e) => e.fields.some((e) => e.type === "string")).map((e) => [e.key, e.name])
+							options: de.filter((e) => e.fields.some((e) => e.type === "string")).map((e) => [e.key, e.name])
 						}),
 						/* @__PURE__ */ (0, b.jsx)(P, {
 							label: "Text field to compare",
@@ -9033,7 +9071,7 @@ function ue({ can: e, notify: t }) {
 								...t,
 								field_key: e.target.value
 							})),
-							options: Ee.map((e) => [e.key, e.label])
+							options: je.map((e) => [e.key, e.label])
 						}),
 						/* @__PURE__ */ (0, b.jsx)(P, {
 							label: "Similarity threshold",
@@ -9062,20 +9100,20 @@ function ue({ can: e, notify: t }) {
 							role: "note",
 							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: "Review control" }), /* @__PURE__ */ (0, b.jsx)("span", { children: "Candidate rows remain blocked until corrected or explicitly accepted as distinct with a reviewer rationale. Folio never merges records automatically." })]
 						}),
-						/* @__PURE__ */ (0, b.jsx)(Oe, {
+						/* @__PURE__ */ (0, b.jsx)(ke, {
 							close: () => S(!1),
 							label: g ? "Saving…" : "Save policy"
 						})
 					]
 				})
 			}),
-			se && /* @__PURE__ */ (0, b.jsx)(De, {
+			se && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: "Compare duplicate candidate",
 				subtitle: se.message,
 				close: () => ce(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: Ue,
+					onSubmit: Ke,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "review-notice",
@@ -9087,24 +9125,24 @@ function ue({ can: e, notify: t }) {
 							as: "textarea",
 							minLength: "8",
 							maxLength: "500",
-							value: le,
-							onChange: (e) => E(e.target.value),
+							value: D,
+							onChange: (e) => O(e.target.value),
 							hint: "Describe the source evidence that proves these are separate records."
 						}),
-						/* @__PURE__ */ (0, b.jsx)(Oe, {
+						/* @__PURE__ */ (0, b.jsx)(ke, {
 							close: () => ce(null),
 							label: g ? "Recording…" : "Accept as distinct"
 						})
 					]
 				})
 			}),
-			c && /* @__PURE__ */ (0, b.jsx)(De, {
+			c && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: "New controlled import",
 				subtitle: "Choose the source, map its columns, then review before server validation. Nothing posts automatically.",
 				close: () => l(!1),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: Re,
+					onSubmit: Ve,
 					children: [
 						/* @__PURE__ */ (0, b.jsx)("ol", {
 							className: "wizard-steps",
@@ -9123,15 +9161,15 @@ function ue({ can: e, notify: t }) {
 								label: "Import template",
 								as: "select",
 								value: f.template_key,
-								onChange: (e) => je(e.target.value),
-								options: D.map((e) => [e.key, `${e.name} · version ${e.version}`])
+								onChange: (e) => Pe(e.target.value),
+								options: de.map((e) => [e.key, `${e.name} · version ${e.version}`])
 							}),
 							/* @__PURE__ */ (0, b.jsxs)("div", {
 								className: "template-download",
 								children: [/* @__PURE__ */ (0, b.jsxs)("button", {
 									type: "button",
 									className: "secondary",
-									onClick: Fe,
+									onClick: Re,
 									children: [
 										"Download blank ",
 										A.name.toLowerCase(),
@@ -9162,7 +9200,7 @@ function ue({ can: e, notify: t }) {
 									/* @__PURE__ */ (0, b.jsx)("input", {
 										type: "file",
 										accept: ".csv,text/csv",
-										onChange: Pe
+										onChange: Le
 									}),
 									/* @__PURE__ */ (0, b.jsx)("strong", { children: f.csv ? "Replace CSV file" : "Choose CSV file" }),
 									/* @__PURE__ */ (0, b.jsx)("span", { children: "Up to 5 MB and 10,000 data rows. The file stays tenant-scoped." })
@@ -9171,7 +9209,7 @@ function ue({ can: e, notify: t }) {
 							/* @__PURE__ */ (0, b.jsx)(P, {
 								label: "Source filename",
 								value: f.filename,
-								onChange: (e) => Ae({ filename: e.target.value }),
+								onChange: (e) => Ne({ filename: e.target.value }),
 								placeholder: `${f.template_key}.csv`
 							}),
 							/* @__PURE__ */ (0, b.jsx)(P, {
@@ -9180,9 +9218,9 @@ function ue({ can: e, notify: t }) {
 								value: f.csv,
 								onChange: (e) => {
 									let t = e.target.value;
-									Ae({
+									Ne({
 										csv: t,
-										mapping: ie(ge, ne(t)) ? f.mapping : {}
+										mapping: ie(Se, ne(t)) ? f.mapping : {}
 									});
 								},
 								placeholder: `${A.sample_header}\n`,
@@ -9197,8 +9235,8 @@ function ue({ can: e, notify: t }) {
 										label: "Cash account",
 										as: "select",
 										value: f.cash_account_id,
-										onChange: (e) => Ae({ cash_account_id: e.target.value }),
-										options: [["", "Select a cash account"], ...de.filter((e) => e.type === "asset").map((e) => [e.id, `${e.code} · ${e.name}`])]
+										onChange: (e) => Ne({ cash_account_id: e.target.value }),
+										options: [["", "Select a cash account"], ...pe.filter((e) => e.type === "asset").map((e) => [e.id, `${e.code} · ${e.name}`])]
 									}),
 									/* @__PURE__ */ (0, b.jsxs)("div", {
 										className: "form-grid",
@@ -9207,27 +9245,27 @@ function ue({ can: e, notify: t }) {
 												label: "Statement start",
 												type: "date",
 												value: f.start_date,
-												onChange: (e) => Ae({ start_date: e.target.value })
+												onChange: (e) => Ne({ start_date: e.target.value })
 											}),
 											/* @__PURE__ */ (0, b.jsx)(P, {
 												label: "Statement end",
 												type: "date",
 												value: f.end_date,
-												onChange: (e) => Ae({ end_date: e.target.value })
+												onChange: (e) => Ne({ end_date: e.target.value })
 											}),
 											/* @__PURE__ */ (0, b.jsx)(P, {
 												label: "Opening balance",
 												type: "number",
 												step: "0.01",
 												value: f.opening,
-												onChange: (e) => Ae({ opening: e.target.value })
+												onChange: (e) => Ne({ opening: e.target.value })
 											}),
 											/* @__PURE__ */ (0, b.jsx)(P, {
 												label: "Closing balance",
 												type: "number",
 												step: "0.01",
 												value: f.closing,
-												onChange: (e) => Ae({ closing: e.target.value })
+												onChange: (e) => Ne({ closing: e.target.value })
 											})
 										]
 									})
@@ -9243,7 +9281,7 @@ function ue({ can: e, notify: t }) {
 								}), /* @__PURE__ */ (0, b.jsx)("button", {
 									type: "button",
 									className: "primary",
-									onClick: Ie,
+									onClick: ze,
 									children: "Map columns"
 								})]
 							})
@@ -9253,7 +9291,7 @@ function ue({ can: e, notify: t }) {
 								className: "source-summary",
 								children: [
 									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Source" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: f.filename })] }),
-									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Detected columns" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: ge.length })] }),
+									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Detected columns" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: Se.length })] }),
 									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Target" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: A.name })] })
 								]
 							}),
@@ -9262,8 +9300,8 @@ function ue({ can: e, notify: t }) {
 								as: "select",
 								required: !1,
 								defaultValue: "",
-								onChange: (e) => Le(e.target.value),
-								options: [["", "Automatic exact-name mapping"], ...fe.filter((e) => e.template_key === f.template_key).map((e) => [e.id, `${e.name} · version ${e.version}`])],
+								onChange: (e) => Be(e.target.value),
+								options: [["", "Automatic exact-name mapping"], ...k.filter((e) => e.template_key === f.template_key).map((e) => [e.id, `${e.name} · version ${e.version}`])],
 								hint: "Profiles are tenant-scoped and retain their template version."
 							}),
 							/* @__PURE__ */ (0, b.jsx)("div", {
@@ -9289,14 +9327,14 @@ function ue({ can: e, notify: t }) {
 											as: "select",
 											required: e.required,
 											value: f.mapping[e.key] || "",
-											onChange: (t) => Ae({
+											onChange: (t) => Ne({
 												mapping_profile_id: "",
 												mapping: {
 													...f.mapping,
 													[e.key]: t.target.value
 												}
 											}),
-											options: [["", e.required ? "Select a source column" : "Not mapped"], ...ge.map((e) => [e, e])]
+											options: [["", e.required ? "Select a source column" : "Not mapped"], ...Se.map((e) => [e, e])]
 										})
 									]
 								}, e.key))
@@ -9304,12 +9342,12 @@ function ue({ can: e, notify: t }) {
 							e("admin") && /* @__PURE__ */ (0, b.jsx)(P, {
 								label: "Save this mapping for reuse",
 								value: f.mapping_profile_name,
-								onChange: (e) => Ae({ mapping_profile_name: e.target.value }),
+								onChange: (e) => Ne({ mapping_profile_name: e.target.value }),
 								required: !1,
 								placeholder: "Optional profile name",
 								hint: "Saved only after this file passes server validation."
 							}),
-							!_e && /* @__PURE__ */ (0, b.jsx)(Te, { children: "Map every required target field before continuing." }),
+							!we && /* @__PURE__ */ (0, b.jsx)(Ee, { children: "Map every required target field before continuing." }),
 							/* @__PURE__ */ (0, b.jsxs)("div", {
 								className: "step-actions",
 								children: [/* @__PURE__ */ (0, b.jsx)("button", {
@@ -9320,7 +9358,7 @@ function ue({ can: e, notify: t }) {
 								}), /* @__PURE__ */ (0, b.jsx)("button", {
 									type: "button",
 									className: "primary",
-									disabled: !_e,
+									disabled: !we,
 									onClick: () => d(3),
 									children: "Review import"
 								})]
@@ -9329,17 +9367,17 @@ function ue({ can: e, notify: t }) {
 						u === 3 && /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [
 							/* @__PURE__ */ (0, b.jsx)("div", {
 								className: "review-card",
-								children: /* @__PURE__ */ (0, b.jsx)(be, { items: [
+								children: /* @__PURE__ */ (0, b.jsx)(xe, { items: [
 									["Source file", f.filename],
 									["Template", `${A.name} · v${A.version}`],
-									["Detected columns", ge.length],
+									["Detected columns", Se.length],
 									["Mapped fields", Object.values(f.mapping).filter(Boolean).length],
 									["Correction source", f.restaged_from_batch_id ? `${f.correction_source_filename} · ${f.correction_row_count} rows` : "Original source batch"],
-									["Mapping lineage", he ? `${he.name} · v${he.version}` : "Exact batch snapshot"],
+									["Mapping lineage", ve ? `${ve.name} · v${ve.version}` : "Exact batch snapshot"],
 									["Saved profile", f.mapping_profile_name || "Not requested"]
 								] })
 							}),
-							/* @__PURE__ */ (0, b.jsx)(ye, {
+							/* @__PURE__ */ (0, b.jsx)(be, {
 								caption: "Import mapping review",
 								columns: [
 									"Target field",
@@ -9378,9 +9416,9 @@ function ue({ can: e, notify: t }) {
 	});
 }
 function de() {
-	let e = ae(() => Promise.all([T("/api/dashboard"), T("/api/reconciliation-exceptions")]), []);
-	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (e.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+	let e = E(() => Promise.all([T("/api/dashboard"), T("/api/reconciliation-exceptions")]), []);
+	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (e.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: e.error,
 		retry: e.refresh
 	});
@@ -9418,7 +9456,7 @@ function de() {
 			children: [/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Monthly performance",
 				subtitle: "Revenue and expense activity by posting month",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Month",
 						"Revenue",
@@ -9447,7 +9485,7 @@ function de() {
 							/* @__PURE__ */ (0, b.jsx)(N, { value: e.status })
 						]
 					}, e.id))
-				}) : /* @__PURE__ */ (0, b.jsx)(xe, {
+				}) : /* @__PURE__ */ (0, b.jsx)(Se, {
 					title: "Everything reconciles",
 					detail: "No unresolved reconciliation exceptions."
 				})
@@ -9456,9 +9494,9 @@ function de() {
 	});
 }
 function fe({ can: e, notify: t }) {
-	let n = ae(() => Promise.all([T("/api/journals"), T("/api/accounts")]), []), [r, i] = (0, _.useState)(!1);
-	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+	let n = E(() => Promise.all([T("/api/journals"), T("/api/accounts")]), []), [r, i] = (0, _.useState)(!1);
+	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (n.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: n.error,
 		retry: n.refresh
 	});
@@ -9510,7 +9548,7 @@ function fe({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Journal register",
 				detail: `${a.length} entries with controlled approval and posting`,
 				action: e("draft") && /* @__PURE__ */ (0, b.jsx)("button", {
@@ -9519,7 +9557,7 @@ function fe({ can: e, notify: t }) {
 					children: "New journal"
 				})
 			}),
-			/* @__PURE__ */ (0, b.jsx)(M, { children: /* @__PURE__ */ (0, b.jsx)(ye, {
+			/* @__PURE__ */ (0, b.jsx)(M, { children: /* @__PURE__ */ (0, b.jsx)(be, {
 				columns: [
 					"Date",
 					"Memo",
@@ -9541,7 +9579,7 @@ function fe({ can: e, notify: t }) {
 					}) : "—"
 				])
 			}) }),
-			r && /* @__PURE__ */ (0, b.jsx)(De, {
+			r && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: "Create balanced journal",
 				subtitle: "Save a draft for review; this does not post to the ledger.",
 				close: () => i(!1),
@@ -9589,7 +9627,7 @@ function fe({ can: e, notify: t }) {
 							name: "description",
 							maxLength: 240
 						}),
-						/* @__PURE__ */ (0, b.jsx)(Oe, {
+						/* @__PURE__ */ (0, b.jsx)(ke, {
 							close: () => i(!1),
 							label: "Save draft"
 						})
@@ -9600,9 +9638,9 @@ function fe({ can: e, notify: t }) {
 	});
 }
 function pe({ can: e, notify: t }) {
-	let n = ae(() => T("/api/saas/overview"), []);
-	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+	let n = E(() => T("/api/saas/overview"), []);
+	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (n.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: n.error,
 		retry: n.refresh
 	});
@@ -9627,7 +9665,7 @@ function pe({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Contract-to-ledger",
 				detail: "ASC 606 contracts, obligations, billing and recognition",
 				action: e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
@@ -9664,7 +9702,7 @@ function pe({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Contracts",
 				subtitle: "Signed arrangements and allocated transaction price",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Contract",
 						"Customer",
@@ -9684,10 +9722,10 @@ function pe({ can: e, notify: t }) {
 		]
 	});
 }
-function O({ can: e, notify: t }) {
-	let n = ae(() => Promise.all([T("/api/receivables"), T("/api/saas/overview")]), []), [r, i] = (0, _.useState)(null);
-	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+function k({ can: e, notify: t }) {
+	let n = E(() => Promise.all([T("/api/receivables"), T("/api/saas/overview")]), []), [r, i] = (0, _.useState)(null);
+	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (n.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: n.error,
 		retry: n.refresh
 	});
@@ -9736,7 +9774,7 @@ function O({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Receivables operations",
 				detail: `Aging as of ${C(a.as_of)}`,
 				action: e("operate") && /* @__PURE__ */ (0, b.jsxs)("div", {
@@ -9782,7 +9820,7 @@ function O({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Invoice aging",
 				subtitle: "Outstanding customer invoices and application status",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Invoice",
 						"Customer",
@@ -9801,7 +9839,7 @@ function O({ can: e, notify: t }) {
 					])
 				})
 			}),
-			r && /* @__PURE__ */ (0, b.jsx)(De, {
+			r && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: r === "invoice" ? "Create customer invoice" : "Record customer payment",
 				subtitle: "The resulting accounting entry retains this workflow's audit lineage.",
 				close: () => i(null),
@@ -9894,7 +9932,7 @@ function O({ can: e, notify: t }) {
 							name: "reference",
 							required: !1
 						})
-					] }), /* @__PURE__ */ (0, b.jsx)(Oe, {
+					] }), /* @__PURE__ */ (0, b.jsx)(ke, {
 						close: () => i(null),
 						label: "Post and save"
 					})]
@@ -9903,14 +9941,14 @@ function O({ can: e, notify: t }) {
 		]
 	});
 }
-function k({ can: e, notify: t }) {
-	let n = ae(() => Promise.all([
+function me({ can: e, notify: t }) {
+	let n = E(() => Promise.all([
 		T("/api/bank-statements"),
 		T("/api/reconciliation-exceptions"),
 		T("/api/accounts")
 	]), []), [r, i] = (0, _.useState)(!1);
-	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (n.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: n.error,
 		retry: n.refresh
 	});
@@ -9962,7 +10000,7 @@ function k({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Bank reconciliation & close",
 				detail: "Cash matching, assigned exceptions and evidence",
 				action: e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
@@ -9976,7 +10014,7 @@ function k({ can: e, notify: t }) {
 				children: [/* @__PURE__ */ (0, b.jsx)(M, {
 					title: "Bank statements",
 					subtitle: "Imported statements and match status",
-					children: /* @__PURE__ */ (0, b.jsx)(ye, {
+					children: /* @__PURE__ */ (0, b.jsx)(be, {
 						columns: [
 							"Period",
 							"Closing",
@@ -10018,13 +10056,13 @@ function k({ can: e, notify: t }) {
 								})
 							]
 						}, t.id))
-					}) : /* @__PURE__ */ (0, b.jsx)(xe, {
+					}) : /* @__PURE__ */ (0, b.jsx)(Se, {
 						title: "No close exceptions",
 						detail: "All synchronized reconciliations agree."
 					})
 				})]
 			}),
-			r && /* @__PURE__ */ (0, b.jsx)(De, {
+			r && /* @__PURE__ */ (0, b.jsx)(Oe, {
 				title: "Import bank statement",
 				subtitle: "Validate a versioned CSV before matching it against posted cash entries.",
 				close: () => i(!1),
@@ -10071,7 +10109,7 @@ function k({ can: e, notify: t }) {
 							as: "textarea",
 							hint: "Required columns: date, description and amount. Include external_id when available. Never paste bank credentials."
 						}),
-						/* @__PURE__ */ (0, b.jsx)(Oe, {
+						/* @__PURE__ */ (0, b.jsx)(ke, {
 							close: () => i(!1),
 							label: "Validate and import"
 						})
@@ -10081,10 +10119,10 @@ function k({ can: e, notify: t }) {
 		]
 	});
 }
-function me() {
-	let e = ae(() => T("/api/investments/overview"), []);
-	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (e.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+function he() {
+	let e = E(() => T("/api/investments/overview"), []);
+	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (e.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: e.error,
 		retry: e.refresh
 	});
@@ -10092,7 +10130,7 @@ function me() {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Investment subledger",
 				detail: "Positions, measurement models and ledger reconciliation"
 			}),
@@ -10125,7 +10163,7 @@ function me() {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Positions",
 				subtitle: "Accounting model, classification and current carrying value",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Instrument",
 						"Issuer",
@@ -10145,10 +10183,10 @@ function me() {
 		]
 	});
 }
-function A() {
-	let e = ae(() => T("/api/fixed-assets/overview"), []);
-	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
-	if (e.error) return /* @__PURE__ */ (0, b.jsx)(we, {
+function ge() {
+	let e = E(() => T("/api/fixed-assets/overview"), []);
+	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Ce, {});
+	if (e.error) return /* @__PURE__ */ (0, b.jsx)(Te, {
 		error: e.error,
 		retry: e.refresh
 	});
@@ -10156,7 +10194,7 @@ function A() {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Fixed-asset register",
 				detail: "PP&E, depreciation, CIP, impairment, disposals and ARO"
 			}),
@@ -10188,7 +10226,7 @@ function A() {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Asset register",
 				subtitle: "Class, custody, lifecycle status and carrying value",
-				children: /* @__PURE__ */ (0, b.jsx)(ye, {
+				children: /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Asset",
 						"Description",
@@ -10210,7 +10248,7 @@ function A() {
 		]
 	});
 }
-function he({ can: e, notify: t }) {
+function _e({ can: e, notify: t }) {
 	let n = [
 		"trial_balance",
 		"income_statement",
@@ -10218,7 +10256,7 @@ function he({ can: e, notify: t }) {
 		"cash_flow",
 		"comprehensive_income",
 		"changes_in_equity"
-	], r = ae(() => T("/api/jobs?limit=100"), []), [i, a] = (0, _.useState)(x);
+	], r = E(() => T("/api/jobs?limit=100"), []), [i, a] = (0, _.useState)(x);
 	(0, _.useEffect)(() => {
 		let e = setInterval(() => void r.refresh(), 3e3);
 		return () => clearInterval(e);
@@ -10262,7 +10300,7 @@ function he({ can: e, notify: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
-			/* @__PURE__ */ (0, b.jsx)(ve, {
+			/* @__PURE__ */ (0, b.jsx)(ye, {
 				title: "Financial statements",
 				detail: "Queue durable statement exports and track all report and connector work"
 			}),
@@ -10307,10 +10345,10 @@ function he({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Background work",
 				subtitle: "Durable status, retry evidence and completed downloads",
-				children: r.loading ? /* @__PURE__ */ (0, b.jsx)(Se, {}) : r.error ? /* @__PURE__ */ (0, b.jsx)(we, {
+				children: r.loading ? /* @__PURE__ */ (0, b.jsx)(Ce, {}) : r.error ? /* @__PURE__ */ (0, b.jsx)(Te, {
 					error: r.error,
 					retry: r.refresh
-				}) : /* @__PURE__ */ (0, b.jsx)(ye, {
+				}) : /* @__PURE__ */ (0, b.jsx)(be, {
 					columns: [
 						"Created",
 						"Kind",
@@ -10353,7 +10391,7 @@ function he({ can: e, notify: t }) {
 		]
 	});
 }
-function ge({ auth: e, setAuth: t, notify: n }) {
+function A({ auth: e, setAuth: t, notify: n }) {
 	async function r(e) {
 		try {
 			let r = await T("/api/auth/switch-org", {
@@ -10374,14 +10412,14 @@ function ge({ auth: e, setAuth: t, notify: n }) {
 	}
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
-		children: [/* @__PURE__ */ (0, b.jsx)(ve, {
+		children: [/* @__PURE__ */ (0, b.jsx)(ye, {
 			title: "Workspace administration",
 			detail: "Identity, organization access and controlled configuration"
 		}), /* @__PURE__ */ (0, b.jsxs)("div", {
 			className: "two-column",
 			children: [/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Signed-in identity",
-				children: /* @__PURE__ */ (0, b.jsx)(be, { items: [
+				children: /* @__PURE__ */ (0, b.jsx)(xe, { items: [
 					["Name", e.user.name],
 					["Email", e.user.email],
 					["Role", w(e.role)],
@@ -10412,7 +10450,7 @@ function ge({ auth: e, setAuth: t, notify: n }) {
 		})]
 	});
 }
-function _e() {
+function ve() {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "brand",
 		children: [/* @__PURE__ */ (0, b.jsx)("span", {
@@ -10440,13 +10478,13 @@ function M({ title: e, subtitle: t, children: n }) {
 		})]
 	});
 }
-function ve({ title: e, detail: t, action: n }) {
+function ye({ title: e, detail: t, action: n }) {
 	return /* @__PURE__ */ (0, b.jsxs)("section", {
 		className: "module-bar",
 		children: [/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("h2", { children: e }), /* @__PURE__ */ (0, b.jsx)("p", { children: t })] }), n && /* @__PURE__ */ (0, b.jsx)("div", { children: n })]
 	});
 }
-function ye({ columns: e, rows: t, caption: n, emptyTitle: r = "Nothing here yet", emptyDetail: i = "New records will appear here." }) {
+function be({ columns: e, rows: t, caption: n, emptyTitle: r = "Nothing here yet", emptyDetail: i = "New records will appear here." }) {
 	return t.length ? /* @__PURE__ */ (0, b.jsx)("div", {
 		className: "table-wrap",
 		children: /* @__PURE__ */ (0, b.jsxs)("table", { children: [
@@ -10460,7 +10498,7 @@ function ye({ columns: e, rows: t, caption: n, emptyTitle: r = "Nothing here yet
 			}, e)) }) }),
 			/* @__PURE__ */ (0, b.jsx)("tbody", { children: t.map((e, t) => /* @__PURE__ */ (0, b.jsx)("tr", { children: e.map((e, t) => /* @__PURE__ */ (0, b.jsx)("td", { children: e ?? "—" }, t)) }, t)) })
 		] })
-	}) : /* @__PURE__ */ (0, b.jsx)(xe, {
+	}) : /* @__PURE__ */ (0, b.jsx)(Se, {
 		title: r,
 		detail: i
 	});
@@ -10472,13 +10510,13 @@ function N({ value: e }) {
 		children: w(e)
 	});
 }
-function be({ items: e }) {
+function xe({ items: e }) {
 	return /* @__PURE__ */ (0, b.jsx)("dl", {
 		className: "description-list",
 		children: e.map(([e, t]) => /* @__PURE__ */ (0, b.jsxs)(_.Fragment, { children: [/* @__PURE__ */ (0, b.jsx)("dt", { children: e }), /* @__PURE__ */ (0, b.jsx)("dd", { children: t })] }, e))
 	});
 }
-function xe({ title: e, detail: t }) {
+function Se({ title: e, detail: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "empty",
 		children: [
@@ -10491,13 +10529,13 @@ function xe({ title: e, detail: t }) {
 		]
 	});
 }
-function Se() {
-	return /* @__PURE__ */ (0, b.jsx)(Ce, {
+function Ce() {
+	return /* @__PURE__ */ (0, b.jsx)(we, {
 		title: "Loading workspace",
 		detail: "Retrieving current accounting data…"
 	});
 }
-function Ce({ title: e, detail: t }) {
+function we({ title: e, detail: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("main", {
 		className: "centered-status",
 		"aria-live": "polite",
@@ -10508,8 +10546,8 @@ function Ce({ title: e, detail: t }) {
 		]
 	});
 }
-function we({ error: e, retry: t }) {
-	return /* @__PURE__ */ (0, b.jsxs)(Te, {
+function Te({ error: e, retry: t }) {
+	return /* @__PURE__ */ (0, b.jsxs)(Ee, {
 		action: /* @__PURE__ */ (0, b.jsx)("button", {
 			className: "small-button",
 			onClick: t,
@@ -10522,14 +10560,14 @@ function we({ error: e, retry: t }) {
 		]
 	});
 }
-function Te({ children: e, action: t }) {
+function Ee({ children: e, action: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "alert",
 		role: "alert",
 		children: [/* @__PURE__ */ (0, b.jsx)("div", { children: e }), t]
 	});
 }
-function Ee({ notice: e, onClose: t }) {
+function De({ notice: e, onClose: t }) {
 	return (0, _.useEffect)(() => {
 		let e = setTimeout(t, 5e3);
 		return () => clearTimeout(e);
@@ -10543,7 +10581,7 @@ function Ee({ notice: e, onClose: t }) {
 		})]
 	});
 }
-function De({ title: e, subtitle: t, close: n, children: r }) {
+function Oe({ title: e, subtitle: t, close: n, children: r }) {
 	let i = (0, _.useRef)(null), a = (0, _.useRef)(null), o = (0, _.useRef)(null), s = (0, _.useRef)(n), c = (0, _.useRef)(document.activeElement);
 	return s.current = n, (0, _.useEffect)(() => {
 		let e = document.body.style.overflow;
@@ -10590,7 +10628,7 @@ function De({ title: e, subtitle: t, close: n, children: r }) {
 		})
 	});
 }
-function Oe({ close: e, label: t }) {
+function ke({ close: e, label: t }) {
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "dialog-actions",
 		children: [/* @__PURE__ */ (0, b.jsx)("button", {
@@ -10629,6 +10667,6 @@ function P({ label: e, hint: t, as: n = "input", options: r = [], required: i = 
 		]
 	});
 }
-var ke = document.querySelector("#root");
-ke && (0, v.createRoot)(ke).render(/* @__PURE__ */ (0, b.jsx)(se, {}));
+var Ae = document.querySelector("#root");
+Ae && (0, v.createRoot)(Ae).render(/* @__PURE__ */ (0, b.jsx)(se, {}));
 //#endregion

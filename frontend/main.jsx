@@ -94,6 +94,19 @@ async function api(path, { method = "GET", body, idempotent = true, headers: ext
   return payload;
 }
 
+async function waitForJob(id, onUpdate, timeoutMilliseconds = 120_000) {
+  const deadline = Date.now() + timeoutMilliseconds;
+  while (Date.now() < deadline) {
+    const job = await api(`/api/jobs/${id}`);
+    onUpdate?.(job);
+    if (job.status === "completed") return job;
+    if (["dead_letter", "cancelled"].includes(job.status))
+      throw new Error(job.last_error || `Background job ${label(job.status)}.`);
+    await new Promise((resolve) => window.setTimeout(resolve, 750));
+  }
+  throw new Error("The job is still running. Continue tracking it in Reports & jobs.");
+}
+
 function useLoad(loader, dependencies = []) {
   const [state, setState] = useState({ loading: true, data: null, error: "" });
   const refresh = async () => {
@@ -604,6 +617,7 @@ function Imports({ can, notify }) {
   });
   const [distinctCandidate, setDistinctCandidate] = useState(null);
   const [distinctReason, setDistinctReason] = useState("");
+  const [activeJob, setActiveJob] = useState(null);
   if (resource.loading || exceptionResource.loading) return <Loading />;
   if (resource.error || exceptionResource.error)
     return (
@@ -771,7 +785,7 @@ function Imports({ can, notify }) {
               closing_cents: Math.round(Number(draft.closing) * 100),
             }
           : {};
-      const batch = await api("/api/imports/stage", {
+      const job = await api("/api/jobs/imports/stage", {
         method: "POST",
         body: {
           template_key: draft.template_key,
@@ -783,6 +797,17 @@ function Imports({ can, notify }) {
           options,
         },
       });
+      setActiveJob(job);
+      setShowStage(false);
+      notify({
+        kind: "success",
+        message:
+          "Import source secured and queued for validation. No accounting records were created.",
+      });
+      const completed = await waitForJob(job.id, setActiveJob);
+      const batch = await api(
+        `/api/imports/batches/${completed.result.batch_id}?page=1&page_size=100`,
+      );
       let mappingSaved = false;
       let mappingSaveError = "";
       if (draft.mapping_profile_name.trim()) {
@@ -801,13 +826,12 @@ function Imports({ can, notify }) {
         }
       }
       setPreview(batch);
-      setShowStage(false);
       await Promise.all([resource.refresh(), exceptionResource.refresh()]);
       notify({
         kind: mappingSaveError ? "error" : "success",
         message: mappingSaveError
-          ? `Import staged, but the optional mapping profile was not saved: ${mappingSaveError}`
-          : `Import validated and staged for review${mappingSaved ? "; mapping profile saved" : ""}.`,
+          ? `Import validated, but the optional mapping profile was not saved: ${mappingSaveError}`
+          : `Import validation completed and is ready for review${mappingSaved ? "; mapping profile saved" : ""}.`,
       });
     } catch (error) {
       notify({ kind: "error", message: error.message });
@@ -872,10 +896,16 @@ function Imports({ can, notify }) {
         method: "POST",
         body: { apply_valid_rows: hasExceptions },
       });
-      const applied = await api(`/api/imports/batches/${preview.id}/apply`, {
+      const job = await api("/api/jobs/imports/apply", {
         method: "POST",
-        body: {},
+        body: { batch_id: preview.id },
       });
+      setActiveJob(job);
+      notify({ kind: "success", message: "Approved import queued for controlled application." });
+      const completed = await waitForJob(job.id, setActiveJob);
+      const applied = await api(
+        `/api/imports/batches/${completed.result.batch_id}?page=1&page_size=100`,
+      );
       setPreview(applied);
       await Promise.all([resource.refresh(), exceptionResource.refresh()]);
       notify({
@@ -961,6 +991,33 @@ function Imports({ can, notify }) {
           )
         }
       />
+      {activeJob && (
+        <Panel
+          title="Import processing"
+          subtitle="Durable work continues if this page closes; retry and failure details remain auditable."
+        >
+          <div className="review-strip" aria-live="polite">
+            <DescriptionList
+              items={[
+                ["Operation", label(activeJob.kind)],
+                ["Status", <Status value={activeJob.status} />],
+                ["Attempts", `${activeJob.attempts} of ${activeJob.max_attempts}`],
+                [
+                  "Outcome",
+                  activeJob.result?.batch_id
+                    ? `Batch ${activeJob.result.batch_id.slice(0, 8)}…`
+                    : activeJob.last_error || "Waiting for a worker",
+                ],
+              ]}
+            />
+            {activeJob.status === "completed" && (
+              <button className="secondary" onClick={() => setActiveJob(null)}>
+                Dismiss
+              </button>
+            )}
+          </div>
+        </Panel>
+      )}
       <section className="kpi-grid">
         <Kpi label="Templates" value={templates.length} detail="Versioned entity formats" />
         <Kpi
