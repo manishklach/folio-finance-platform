@@ -86,9 +86,9 @@ The detailed fixed-assets matrix, lifecycle flowchart, API inventory, and scope 
 - Versioned mapping definitions, payload hashes, run metrics, and resolvable exception/dead-letter queues
 - Transactional provider-record workbench with mapping previews, stale-preview protection, approval
   notes, record-linked exceptions, and idempotent draft-journal creation without automatic posting
-- Native Plaid bank-feed matching, native Stripe customer/contract/AR reconciliation, and a native
-  Gusto payroll accrual and settlement subledger, including fee-bearing payout components and
-  provider-to-bank-to-posted-cash proof without duplicate journals
+- Native Plaid bank-feed matching, Stripe customer/contract/AR reconciliation, Gusto payroll accrual
+  and settlement, and HubSpot company/product/deal/line-item contract handoff, including association
+  integrity, maker-checker proposals, close controls, and no provider-originated automatic posting
 - Administrator-only configuration and operator-scoped synchronization controls
 
 The exact implemented boundary, provider matrix, flowchart, API inventory, and remaining live-provider

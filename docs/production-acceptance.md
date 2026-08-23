@@ -103,6 +103,15 @@ provider sandbox certification, credentialed staging and deployed soak remain pr
 gates. Gusto remains the payroll calculator and payment/tax-filing system; Folio records and
 reconciles the accounting result and never calculates employee payroll or files taxes.
 
+Repository acceptance for HubSpot now includes one composite, per-object cursor; batched
+deal/company/line-item/product association lineage; immutable approved links to Folio customers and
+catalog products; closed-won gating; exact line and deal economic crossfoots; currency/date/SSP
+validation; a non-accounting contract proposal; preparer/controller separation; idempotent atomic
+contract and revenue-schedule creation; source-change fail-closed behavior; and revenue-review close
+blocking. Hosted OAuth, verified native events, portal-specific custom-property policies, provider
+sandbox certification, credentialed staging and deployed soak remain production acceptance gates.
+HubSpot never creates or posts a journal.
+
 ## 3. Imports, mappings and exception operations
 
 Repository acceptance now includes versioned tenant fuzzy-match policies for one configured text field,

@@ -328,6 +328,9 @@ function Integrations({ can, notify }) {
   const [payrollPreview, setPayrollPreview] = useState(null);
   const [payrollSettlement, setPayrollSettlement] = useState(null);
   const [payrollReconcile, setPayrollReconcile] = useState(null);
+  const [crmPreview, setCrmPreview] = useState(null);
+  const [crmLink, setCrmLink] = useState(null);
+  const [crmApproval, setCrmApproval] = useState(null);
   const [applicationBusy, setApplicationBusy] = useState(false);
   useEffect(() => {
     if (!selectedConnectionId && resource.data?.connections?.length)
@@ -342,8 +345,18 @@ function Integrations({ can, notify }) {
             api(`/api/integrations/stripe-reconciliation?connection_id=${selectedConnectionId}`),
             api(`/api/payroll?connection_id=${selectedConnectionId}`),
             api("/api/accounts"),
+            api(`/api/crm?connection_id=${selectedConnectionId}`),
+            api("/api/saas/overview"),
           ])
-        : Promise.resolve([[], [], { records: [], metrics: {} }, { runs: [], metrics: {} }, []]),
+        : Promise.resolve([
+            [],
+            [],
+            { records: [], metrics: {} },
+            { runs: [], metrics: {} },
+            [],
+            { proposals: [], metrics: {} },
+            { customers: [], products: [], entities: [] },
+          ]),
     [selectedConnectionId],
   );
   if (resource.loading) return <Loading />;
@@ -673,13 +686,125 @@ function Integrations({ can, notify }) {
     }
   }
 
-  const [records, mappings, stripeReconciliation, payroll, accounts] = workbench.data || [
-    [],
-    [],
-    { records: [], metrics: {} },
-    { runs: [], metrics: {} },
-    [],
-  ];
+  async function previewCrmApplication(record) {
+    try {
+      setCrmPreview(
+        await api(`/api/integrations/records/${record.id}/crm-preview`, {
+          method: "POST",
+          body: {},
+        }),
+      );
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+
+  async function approveCrmLink(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const customer = crmLink.object_type === "hubspot_company";
+    setApplicationBusy(true);
+    try {
+      await api(customer ? "/api/crm/customer-links" : "/api/crm/product-links", {
+        method: "POST",
+        body: {
+          record_id: crmLink.id,
+          [customer ? "customer_id" : "product_id"]: Number(form.get("local_id")),
+          approved: true,
+          approval_note: form.get("approval_note"),
+        },
+      });
+      setCrmLink(null);
+      await workbench.refresh();
+      notify({
+        kind: "success",
+        message: `HubSpot ${customer ? "company" : "product"} identity linked with approval lineage.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  async function prepareCrmContract(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      const result = await api(`/api/integrations/records/${crmPreview.record.id}/crm-prepare`, {
+        method: "POST",
+        body: {
+          approved: true,
+          approval_note: form.get("approval_note"),
+          entity_id: Number(form.get("entity_id")),
+          contract_number: form.get("contract_number"),
+          signed_date: form.get("signed_date"),
+          start_date: form.get("start_date"),
+          end_date: form.get("end_date"),
+          recognition_method: form.get("recognition_method"),
+        },
+      });
+      if (result.status === "error") {
+        setCrmPreview(result.preview);
+        return;
+      }
+      setCrmPreview(null);
+      await workbench.refresh();
+      notify({
+        kind: "success",
+        message:
+          "Contract proposal prepared. A different controller must approve it before creation.",
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  async function approveCrmProposal(event) {
+    event.preventDefault();
+    const note = new FormData(event.currentTarget).get("approval_note");
+    try {
+      await api(`/api/crm/proposals/${crmApproval.id}/approve`, {
+        method: "POST",
+        body: { approved: true, approval_note: note },
+      });
+      setCrmApproval(null);
+      await workbench.refresh();
+      notify({ kind: "success", message: "CRM contract proposal approved." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+
+  async function applyCrmProposal(proposal) {
+    try {
+      const result = await api(`/api/crm/proposals/${proposal.id}/apply`, {
+        method: "POST",
+        body: {},
+      });
+      await workbench.refresh();
+      notify({
+        kind: "success",
+        message: `Folio contract ${result.contract.contract_number} created with revenue schedules.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+
+  const [records, mappings, stripeReconciliation, payroll, accounts, crm, saas] =
+    workbench.data || [
+      [],
+      [],
+      { records: [], metrics: {} },
+      { runs: [], metrics: {} },
+      [],
+      { proposals: [], metrics: {} },
+      { customers: [], products: [], entities: [] },
+    ];
   const selectedConnection = value.connections.find((item) => item.id === selectedConnectionId);
 
   return (
@@ -799,7 +924,7 @@ function Integrations({ can, notify }) {
         action={
           can("admin") &&
           selectedConnection &&
-          !["plaid", "stripe", "gusto"].includes(selectedConnection.provider) ? (
+          !["plaid", "stripe", "gusto", "hubspot"].includes(selectedConnection.provider) ? (
             <button className="secondary" onClick={() => setShowMapping(true)}>
               Add mapping
             </button>
@@ -824,7 +949,9 @@ function Integrations({ can, notify }) {
                     ? "Stripe billing and payment objects reconcile to Folio subledgers; payouts prove net settlement through the bank feed"
                     : selectedConnection?.provider === "gusto"
                       ? "Gusto payrolls accrue wages, taxes, benefits and deductions before each disclosed cash component reconciles independently"
-                      : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
+                      : selectedConnection?.provider === "hubspot"
+                        ? "HubSpot associations flow through approved identity links and contract proposals; CRM never posts accounting"
+                        : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
               </span>
             </div>
             {workbench.loading ? (
@@ -865,6 +992,18 @@ function Integrations({ can, notify }) {
                       >
                         Review payroll
                       </button>
+                    ) : selectedConnection?.provider === "hubspot" &&
+                      ["hubspot_company", "hubspot_product"].includes(item.object_type) ? (
+                      <button className="small-button" onClick={() => setCrmLink(item)}>
+                        Link identity
+                      </button>
+                    ) : selectedConnection?.provider === "hubspot" &&
+                      item.object_type === "hubspot_deal" ? (
+                      <button className="small-button" onClick={() => previewCrmApplication(item)}>
+                        Prepare contract
+                      </button>
+                    ) : selectedConnection?.provider === "hubspot" ? (
+                      "Association component"
                     ) : (
                       <button className="small-button" onClick={() => previewApplication(item)}>
                         Review mapping
@@ -877,6 +1016,8 @@ function Integrations({ can, notify }) {
                       "Stripe reconciled"
                     ) : item.applied_entity_type === "payroll_run" ? (
                       "Payroll subledger applied"
+                    ) : item.applied_entity_type?.startsWith("crm_") ? (
+                      "CRM handoff controlled"
                     ) : (
                       `Draft ${item.applied_entity_id}`
                     )
@@ -1028,6 +1169,45 @@ function Integrations({ can, notify }) {
             />
           </Panel>
         </>
+      )}
+      {selectedConnection?.provider === "hubspot" && (
+        <Panel
+          title="CRM contract proposal ledger"
+          subtitle="Closed-won deals remain non-accounting proposals until identity, economics, dates, SSPs and controller approval are complete"
+        >
+          <div className="workflow-toolbar">
+            <span>
+              {crm.metrics?.prepared || 0} prepared · {crm.metrics?.approved || 0} approved ·{" "}
+              {crm.metrics?.applied || 0} contracts created
+            </span>
+          </div>
+          <Table
+            caption="HubSpot to Folio controlled handoffs"
+            emptyTitle="No contract proposals"
+            emptyDetail="Link company and product identities, then prepare a synchronized closed-won deal above."
+            columns={["Deal", "Customer", "Contract", "Value", "Status", "Action"]}
+            rows={crm.proposals.map((proposal) => [
+              proposal.deal_external_id,
+              proposal.customer_name,
+              proposal.contract_number,
+              money(proposal.transaction_price_cents),
+              <Status value={proposal.status} />,
+              can("post") && proposal.status === "prepared" ? (
+                <button className="small-button" onClick={() => setCrmApproval(proposal)}>
+                  Approve proposal
+                </button>
+              ) : can("operate") && proposal.status === "approved" ? (
+                <button className="small-button" onClick={() => applyCrmProposal(proposal)}>
+                  Create contract
+                </button>
+              ) : proposal.status === "applied" ? (
+                `Contract ${proposal.contract_id}`
+              ) : (
+                "—"
+              ),
+            ])}
+          />
+        </Panel>
       )}
       <Panel
         title="Integration exception queue"
@@ -1219,6 +1399,174 @@ function Integrations({ can, notify }) {
                   Return to mappings
                 </button>
               </div>
+            )}
+          </div>
+        </Dialog>
+      )}
+      {crmApproval && (
+        <Dialog
+          title="Approve CRM contract proposal"
+          subtitle={`${crmApproval.contract_number} · prepared by ${crmApproval.prepared_by}`}
+          close={() => setCrmApproval(null)}
+        >
+          <form className="form-stack" onSubmit={approveCrmProposal}>
+            <div className="source-summary">
+              <ReviewValue label="Customer" value={crmApproval.customer_name} />
+              <ReviewValue label="Value" value={money(crmApproval.transaction_price_cents)} />
+              <ReviewValue
+                label="Service period"
+                value={`${crmApproval.start_date} → ${crmApproval.end_date}`}
+              />
+              <ReviewValue label="Prepared by" value={crmApproval.prepared_by} />
+            </div>
+            <Field
+              label="Controller approval rationale"
+              name="approval_note"
+              as="textarea"
+              minLength="5"
+              placeholder="Confirm executed evidence, customer identity, consideration, dates, SSP and recognition policy."
+            />
+            <p className="form-hint">
+              Folio rejects self-approval. Approval still does not create a contract; the proposal
+              returns to the queue for a deliberate apply action.
+            </p>
+            <DialogActions close={() => setCrmApproval(null)} label="Approve proposal" />
+          </form>
+        </Dialog>
+      )}
+      {crmLink && (
+        <Dialog
+          title={`Link HubSpot ${crmLink.object_type === "hubspot_company" ? "company" : "product"}`}
+          subtitle={`${crmLink.external_id} · immutable identity decision`}
+          close={() => setCrmLink(null)}
+        >
+          <form className="form-stack" onSubmit={approveCrmLink}>
+            <Field
+              label={crmLink.object_type === "hubspot_company" ? "Folio customer" : "Folio product"}
+              name="local_id"
+              as="select"
+              options={(crmLink.object_type === "hubspot_company"
+                ? saas.customers
+                : saas.products
+              ).map((item) => [
+                item.id,
+                crmLink.object_type === "hubspot_company"
+                  ? item.name
+                  : `${item.sku} · ${item.name}`,
+              ])}
+            />
+            <Field
+              label="Identity approval rationale"
+              name="approval_note"
+              as="textarea"
+              minLength="5"
+              placeholder="Document the legal name, domain, SKU or catalog evidence used to establish identity."
+            />
+            <p className="form-hint">
+              An external identity cannot later be silently relinked to a different Folio record.
+            </p>
+            <DialogActions
+              close={() => setCrmLink(null)}
+              label={applicationBusy ? "Linking…" : "Approve identity link"}
+              disabled={applicationBusy}
+            />
+          </form>
+        </Dialog>
+      )}
+      {crmPreview && (
+        <Dialog
+          title="Prepare HubSpot contract proposal"
+          subtitle={`${crmPreview.record.external_id} · no journal posting`}
+          close={() => setCrmPreview(null)}
+        >
+          <div className="application-review">
+            <div className="source-summary">
+              <ReviewValue label="Customer" value={crmPreview.customer?.name || "Not linked"} />
+              <ReviewValue
+                label="Deal"
+                value={crmPreview.deal.name || crmPreview.record.external_id}
+              />
+              <ReviewValue label="Amount" value={money(crmPreview.deal.amount_cents)} />
+              <ReviewValue label="Currency" value={crmPreview.deal.currency} />
+            </div>
+            <div className={crmPreview.ready ? "control-note" : "control-note warning-note"}>
+              <strong>
+                {crmPreview.ready
+                  ? "Association and amount crossfoot passed"
+                  : "Contract handoff blocked"}
+              </strong>
+              <span>
+                {crmPreview.ready
+                  ? `${crmPreview.line_items.length} linked performance-obligation candidate${crmPreview.line_items.length === 1 ? "" : "s"}`
+                  : crmPreview.issues.join(" · ")}
+              </span>
+            </div>
+            {crmPreview.ready ? (
+              <form className="form-stack" onSubmit={prepareCrmContract}>
+                <Table
+                  caption="Synchronized deal economics"
+                  columns={["Line item", "Product", "Quantity", "Amount", "SSP"]}
+                  rows={crmPreview.line_items.map((item) => [
+                    item.description,
+                    item.product_name,
+                    item.quantity,
+                    money(item.line_amount_cents),
+                    money(item.ssp_cents),
+                  ])}
+                />
+                <div className="form-grid">
+                  <Field
+                    label="Folio entity"
+                    name="entity_id"
+                    as="select"
+                    options={saas.entities.map((item) => [item.id, item.name])}
+                  />
+                  <Field
+                    label="Contract number"
+                    name="contract_number"
+                    placeholder={`HS-${crmPreview.record.external_id}`}
+                  />
+                </div>
+                <div className="form-grid">
+                  <Field
+                    label="Signed date"
+                    name="signed_date"
+                    type="date"
+                    defaultValue={crmPreview.deal.close_date}
+                  />
+                  <Field label="Service start" name="start_date" type="date" />
+                  <Field label="Service end" name="end_date" type="date" />
+                </div>
+                <Field
+                  label="Recognition policy"
+                  name="recognition_method"
+                  as="select"
+                  options={[
+                    ["straight_line", "Straight line"],
+                    ["point_in_time", "Point in time"],
+                    ["usage", "Usage"],
+                    ["milestone", "Milestone"],
+                  ]}
+                />
+                <Field
+                  label="Preparation rationale"
+                  name="approval_note"
+                  as="textarea"
+                  minLength="5"
+                  placeholder="Reference the executed agreement, service dates, consideration, SSP evidence and policy conclusion."
+                />
+                <p className="form-hint">
+                  Preparation does not create a contract. A different controller approves the
+                  immutable proposal before a separate apply action creates schedules.
+                </p>
+                <DialogActions
+                  close={() => setCrmPreview(null)}
+                  label={applicationBusy ? "Preparing…" : "Prepare controlled proposal"}
+                  disabled={applicationBusy}
+                />
+              </form>
+            ) : (
+              <DialogActions close={() => setCrmPreview(null)} label="Close and resolve links" />
             )}
           </div>
         </Dialog>

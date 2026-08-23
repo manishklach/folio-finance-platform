@@ -14,7 +14,7 @@ can carry live financial data.
 | Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned adapter, pagination restart, staged outcomes, retries, account binding, native versioned bank feed, unique posted-cash matching and close-blocking exceptions                    | Link handoff/token exchange, JWT webhook verification, operator-assisted matching, sandbox certification and credentialed staging evidence |
 | Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Signed, connection-bound events; native source-to-contract/AR reconciliation; fee-bearing payout expansion; payout-to-bank-to-journal proof; version lineage, exception and close controls | OAuth/restricted-key exchange, provider sandbox certification, credentialed staging evidence and deployed soak                             |
 | Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and bank-debit components                        | Processed-date watermark plus page     | Versioned adapter; validated wages/tax/benefit/deduction accrual; maker-checker drafts; component liability clearing; Plaid cash proof; reversal and close controls                        | OAuth lifecycle, verified events, employee/department detail, detailed payroll receipts, sandbox certification and credentialed staging    |
-| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries, staged outcomes, mapping preview and approved draft-journal application                                      | OAuth lifecycle, signed webhooks, association expansion, native contract handoff and sandbox certification                                 |
+| HubSpot  | CRM                  | Companies, deals, products, line items and their associations                             | Per-object updated watermark + `after` | Composite cursor-safe search; batched associations; immutable identity links; exact economic crossfoot; maker-checker contract proposals and close controls                                | OAuth lifecycle, signed webhooks, sandbox certification, custom-property policy mapping and credentialed staging evidence                  |
 
 The provider behavior assumptions above follow the vendors' current official documentation:
 [Plaid transaction sync](https://plaid.com/docs/transactions/sync-migration/),
@@ -22,6 +22,8 @@ The provider behavior assumptions above follow the vendors' current official doc
 [Stripe webhook signatures](https://docs.stripe.com/webhooks/signature),
 [Gusto authentication](https://docs.gusto.com/embedded-payroll/docs/authentication),
 [Gusto payroll fundamentals](https://docs.gusto.com/embedded-payroll/docs/payroll-fundamentals), and
+[HubSpot object APIs](https://developers.hubspot.com/docs/api-reference/latest/crm/using-object-apis),
+[HubSpot association APIs](https://developers.hubspot.com/docs/api-reference/crm-associations-v4/guide), and
 [HubSpot request signatures](https://developers.hubspot.com/docs/apps/legacy-apps/authentication/validating-requests).
 They must be revalidated when a provider adapter is certified.
 
@@ -70,6 +72,12 @@ flowchart LR
   J --> L[Post by a different approver]
   L --> Z[Clear each payroll liability with a controlled settlement draft]
   Z --> K
+  M -->|HubSpot CRM| R1[Resolve company and product identities]
+  R1 --> R2[Crossfoot closed-won deal and associated line items]
+  R2 --> R3[Prepare proposal]
+  R3 --> R4[Different controller approves]
+  R4 --> R5[Create ASC 606 contract and schedules]
+  R5 --> C
   M -->|Generic controlled mapping| G[Validate journal-draft mapping]
   G -->|Valid and approved| A[Create auditable Folio draft]
   M -->|Failure| E[Exception/dead-letter queue]
@@ -145,6 +153,21 @@ Gusto and other residual payroll liabilities remain visible in the GL rather tha
 classified as provider-settled cash. Employee-level payroll receipts, department allocation and live
 provider reversal-recovery events remain outside this totals-based increment.
 
+HubSpot uses one composite connection to page companies, products, line items and deals while
+retaining an independent updated-time watermark for each object family. Search results are enriched
+through batched association reads. Deals must resolve to exactly one company and at least one line
+item; every line item must resolve to exactly one product. Operators explicitly link external
+companies and products to existing Folio customers and catalog products, and those identity decisions
+cannot be silently rebound. Only closed-won deals proceed. Line quantity times unit price, the sum of
+line amounts, deal consideration, currency, dates and SSP inputs must all crossfoot.
+
+A preparer supplies the legal entity, contract number, executed/service dates, recognition policy and
+evidence note. That creates a proposal only. The preparer cannot approve it; after independent
+controller approval, a separate apply action atomically creates the Folio contract, performance
+obligations and ASC 606 schedules. Changed source versions cannot edit an applied contract and fail
+closed into the contract-modification workflow. Unresolved closed-won deals and unapplied proposals
+block revenue-review sign-off. HubSpot never creates or posts a journal.
+
 For non-native providers, an administrator configures connection-specific, versioned mappings into the
 five-field journal draft shape: date, memo, integer-cent amount, debit account code and credit account
 code. An operator previews the exact mapping fingerprint and must supply an approval note. A successful
@@ -163,8 +186,8 @@ removed previously matched source invalidates the match and creates a reconcilia
 without silently changing the journal. Existing feed history prevents account/currency rebinding,
 replays are idempotent, and unresolved period activity blocks the bank-reconciled close sign-off. For
 multiple exact candidates, an operator selects one with a required rationale; Folio revalidates the
-candidate at commit and retains a match-decision record. Tolerance/date-window bank matching and the
-provider-native CRM-to-contract handoff remain launch work.
+candidate at commit and retains a match-decision record. Tolerance/date-window bank matching, custom
+HubSpot property policies and credentialed provider certification remain launch work.
 
 ## API inventory
 
@@ -204,6 +227,13 @@ The direct sync-run page API remains for adapter ingestion, controlled diagnosti
 | `POST /api/integrations/records/:id/payroll-apply`   | Approve an idempotent accrual or reversal draft   | Operate    |
 | `POST /api/payroll/settlements/:id/draft`            | Prepare one controlled liability-clearing draft   | Operate    |
 | `POST /api/payroll/settlements/:id/reconcile`        | Prove settlement against Plaid and posted cash    | Operate    |
+| `GET /api/crm`                                       | CRM identity-link and proposal ledger             | Read       |
+| `POST /api/crm/customer-links`                       | Approve a company/customer identity link          | Operate    |
+| `POST /api/crm/product-links`                        | Approve a product/catalog identity link           | Operate    |
+| `POST /api/integrations/records/:id/crm-preview`     | Validate deal associations and economics          | Operate    |
+| `POST /api/integrations/records/:id/crm-prepare`     | Prepare a non-accounting contract proposal        | Operate    |
+| `POST /api/crm/proposals/:id/approve`                | Independently approve a prepared proposal         | Post       |
+| `POST /api/crm/proposals/:id/apply`                  | Create the contract and revenue schedules         | Operate    |
 
 ## Verification in this increment
 
@@ -224,6 +254,9 @@ rebind controls, exact unique and operator-selected matching, pending items, amb
 removed matched versions, journal non-mutation, close blocking and replay idempotency. Native Gusto
 tests cover required totals, payroll and cash-component crossfoots, balanced accruals,
 maker-checker posting, separate liability settlement, Plaid-to-posted-cash proof, period-close blocks,
-posted-change denial and controlled removal reversals. Live acceptance additionally requires
+posted-change denial and controlled removal reversals. HubSpot tests cover composite cursors,
+association lineage, immutable company/product identity,
+deal/line economic crossfoot, maker-checker proposal approval, idempotent contract creation and
+revenue-close blocking. Live acceptance additionally requires
 provider-hosted sandbox contract tests, a deployment-level worker kill drill and
 a credentialed staging synchronization.

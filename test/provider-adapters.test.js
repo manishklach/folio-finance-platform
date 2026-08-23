@@ -357,6 +357,85 @@ test("HubSpot adapter uses search paging and updated-time watermarks", async () 
   ledger.close();
 });
 
+test("HubSpot composite sync preserves deal, company, line-item and product associations", async () => {
+  const { ledger, configured } = connection("hubspot");
+  const calls = [];
+  const objects = {
+    companies: [{ id: "co-1", updatedAt: "2026-08-20T01:00:00Z", properties: { name: "Acme" } }],
+    products: [
+      {
+        id: "prod-1",
+        updatedAt: "2026-08-20T02:00:00Z",
+        properties: { name: "Platform", hs_sku: "PLAT", price: "6000" },
+      },
+    ],
+    line_items: [
+      {
+        id: "line-1",
+        updatedAt: "2026-08-20T03:00:00Z",
+        properties: { name: "Platform", quantity: "2", price: "6000", amount: "12000" },
+      },
+    ],
+    deals: [
+      {
+        id: "deal-1",
+        updatedAt: "2026-08-20T04:00:00Z",
+        properties: {
+          dealname: "Annual",
+          amount: "12000",
+          hs_is_closed_won: "true",
+          closedate: "2026-08-20",
+          deal_currency_code: "USD",
+        },
+      },
+    ],
+  };
+  const run = await synchronizeProviderConnection({
+    ledger,
+    connectionId: configured.id,
+    credentialResolver: () => ({ access_token: "hubspot-token" }),
+    fetchImpl: async (url, init) => {
+      calls.push(url);
+      const association = url.includes("/associations/");
+      if (association) {
+        const inputs = JSON.parse(init.body).inputs;
+        const targets = url.includes("/deals/companies/")
+          ? ["co-1"]
+          : url.includes("/deals/line_items/")
+            ? ["line-1"]
+            : ["prod-1"];
+        return response({
+          results: inputs.map(({ id }) => ({
+            from: { id },
+            to: targets.map((toObjectId) => ({ toObjectId })),
+          })),
+        });
+      }
+      const resource = [...Object.keys(objects)].find((name) => url.includes(`/${name}/search`));
+      return response({ results: objects[resource] });
+    },
+  });
+  assert.equal(run.pages, 4);
+  assert.equal(run.added, 4);
+  assert.equal(calls.filter((url) => url.includes("/associations/")).length, 3);
+  const records = ledger.integrationRecords(configured.id);
+  assert.deepEqual(
+    records.find((item) => item.object_type === "hubspot_deal").normalized.company_external_ids,
+    ["co-1"],
+  );
+  assert.deepEqual(
+    records.find((item) => item.object_type === "hubspot_deal").normalized.line_item_external_ids,
+    ["line-1"],
+  );
+  assert.deepEqual(
+    records.find((item) => item.object_type === "hubspot_line_item").normalized
+      .product_external_ids,
+    ["prod-1"],
+  );
+  assert.equal(JSON.parse(ledger.integrationConnection(configured.id).cursor).resource_index, 0);
+  ledger.close();
+});
+
 test("provider throttling is retried without exposing credentials, then becomes an exception", async () => {
   const { ledger, configured } = connection("stripe");
   let calls = 0;

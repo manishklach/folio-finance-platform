@@ -642,6 +642,8 @@ async function api(req, res, url, ledger, platform, session, environment) {
     );
   if (req.method === "GET" && url.pathname === "/api/payroll")
     return json(res, 200, ledger.payrollOverview(url.searchParams.get("connection_id") || null));
+  if (req.method === "GET" && url.pathname === "/api/crm")
+    return json(res, 200, ledger.crmOverview(url.searchParams.get("connection_id") || null));
   const integrationRecordsMatch = url.pathname.match(
     /^\/api\/integrations\/connections\/([^/]+)\/records$/,
   );
@@ -783,6 +785,45 @@ async function api(req, res, url, ledger, platform, session, environment) {
         ...(await readJson(req)),
         record_id: payrollApplyMatch[1],
       }),
+    );
+  const crmPreviewMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/crm-preview$/,
+  );
+  if (req.method === "POST" && crmPreviewMatch)
+    return json(
+      res,
+      200,
+      ledger.previewCrmRecordApplication({ record_id: crmPreviewMatch[1], classify: true }),
+    );
+  const crmPrepareMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/crm-prepare$/,
+  );
+  if (req.method === "POST" && crmPrepareMatch)
+    return json(
+      res,
+      201,
+      ledger.prepareCrmRecordApplication({
+        ...(await readJson(req)),
+        record_id: crmPrepareMatch[1],
+      }),
+    );
+  if (req.method === "POST" && url.pathname === "/api/crm/customer-links")
+    return json(res, 201, ledger.linkCrmCustomer(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/crm/product-links")
+    return json(res, 201, ledger.linkCrmProduct(await readJson(req)));
+  const crmApproveMatch = url.pathname.match(/^\/api\/crm\/proposals\/([^/]+)\/approve$/);
+  if (req.method === "POST" && crmApproveMatch)
+    return json(
+      res,
+      200,
+      ledger.approveCrmProposal({ ...(await readJson(req)), proposal_id: crmApproveMatch[1] }),
+    );
+  const crmApplyMatch = url.pathname.match(/^\/api\/crm\/proposals\/([^/]+)\/apply$/);
+  if (req.method === "POST" && crmApplyMatch)
+    return json(
+      res,
+      201,
+      ledger.applyCrmProposal({ ...(await readJson(req)), proposal_id: crmApplyMatch[1] }),
     );
   const payrollSettlementDraftMatch = url.pathname.match(
     /^\/api\/payroll\/settlements\/([^/]+)\/draft$/,
