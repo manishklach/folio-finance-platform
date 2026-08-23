@@ -1,6 +1,6 @@
 # Security best-practices review
 
-Review date: 2026-08-23  
+Review date: 2026-08-23
 Scope: React client, raw Node.js HTTP server, authentication and sessions, tenant database routing,
 attachments, provider adapters, backups, container/deployment configuration, and CI.
 
