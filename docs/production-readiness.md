@@ -15,7 +15,7 @@
 | 10 Compliance engineering | Complete           | secret mounts, privacy requests/export/delete, SOC 2 evidence map                                                                          |
 | 11 SaaS GAAP engine       | Complete           | ASC measurement subledgers, policy judgments, disclosures, six statements, cutoff tests                                                    |
 | Transactional UX          | Active             | guided module workflows and import mapper shipped; full assistive-technology, controller and responsive evidence remains                   |
-| Integration/import ops    | Active             | connector foundation plus template/mapping/paged correction workbench shipped; provider sandbox and launch-volume evidence remain          |
+| Integration/import ops    | Active             | connector foundation plus mapped correction/fuzzy-review workbench and 10k CI gate shipped; provider sandbox/deployed soak remain          |
 | Production operations     | Active             | hardened Compose/TLS topology, metrics/alerts and authenticated encrypted restore shipped; credentialed hosting and named exercises remain |
 | Security assurance        | Active             | repository review, threat model, abuse regressions and image scan shipped; credentialed pen test and independent retest remain             |
 | Accounting assurance      | Active             | migration/property suites and CPA pack/findings gate shipped; named reviewer execution and signed evidence remain                          |

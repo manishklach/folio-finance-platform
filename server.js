@@ -488,6 +488,8 @@ async function api(req, res, url, ledger, platform, session) {
     return json(res, 200, ledger.importBatches());
   if (req.method === "GET" && url.pathname === "/api/imports/mapping-profiles")
     return json(res, 200, ledger.importMappingProfiles());
+  if (req.method === "GET" && url.pathname === "/api/imports/duplicate-policies")
+    return json(res, 200, ledger.importDuplicatePolicies());
   if (req.method === "GET" && url.pathname === "/api/imports/exceptions")
     return json(
       res,
@@ -527,6 +529,20 @@ async function api(req, res, url, ledger, platform, session) {
     return json(res, 200, ledger.applyImport(importApplyMatch[1]));
   if (req.method === "POST" && url.pathname === "/api/imports/mapping-profiles")
     return json(res, 201, ledger.createImportMappingProfile(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/imports/duplicate-policies")
+    return json(res, 200, ledger.configureImportDuplicatePolicy(await readJson(req)));
+  const acceptDuplicateMatch = url.pathname.match(
+    /^\/api\/imports\/exceptions\/([^/]+)\/accept-distinct$/,
+  );
+  if (req.method === "POST" && acceptDuplicateMatch)
+    return json(
+      res,
+      200,
+      ledger.acceptImportDuplicate({
+        ...(await readJson(req)),
+        id: acceptDuplicateMatch[1],
+      }),
+    );
   if (req.method === "POST" && url.pathname === "/api/imports/exceptions/status")
     return json(res, 200, ledger.resolveImportException(await readJson(req)));
   if (req.method === "GET" && url.pathname === "/api/fixed-assets/overview")

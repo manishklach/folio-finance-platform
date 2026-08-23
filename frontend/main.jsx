@@ -365,6 +365,7 @@ function Integrations({ can, notify }) {
       notify({ kind: "error", message: error.message });
     }
   }
+
   return (
     <div className="module-flow">
       <ModuleBar
@@ -561,6 +562,7 @@ function Imports({ can, notify }) {
         api("/api/imports/batches"),
         api("/api/accounts"),
         api("/api/imports/mapping-profiles"),
+        api("/api/imports/duplicate-policies"),
       ]),
     [],
   );
@@ -577,6 +579,15 @@ function Imports({ can, notify }) {
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [batchQuery, setBatchQuery] = useState("");
+  const [showPolicy, setShowPolicy] = useState(false);
+  const [policyDraft, setPolicyDraft] = useState({
+    template_key: "customers",
+    field_key: "name",
+    threshold_percent: "88",
+    active: true,
+  });
+  const [distinctCandidate, setDistinctCandidate] = useState(null);
+  const [distinctReason, setDistinctReason] = useState("");
   if (resource.loading || exceptionResource.loading) return <Loading />;
   if (resource.error || exceptionResource.error)
     return (
@@ -585,7 +596,7 @@ function Imports({ can, notify }) {
         retry={() => Promise.all([resource.refresh(), exceptionResource.refresh()])}
       />
     );
-  const [templates, batches, accounts, mappingProfiles] = resource.data;
+  const [templates, batches, accounts, mappingProfiles, duplicatePolicies] = resource.data;
   const {
     items: exceptions,
     page: exceptionPagination,
@@ -608,6 +619,9 @@ function Imports({ can, notify }) {
   const previewMappingProfile = preview?.mapping_profile_id
     ? mappingProfiles.find((item) => item.id === preview.mapping_profile_id)
     : null;
+  const policyTemplate =
+    templates.find((item) => item.key === policyDraft.template_key) || templates[0];
+  const policyFields = policyTemplate.fields.filter((field) => field.type === "string");
 
   function openWizard() {
     setDraft(blankImportDraft());
@@ -621,6 +635,43 @@ function Imports({ can, notify }) {
 
   function selectTemplate(templateKey) {
     setDraft(blankImportDraft(templateKey));
+  }
+
+  function editDuplicatePolicy(templateKey = "customers") {
+    const template = templates.find((item) => item.key === templateKey) || templates[0];
+    const existing = duplicatePolicies.find((item) => item.template_key === template.key);
+    const textFields = template.fields.filter((field) => field.type === "string");
+    setPolicyDraft({
+      template_key: template.key,
+      field_key: existing?.field_key || textFields[0]?.key || "",
+      threshold_percent: String(existing?.threshold_percent || 88),
+      active: existing?.active ?? true,
+    });
+    setShowPolicy(true);
+  }
+
+  async function saveDuplicatePolicy(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const policy = await api("/api/imports/duplicate-policies", {
+        method: "POST",
+        body: {
+          ...policyDraft,
+          threshold_percent: Number(policyDraft.threshold_percent),
+        },
+      });
+      await resource.refresh();
+      setShowPolicy(false);
+      notify({
+        kind: "success",
+        message: `${label(policy.template_key)} candidate policy v${policy.version} saved; ${policy.indexed_rows} applied rows indexed.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function loadCsvFile(event) {
@@ -848,16 +899,49 @@ function Imports({ can, notify }) {
     }
   }
 
+  async function acceptDistinct(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const result = await api(`/api/imports/exceptions/${distinctCandidate.id}/accept-distinct`, {
+        method: "POST",
+        body: { resolution: distinctReason },
+      });
+      if (preview?.id === result.batch.id) setPreview(result.batch);
+      await Promise.all([resource.refresh(), exceptionResource.refresh()]);
+      setDistinctCandidate(null);
+      setDistinctReason("");
+      notify({
+        kind: "success",
+        message:
+          "Candidate accepted as distinct; the reviewer rationale and match evidence were retained.",
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="module-flow">
       <ModuleBar
         title="Controlled imports"
         detail="Versioned templates, validation previews, duplicate controls and traceable application"
         action={
-          can("operate") && (
-            <button className="primary" onClick={openWizard}>
-              New import
-            </button>
+          (can("operate") || can("admin")) && (
+            <div className="button-row">
+              {can("admin") && (
+                <button className="secondary" onClick={() => editDuplicatePolicy()}>
+                  Matching policies
+                </button>
+              )}
+              {can("operate") && (
+                <button className="primary" onClick={openWizard}>
+                  New import
+                </button>
+              )}
+            </div>
           )
         }
       />
@@ -880,6 +964,34 @@ function Imports({ can, notify }) {
           warning={openExceptions > 0}
         />
       </section>
+      <Panel
+        title="Duplicate candidate controls"
+        subtitle="Versioned tenant policies compare normalized text without auto-merging records"
+      >
+        <Table
+          columns={["Template", "Match field", "Threshold", "Indexed history", "Status", "Action"]}
+          caption="Configured duplicate candidate policies"
+          emptyTitle="Exact-key checks only"
+          emptyDetail="An administrator can add a fuzzy candidate policy for a text field."
+          rows={duplicatePolicies.map((item) => [
+            label(item.template_key),
+            label(item.field_key),
+            `${item.threshold_percent}% · v${item.version}`,
+            item.indexed_rows,
+            <Status value={item.active ? "active" : "disabled"} />,
+            can("admin") ? (
+              <button
+                className="small-button"
+                onClick={() => editDuplicatePolicy(item.template_key)}
+              >
+                Configure
+              </button>
+            ) : (
+              "—"
+            ),
+          ])}
+        />
+      </Panel>
       <div className="two-column">
         <Panel
           title="Import batches"
@@ -942,7 +1054,7 @@ function Imports({ can, notify }) {
             </span>
           </div>
           <Table
-            columns={["Code", "Severity", "Message", "Status", "Action"]}
+            columns={["Code", "Severity", "Message", "Status", "Resolution", "Action"]}
             caption="Import exception queue"
             emptyTitle="No matching exceptions"
             emptyDetail="This queue is clear for the selected status."
@@ -951,10 +1063,23 @@ function Imports({ can, notify }) {
               <Status value={item.severity} />,
               item.message,
               <Status value={item.status} />,
+              item.resolution ? `${item.resolution} · ${item.owner || "reviewer"}` : "—",
               item.status === "open" && can("operate") ? (
-                <button className="small-button" onClick={() => resolveException(item)}>
-                  Resolve
-                </button>
+                item.code === "FUZZY_DUPLICATE" ? (
+                  <button
+                    className="small-button"
+                    onClick={() => {
+                      setDistinctCandidate(item);
+                      setDistinctReason("");
+                    }}
+                  >
+                    Compare
+                  </button>
+                ) : (
+                  <button className="small-button" onClick={() => resolveException(item)}>
+                    Resolve
+                  </button>
+                )
               ) : (
                 "—"
               ),
@@ -995,6 +1120,12 @@ function Imports({ can, notify }) {
                 ["Valid", preview.valid_count],
                 ["Errors", preview.error_count],
                 ["Duplicates", preview.duplicate_count],
+                [
+                  "Candidate policy",
+                  preview.duplicate_policy
+                    ? `${label(preview.duplicate_policy.field_key)} · ${preview.duplicate_policy.threshold_percent}% · v${preview.duplicate_policy.version}`
+                    : "Exact natural keys only",
+                ],
                 [
                   "Mapping",
                   previewMappingProfile
@@ -1070,6 +1201,116 @@ function Imports({ can, notify }) {
             </nav>
           )}
         </Panel>
+      )}
+      {showPolicy && (
+        <Dialog
+          title="Duplicate candidate policy"
+          subtitle="Choose one text field and a review threshold. Changes are versioned and rebuild the applied-import index."
+          close={() => setShowPolicy(false)}
+        >
+          <form className="form-stack" onSubmit={saveDuplicatePolicy}>
+            <Field
+              label="Import template"
+              as="select"
+              value={policyDraft.template_key}
+              onChange={(event) => {
+                const template = templates.find((item) => item.key === event.target.value);
+                const existing = duplicatePolicies.find(
+                  (item) => item.template_key === event.target.value,
+                );
+                const textFields = template.fields.filter((field) => field.type === "string");
+                setPolicyDraft({
+                  template_key: template.key,
+                  field_key: existing?.field_key || textFields[0]?.key || "",
+                  threshold_percent: String(existing?.threshold_percent || 88),
+                  active: existing?.active ?? true,
+                });
+              }}
+              options={templates
+                .filter((template) => template.fields.some((field) => field.type === "string"))
+                .map((template) => [template.key, template.name])}
+            />
+            <Field
+              label="Text field to compare"
+              as="select"
+              value={policyDraft.field_key}
+              onChange={(event) =>
+                setPolicyDraft((current) => ({ ...current, field_key: event.target.value }))
+              }
+              options={policyFields.map((field) => [field.key, field.label])}
+            />
+            <Field
+              label="Similarity threshold"
+              type="number"
+              min="70"
+              max="99"
+              value={policyDraft.threshold_percent}
+              onChange={(event) =>
+                setPolicyDraft((current) => ({
+                  ...current,
+                  threshold_percent: event.target.value,
+                }))
+              }
+              hint="70–99%. Lower values surface more candidates for human review."
+            />
+            <Field
+              label="Policy status"
+              as="select"
+              value={policyDraft.active ? "active" : "disabled"}
+              onChange={(event) =>
+                setPolicyDraft((current) => ({
+                  ...current,
+                  active: event.target.value === "active",
+                }))
+              }
+              options={[
+                ["active", "Active — flag matching candidates"],
+                ["disabled", "Disabled — exact natural keys only"],
+              ]}
+            />
+            <div className="review-notice" role="note">
+              <strong>Review control</strong>
+              <span>
+                Candidate rows remain blocked until corrected or explicitly accepted as distinct
+                with a reviewer rationale. Folio never merges records automatically.
+              </span>
+            </div>
+            <DialogActions
+              close={() => setShowPolicy(false)}
+              label={busy ? "Saving…" : "Save policy"}
+            />
+          </form>
+        </Dialog>
+      )}
+      {distinctCandidate && (
+        <Dialog
+          title="Compare duplicate candidate"
+          subtitle={distinctCandidate.message}
+          close={() => setDistinctCandidate(null)}
+        >
+          <form className="form-stack" onSubmit={acceptDistinct}>
+            <div className="review-notice" role="note">
+              <strong>No automatic merge</strong>
+              <span>
+                Accepting makes this row eligible for the batch. The similarity evidence, policy
+                version, reviewer and rationale remain attached to the import history.
+              </span>
+            </div>
+            <Field
+              label="Reviewer rationale"
+              as="textarea"
+              minLength="8"
+              maxLength="500"
+              value={distinctReason}
+              onChange={(event) => setDistinctReason(event.target.value)}
+              hint="Describe the source evidence that proves these are separate records."
+            />
+            <DialogActions
+              close={() => setDistinctCandidate(null)}
+              label={busy ? "Recording…" : "Accept as distinct"}
+            />
+          </form>
+        </Dialog>
       )}
       {showStage && (
         <Dialog

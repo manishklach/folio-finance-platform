@@ -53,6 +53,117 @@ test("stage validates mappings, formula-like text, rows and within-file duplicat
   ledger.close();
 });
 
+test("tenant duplicate policies flag fuzzy candidates with evidence and reviewed override", () => {
+  const ledger = createLedger(":memory:");
+  const policy = ledger.configureImportDuplicatePolicy({
+    template_key: "customers",
+    field_key: "name",
+    threshold_percent: 75,
+  });
+  assert.equal(policy.version, 1);
+  assert.equal(policy.indexed_rows, 0);
+  assert.equal(policy.active, true);
+  assert.throws(
+    () =>
+      ledger.configureImportDuplicatePolicy({
+        template_key: "invoices",
+        field_key: "amount_cents",
+        threshold_percent: 80,
+      }),
+    /text field/,
+  );
+
+  const batch = ledger.stageImport({
+    template_key: "customers",
+    filename: "fuzzy-customers.csv",
+    csv: [
+      "name,segment,region,external_id",
+      "Acme Corporation,Enterprise,US,cust-1",
+      "Acme Corporatoin,Enterprise,US,cust-2",
+    ].join("\n"),
+  });
+  assert.equal(batch.valid_count, 1);
+  assert.equal(batch.duplicate_count, 1);
+  assert.equal(batch.duplicate_policy.version, 1);
+  const candidate = batch.rows.find((row) => row.status === "duplicate");
+  assert.equal(candidate.duplicate_evidence.kind, "fuzzy");
+  assert.equal(candidate.duplicate_evidence.field_key, "name");
+  assert.ok(candidate.duplicate_evidence.score_percent >= 75);
+  const fuzzyException = batch.exceptions.find((item) => item.code === "FUZZY_DUPLICATE");
+  assert.ok(fuzzyException);
+  assert.throws(() => ledger.acceptImportDuplicate({ id: fuzzyException.id }), /expected string/i);
+
+  const accepted = ledger.acceptImportDuplicate({
+    id: fuzzyException.id,
+    resolution: "Controller compared source identifiers and confirmed separate legal customers",
+  });
+  assert.equal(accepted.batch.valid_count, 2);
+  assert.equal(accepted.batch.duplicate_count, 0);
+  assert.equal(accepted.exception.status, "resolved");
+  ledger.approveImport({ id: batch.id });
+  assert.equal(ledger.applyImport(batch.id).applied_count, 2);
+  assert.equal(ledger.importDuplicatePolicies()[0].indexed_rows, 2);
+  const revisedPolicy = ledger.configureImportDuplicatePolicy({
+    template_key: "customers",
+    field_key: "name",
+    threshold_percent: 76,
+  });
+  assert.equal(revisedPolicy.version, 2);
+  assert.equal(revisedPolicy.indexed_rows, 2);
+  assert.equal(
+    ledger.db
+      .prepare(
+        "SELECT COUNT(*) count FROM import_duplicate_policies WHERE template_key='customers'",
+      )
+      .get().count,
+    2,
+  );
+
+  const historicalCandidate = ledger.stageImport({
+    template_key: "customers",
+    filename: "historical-fuzzy.csv",
+    csv: ["name,segment,region,external_id", "Acme Corporations,Enterprise,US,cust-3"].join("\n"),
+  });
+  assert.equal(historicalCandidate.duplicate_count, 1);
+  assert.equal(historicalCandidate.rows[0].duplicate_evidence.source, "applied_import");
+  assert.ok(historicalCandidate.rows[0].duplicate_evidence.candidate_batch_id);
+
+  const exact = ledger.stageImport({
+    template_key: "customers",
+    filename: "exact-customers.csv",
+    csv: ["name,segment,region,external_id", "Different Display Name,Enterprise,US,cust-1"].join(
+      "\n",
+    ),
+  });
+  const exactException = exact.exceptions.find((item) => item.code === "EXACT_DUPLICATE");
+  assert.equal(exactException.severity, "blocking");
+  assert.throws(
+    () =>
+      ledger.acceptImportDuplicate({
+        id: exactException.id,
+        resolution: "Reviewed exact-key collision and attempted override",
+      }),
+    /Only a fuzzy duplicate/,
+  );
+  const disabledPolicy = ledger.configureImportDuplicatePolicy({
+    template_key: "customers",
+    field_key: "name",
+    threshold_percent: 76,
+    active: false,
+  });
+  assert.equal(disabledPolicy.version, 3);
+  assert.equal(disabledPolicy.active, false);
+  assert.equal(disabledPolicy.indexed_rows, 0);
+  const disabledCandidate = ledger.stageImport({
+    template_key: "customers",
+    filename: "disabled-fuzzy.csv",
+    csv: ["name,segment,region,external_id", "Acme Corporaton,Enterprise,US,cust-4"].join("\n"),
+  });
+  assert.equal(disabledCandidate.valid_count, 1);
+  assert.equal(disabledCandidate.duplicate_count, 0);
+  ledger.close();
+});
+
 test("saved mapping profiles drive staging and retain version lineage", () => {
   const ledger = createLedger(":memory:");
   const profile = ledger.createImportMappingProfile({
@@ -98,7 +209,7 @@ test("saved mapping profiles drive staging and retain version lineage", () => {
   ledger.close();
 });
 
-test("existing import batches upgrade to mapping-profile lineage columns", (t) => {
+test("existing import batches upgrade to mapping and duplicate-policy lineage", (t) => {
   const root = mkdtempSync(join(tmpdir(), "folio-import-upgrade-"));
   const databasePath = join(root, "tenant.db");
   let ledger;
@@ -140,6 +251,23 @@ test("existing import batches upgrade to mapping-profile lineage columns", (t) =
   assert.equal(columns.has("mapping_profile_id"), true);
   assert.equal(columns.has("mapping_profile_version"), true);
   assert.equal(columns.has("restaged_from_batch_id"), true);
+  assert.equal(columns.has("duplicate_policy_version"), true);
+  assert.equal(columns.has("duplicate_policy_json"), true);
+  const rowColumns = new Set(
+    ledger.db
+      .prepare("PRAGMA table_info(import_rows)")
+      .all()
+      .map((column) => column.name),
+  );
+  assert.equal(rowColumns.has("duplicate_evidence_json"), true);
+  assert.equal(
+    ledger.db
+      .prepare(
+        "SELECT COUNT(*) count FROM sqlite_master WHERE type='table' AND name LIKE 'import_duplicate_%'",
+      )
+      .get().count,
+    3,
+  );
   ledger.close();
   ledger = null;
 });

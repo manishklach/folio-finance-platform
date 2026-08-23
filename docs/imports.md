@@ -11,9 +11,17 @@ flowchart LR
   F[Select versioned template and source CSV] --> M[Map canonical fields to source headers]
   M --> V[Parse and normalize in a tenant-scoped batch]
   V --> H[Hash file and every normalized row]
-  H --> D{Validation and natural-key checks}
-  D -->|Valid| P[Preview valid row and intended entity]
-  D -->|Invalid or possible duplicate| E[Exception queue]
+  H --> D{Validation and exact natural-key checks}
+  D -->|Structurally valid and exact-key unique| FZ{Active fuzzy policy?}
+  FZ -->|Yes| FI[Indexed trigram candidate search]
+  FZ -->|No| P
+  FI -->|Below threshold| P
+  FI -->|At or above threshold| FC[Blocked candidate with score and source evidence]
+  FC --> FR{Reviewer disposition}
+  FR -->|Confirmed distinct with rationale| P
+  FR -->|Correction required| E
+  D -->|Invalid or exact duplicate| E[Exception queue]
+  P[Preview valid row and intended entity]
   P --> A{Explicit operator approval}
   E --> A
   A -->|All rows clean| T[Atomic apply]
@@ -64,6 +72,14 @@ snapshot.
   later exports or operational review.
 - Duplicate detection uses template plus natural key, both inside the current file and across
   successfully applied batches. The exact same file/template hash cannot be staged twice.
+- Administrators may version one active fuzzy policy per template by selecting a text field and a
+  70–99% similarity threshold. Values are Unicode-normalized, case/punctuation-folded and compared
+  with a trigram Dice score against a bounded in-file candidate map and an indexed applied-import
+  history. The effective policy version and JSON snapshot are retained on every batch.
+- A fuzzy hit stores the normalized values, score, threshold, policy version, candidate row/batch and
+  source type on the import row. It is a blocked candidate, never an automatic merge. An operator may
+  accept it as distinct only while the batch is staged and only with a retained reviewer rationale;
+  exact natural-key duplicates cannot use that override.
 - Invalid and duplicate rows are never applied. Applying a clean batch requires approval; applying
   only valid rows from a batch with exceptions requires a separate explicit choice.
 - Application is atomic across the approved valid subset. A runtime database or accounting-policy
@@ -89,19 +105,22 @@ misrepresenting an unrelated or incomplete file as the correction.
 
 ## Permissions and API
 
-| Method and route                                 | Purpose                                              | Permission                            |
-| ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------- |
-| `GET /api/imports/templates`                     | Inspect current template contracts                   | Read                                  |
-| `GET /api/imports/batches`                       | List bounded batch history                           | Read                                  |
-| `GET /api/imports/batches/:id`                   | Review a paged row set, mapping, hashes and outcomes | Read                                  |
-| `GET /api/imports/batches/:id/correction-source` | Reconstruct eligible rows and source lineage         | Read                                  |
-| `POST /api/imports/stage`                        | Parse, map, validate and stage a file                | Operate + CSRF + idempotency key      |
-| `POST /api/imports/batches/:id/approve`          | Approve all clean rows or explicit valid subset      | Operate + CSRF                        |
-| `POST /api/imports/batches/:id/apply`            | Atomically apply an approved batch                   | Operate + CSRF; repository idempotent |
-| `GET /api/imports/mapping-profiles`              | List active mapping versions                         | Read                                  |
-| `POST /api/imports/mapping-profiles`             | Save a validated mapping profile                     | Admin + CSRF                          |
-| `GET /api/imports/exceptions`                    | Filter and page validation/application exceptions    | Read                                  |
-| `POST /api/imports/exceptions/status`            | Record a disposition and owner                       | Operate + CSRF                        |
+| Method and route                                   | Purpose                                              | Permission                            |
+| -------------------------------------------------- | ---------------------------------------------------- | ------------------------------------- |
+| `GET /api/imports/templates`                       | Inspect current template contracts                   | Read                                  |
+| `GET /api/imports/batches`                         | List bounded batch history                           | Read                                  |
+| `GET /api/imports/batches/:id`                     | Review a paged row set, mapping, hashes and outcomes | Read                                  |
+| `GET /api/imports/batches/:id/correction-source`   | Reconstruct eligible rows and source lineage         | Read                                  |
+| `POST /api/imports/stage`                          | Parse, map, validate and stage a file                | Operate + CSRF + idempotency key      |
+| `POST /api/imports/batches/:id/approve`            | Approve all clean rows or explicit valid subset      | Operate + CSRF                        |
+| `POST /api/imports/batches/:id/apply`              | Atomically apply an approved batch                   | Operate + CSRF; repository idempotent |
+| `GET /api/imports/mapping-profiles`                | List active mapping versions                         | Read                                  |
+| `POST /api/imports/mapping-profiles`               | Save a validated mapping profile                     | Admin + CSRF                          |
+| `GET /api/imports/duplicate-policies`              | List fuzzy policies, versions and indexed row counts | Read                                  |
+| `POST /api/imports/duplicate-policies`             | Version a policy and rebuild its applied-row index   | Admin + CSRF                          |
+| `GET /api/imports/exceptions`                      | Filter and page validation/application exceptions    | Read                                  |
+| `POST /api/imports/exceptions/status`              | Record a disposition and owner                       | Operate + CSRF                        |
+| `POST /api/imports/exceptions/:id/accept-distinct` | Approve a fuzzy candidate with reviewer rationale    | Operate + CSRF                        |
 
 ## Verification and remaining production work
 
@@ -109,9 +128,15 @@ Automated tests cover all ten templates, custom source mappings, formula-like in
 within-file and cross-batch duplicate behavior, explicit valid-row subsets, exact-file replay,
 whole-batch rollback, blocking exceptions, balanced draft creation, posted subledger transactions,
 bank matching, correction scope and parent/child lineage, row-count safeguards, row/exception
-pagination, schema upgrades, journal integrity, API authentication, CSRF, authorization, and tenant
-database isolation.
+pagination, fuzzy policy versioning, indexed historical and in-file candidates, exact-duplicate
+non-override, reviewed distinct-record disposition, schema upgrades, journal integrity, API
+authentication, CSRF, authorization, and tenant database isolation. `npm run test:load` additionally
+stages and applies the documented 10,000-row maximum, rebuilds its fuzzy index, finds a historical
+candidate, and enforces a configurable per-step ceiling in CI.
 
-Before pilot use, Folio still needs large-file worker processing, configurable duplicate candidates
-beyond exact natural keys, approval segregation policies, and launch-volume migration/load evidence.
-These are tracked by the production acceptance specification and are not represented as complete here.
+The fuzzy index intentionally covers the current file and applied import lineage, not manually-created
+master records or provider-native records. It uses one configured text field per template and provides
+candidates rather than entity merge logic. Before pilot use, Folio still needs large-file worker
+processing, approval segregation policies, production-shaped migration/load/soak evidence and a
+controller review of threshold behavior. These boundaries remain tracked by the production acceptance
+specification.

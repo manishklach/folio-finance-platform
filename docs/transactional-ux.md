@@ -6,16 +6,16 @@ a WCAG certification or a substitute for controller usability validation.
 
 ## Journey coverage
 
-| Daily journey                | Current product workflow                                                                                                                                  | Repository evidence                                                                       | Remaining acceptance evidence                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Identity and organization    | Authenticated setup/sign-in, role display, tenant-scoped workspace and sign-out                                                                           | `frontend/main.jsx`; auth and tenancy HTTP tests                                          | Session/device management and a manual assistive-technology pass |
-| Journals                     | Guided balanced draft, evidence attachment and authorized posting                                                                                         | Journal UI, API authorization manifest and ledger tests                                   | Named maker-checker usability exercise                           |
-| Revenue                      | Contract entry, billing, recognition, waterfall and GL reconciliation                                                                                     | Revenue UI and ASC 606 regression/property tests                                          | Representative controller walkthrough                            |
-| Receivables                  | Payments, applications, credits, refunds, write-offs, disputes and collections                                                                            | Receivables UI and SaaS/operations tests                                                  | End-user task timing and high-volume queue evidence              |
-| Imports                      | CSV/file source, downloadable template, mapping/profile review, paged validation, controlled apply, server-paged exceptions and linked correction/restage | `frontend/main.jsx`; `lib/imports.js`; import/API tests and rendered-browser verification | Launch-volume soak evidence and controller walkthrough           |
-| Bank and close               | Statement controls, reconciliation exceptions, checklist and period lock                                                                                  | Bank/close UI and operations tests                                                        | Named close rehearsal with retained evidence                     |
-| Investments and fixed assets | Guided lifecycle actions, rollforwards, disclosures and GL reconciliation                                                                                 | Module UIs and Topic regression tests                                                     | Controller validation against representative populations         |
-| Reports and administration   | Statement exports plus users, policies, connector and fiscal configuration                                                                                | Reports/admin UI, route-policy tests and report tests                                     | Manual screen-reader review and customer role testing            |
+| Daily journey                | Current product workflow                                                                                                             | Repository evidence                                                      | Remaining acceptance evidence                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| Identity and organization    | Authenticated setup/sign-in, role display, tenant-scoped workspace and sign-out                                                      | `frontend/main.jsx`; auth and tenancy HTTP tests                         | Session/device management and a manual assistive-technology pass |
+| Journals                     | Guided balanced draft, evidence attachment and authorized posting                                                                    | Journal UI, API authorization manifest and ledger tests                  | Named maker-checker usability exercise                           |
+| Revenue                      | Contract entry, billing, recognition, waterfall and GL reconciliation                                                                | Revenue UI and ASC 606 regression/property tests                         | Representative controller walkthrough                            |
+| Receivables                  | Payments, applications, credits, refunds, write-offs, disputes and collections                                                       | Receivables UI and SaaS/operations tests                                 | End-user task timing and high-volume queue evidence              |
+| Imports                      | Source/template, mapping, versioned fuzzy policy, paged validation, compare/accept rationale, controlled apply and linked correction | UI/import/API tests, 10k capacity gate and rendered-browser verification | Deployed soak evidence and controller walkthrough                |
+| Bank and close               | Statement controls, reconciliation exceptions, checklist and period lock                                                             | Bank/close UI and operations tests                                       | Named close rehearsal with retained evidence                     |
+| Investments and fixed assets | Guided lifecycle actions, rollforwards, disclosures and GL reconciliation                                                            | Module UIs and Topic regression tests                                    | Controller validation against representative populations         |
+| Reports and administration   | Statement exports plus users, policies, connector and fiscal configuration                                                           | Reports/admin UI, route-policy tests and report tests                    | Manual screen-reader review and customer role testing            |
 
 ## Import workbench flow
 
@@ -28,10 +28,14 @@ flowchart LR
   P -->|No| B[Retain exact batch mapping snapshot]
   L --> R[Review source, target and mappings]
   B --> R
-  R --> V[Server validation and duplicate checks]
+  R --> V[Server validation, exact keys and versioned fuzzy policy]
   V --> Q[Row preview and exception queue]
-  Q --> C{Correct source?}
-  C -->|No| A[Explicit approve and idempotent apply]
+  Q --> F{Fuzzy candidate?}
+  F -->|Yes| J[Compare score/source and record rationale]
+  J -->|Confirmed distinct| A[Explicit approve and idempotent apply]
+  J -->|Needs correction| C
+  F -->|No| C{Correct source?}
+  C -->|No| A
   C -->|Yes| X[Full source replacement or exception-only child]
   X --> V
 ```
@@ -50,11 +54,16 @@ formula-like text and duplicates, and persists the effective mapping before retu
   explicit empty states, server-bounded pagination and user-controlled filtering.
 - Blank versioned templates download from the source step. Correction preserves mappings when headers
   are unchanged, enforces complete source populations, and visibly links the replacement batch.
+- Administrators can configure a versioned field/threshold policy. Operators see candidate score and
+  source, must enter a rationale to accept a row as distinct, and can later read that rationale and
+  actor from the resolved queue; no UI path can override an exact natural-key duplicate.
 - Destructive or accounting-effective work remains outside the file/mapping dialog. Staging creates a
   review batch; application requires a separate authorized action after row validation.
 - The workbench has been rendered without document overflow at 360, 768, 1280 and 1440 CSS pixels. The
   360-pixel layout uses a bottom-sheet dialog, stacked mappings and independently scrollable tables.
-  The paged preview and correction loop were additionally exercised at 360 and 1280 CSS pixels.
+  The paged preview/correction loop and policy/candidate/rationale/apply journey were additionally
+  exercised at 360 and 1280 CSS pixels. The policy dialog measured 360 CSS pixels at the mobile width,
+  and the document remained within the 360-pixel viewport while each wide table scrolled internally.
 
 ## Unproven launch gates
 

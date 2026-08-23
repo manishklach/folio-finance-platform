@@ -16,6 +16,8 @@ verified pre-deployment backup when a tenant data rollback is authorized.
   migration back, and applies it again.
 - The migration assurance tests corrupt history deliberately, inject a failure during a transactional
   migration, prove that schema and history roll back together, and then resume successfully.
+- Tenant import upgrade tests open a legacy schema and prove additive mapping, correction and duplicate
+  policy/evidence columns plus indexed candidate tables are created without discarding the old batch.
 
 CI runs both the clean-database migration and the oldest-schema rehearsal. Before a real deployment,
 operators must still rehearse against a restored, de-identified production-shaped copy, record elapsed

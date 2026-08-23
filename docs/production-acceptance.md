@@ -68,6 +68,14 @@ connector readiness.
 
 ## 3. Imports, mappings and exception operations
 
+Repository acceptance now includes versioned tenant fuzzy-match policies for one configured text field,
+an indexed 70–99% trigram similarity search across current-file and applied-import history, retained
+candidate evidence, and an operator-only accept-as-distinct action requiring a rationale. Exact natural
+keys remain non-overridable and Folio never auto-merges entities. CI stages and applies the 10,000-row
+maximum, rebuilds the index and proves a historical candidate lookup. Production acceptance still
+requires controller-selected thresholds, manually-created/provider-native master coverage decisions,
+and a deployed multi-tenant soak.
+
 - Supported templates are versioned for chart of accounts, opening balances, customers, vendors,
   contracts, invoices, payments, bank transactions, journals, investments, and fixed assets.
 - Import sequence is upload → parse → map → validate → preview → approve → idempotent apply → reconcile.

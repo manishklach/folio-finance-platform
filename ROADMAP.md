@@ -23,10 +23,10 @@ that engine without weakening its deterministic ledger controls.
 | 13. Fixed assets subledger           | Complete | PP&E, depreciation, CIP, ASC 360/410/835-20, controls, APIs, UI and tests                                     |
 | 14. Transactional product UX         | Active   | Guided daily workflows, accessibility, responsive tables/forms, design system                                 |
 | 15. External integrations            | Active   | Provider adapters/worker shipped; OAuth, signed events and sandbox evidence remain                            |
-| 16. Import and exception operations  | Active   | Templates, mapping, paged preview/queues and linked correction shipped; load/fuzzy-match evidence remains     |
+| 16. Import and exception operations  | Active   | Mapping, correction, fuzzy review and 10k capacity gate shipped; worker/segregation evidence remains          |
 | 17. Production operations            | Active   | Hardened single-node stack and encrypted DR shipped; live exercises remain                                    |
 | 18. Security hardening               | Active   | Repository audit, threat model, abuse regressions and image scan shipped; independent pen test/retest remains |
-| 19. Edge and migration assurance     | Active   | Migration and accounting property suites shipped; provider failure and launch-volume soak evidence remain     |
+| 19. Edge and migration assurance     | Active   | Property/migration suites and 10k import capacity gate shipped; deployed provider/soak evidence remains       |
 | 20. Accounting validation            | Active   | Complete pack generator and findings gate shipped; named reviewer execution and signed evidence remain        |
 | Independent launch approvals         | Pending  | Pen test, accounting, legal/privacy, deployment and support sign-off                                          |
 

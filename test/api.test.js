@@ -182,6 +182,51 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   assert.equal(correctionSource.response.status, 200);
   assert.equal(correctionSource.body.scope, "full_replacement");
   assert.equal(correctionSource.body.row_count, 2);
+  const duplicatePolicy = await call(
+    origin,
+    "/api/imports/duplicate-policies",
+    { template_key: "customers", field_key: "name", threshold_percent: 75 },
+    admin,
+  );
+  assert.equal(duplicatePolicy.response.status, 200);
+  assert.equal(duplicatePolicy.body.field_key, "name");
+  assert.equal(
+    (await call(origin, "/api/imports/duplicate-policies", null, admin)).body[0].version,
+    1,
+  );
+  assert.equal(
+    (
+      await call(
+        origin,
+        "/api/imports/duplicate-policies",
+        { template_key: "customers", field_key: "name", threshold_percent: 75 },
+        viewer,
+      )
+    ).response.status,
+    403,
+  );
+  const fuzzyBatch = await call(
+    origin,
+    "/api/imports/stage",
+    {
+      template_key: "customers",
+      filename: "api-fuzzy.csv",
+      csv: "name,segment,region,external_id\nNorthwind Software,Enterprise,US,north-1\nNorthwind Softwrae,Enterprise,US,north-2",
+    },
+    { ...admin, idempotency: "import-fuzzy-admin-1" },
+  );
+  assert.equal(fuzzyBatch.response.status, 201);
+  assert.equal(fuzzyBatch.body.duplicate_count, 1);
+  const fuzzyException = fuzzyBatch.body.exceptions.find((item) => item.code === "FUZZY_DUPLICATE");
+  const acceptedDistinct = await call(
+    origin,
+    `/api/imports/exceptions/${fuzzyException.id}/accept-distinct`,
+    { resolution: "Controller confirmed separate customer identifiers in source system" },
+    admin,
+  );
+  assert.equal(acceptedDistinct.response.status, 200);
+  assert.equal(acceptedDistinct.body.batch.valid_count, 2);
+  assert.equal(acceptedDistinct.body.batch.duplicate_count, 0);
   const configuredConnector = await call(
     origin,
     "/api/integrations/connections",
