@@ -87,6 +87,19 @@ The detailed fixed-assets matrix, lifecycle flowchart, API inventory, and scope 
 The exact implemented boundary, provider matrix, flowchart, API inventory, and remaining live-provider
 work are in [`docs/integrations.md`](docs/integrations.md).
 
+### Controlled imports and exception operations
+
+- Ten versioned templates spanning accounts, opening balances, customers, contracts, invoices,
+  payments, bank transactions, journal drafts, investments, and fixed assets
+- Target-to-source field mappings, typed normalization, previews, file/row hashes, and formula-injection
+  protection
+- Natural-key and exact-file duplicate prevention with repeat-safe application
+- Explicit clean-batch or valid-row-subset approval and atomic rollback on any application failure
+- Created-entity lineage, mapping versions, operator identity, row outcomes, and resolvable exceptions
+
+The template matrix, workflow, permissions, validation controls, and remaining pilot boundaries are in
+[`docs/imports.md`](docs/imports.md).
+
 The exact supported and excluded scope is maintained in [`docs/gaap-coverage-matrix.md`](docs/gaap-coverage-matrix.md). The complete processing and close flow is illustrated in [`docs/gaap-system-flow.md`](docs/gaap-system-flow.md), and request contracts are in [`docs/gaap-api.md`](docs/gaap-api.md).
 
 AI suggestions never post automatically. The server validates account IDs, amount shape, and debit/credit equality before saving a draft, then validates again before posting.

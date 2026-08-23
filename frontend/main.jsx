@@ -52,6 +52,7 @@ const navigation = [
   ["receivables", "Receivables", "▤"],
   ["bank-close", "Bank & close", "✓"],
   ["integrations", "Integrations", "⇆"],
+  ["imports", "Imports", "⇩"],
   ["investments", "Investments", "↗"],
   ["fixed-assets", "Fixed assets", "◇"],
   ["reports", "Reports", "⌁"],
@@ -219,6 +220,7 @@ function Module({ active, ...props }) {
     receivables: Receivables,
     "bank-close": BankClose,
     integrations: Integrations,
+    imports: Imports,
     investments: Investments,
     "fixed-assets": FixedAssets,
     reports: Reports,
@@ -468,6 +470,280 @@ function Integrations({ can, notify }) {
               />
             </div>
             <DialogActions close={() => setShowForm(false)} label="Save configuration" />
+          </form>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+function Imports({ can, notify }) {
+  const resource = useLoad(
+    () =>
+      Promise.all([
+        api("/api/imports/templates"),
+        api("/api/imports/batches"),
+        api("/api/imports/exceptions"),
+        api("/api/accounts"),
+      ]),
+    [],
+  );
+  const [showStage, setShowStage] = useState(false);
+  const [templateKey, setTemplateKey] = useState("chart_of_accounts");
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  if (resource.loading) return <Loading />;
+  if (resource.error) return <LoadError error={resource.error} retry={resource.refresh} />;
+  const [templates, batches, exceptions, accounts] = resource.data;
+  const selectedTemplate = templates.find((item) => item.key === templateKey) || templates[0];
+
+  async function stage(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setBusy(true);
+    try {
+      const options =
+        templateKey === "bank_transactions"
+          ? {
+              cash_account_id: Number(form.get("cash_account_id")),
+              start_date: form.get("start_date"),
+              end_date: form.get("end_date"),
+              opening_cents: Math.round(Number(form.get("opening")) * 100),
+              closing_cents: Math.round(Number(form.get("closing")) * 100),
+            }
+          : {};
+      const batch = await api("/api/imports/stage", {
+        method: "POST",
+        body: {
+          template_key: templateKey,
+          filename: form.get("filename"),
+          csv: form.get("csv"),
+          options,
+        },
+      });
+      setPreview(batch);
+      setShowStage(false);
+      await resource.refresh();
+      notify({ kind: "success", message: "Import validated and staged for review." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openBatch(id) {
+    try {
+      setPreview(await api(`/api/imports/batches/${id}`));
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+
+  async function approveAndApply() {
+    setBusy(true);
+    try {
+      const hasExceptions = preview.error_count > 0 || preview.duplicate_count > 0;
+      await api(`/api/imports/batches/${preview.id}/approve`, {
+        method: "POST",
+        body: { apply_valid_rows: hasExceptions },
+      });
+      const applied = await api(`/api/imports/batches/${preview.id}/apply`, {
+        method: "POST",
+        body: {},
+      });
+      setPreview(applied);
+      await resource.refresh();
+      notify({
+        kind: "success",
+        message: `${applied.applied_count} validated rows applied with retained lineage.`,
+      });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resolveException(item) {
+    try {
+      await api("/api/imports/exceptions/status", {
+        method: "POST",
+        body: {
+          id: item.id,
+          status: "resolved",
+          resolution: "Reviewed in the import operations workbench",
+        },
+      });
+      await resource.refresh();
+      notify({ kind: "success", message: "Import exception resolved." });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+
+  return (
+    <div className="module-flow">
+      <ModuleBar
+        title="Controlled imports"
+        detail="Versioned templates, validation previews, duplicate controls and traceable application"
+        action={
+          can("operate") && (
+            <button className="primary" onClick={() => setShowStage(true)}>
+              Stage import
+            </button>
+          )
+        }
+      />
+      <section className="kpi-grid">
+        <Kpi label="Templates" value={templates.length} detail="Versioned entity formats" />
+        <Kpi
+          label="Staged"
+          value={batches.filter((item) => item.status === "staged").length}
+          detail="Awaiting approval"
+        />
+        <Kpi
+          label="Applied rows"
+          value={batches.reduce((sum, item) => sum + item.applied_count, 0)}
+          detail="With entity lineage"
+        />
+        <Kpi
+          label="Open exceptions"
+          value={exceptions.filter((item) => item.status === "open").length}
+          detail="Validation or apply issues"
+          warning={exceptions.some((item) => item.status === "open")}
+        />
+      </section>
+      <div className="two-column">
+        <Panel
+          title="Import batches"
+          subtitle="Files remain staged until an operator reviews the preview"
+        >
+          <Table
+            columns={["File", "Template", "Rows", "Valid", "Exceptions", "Status", "Review"]}
+            rows={batches.map((item) => [
+              item.filename,
+              label(item.template_key),
+              item.row_count,
+              item.valid_count,
+              item.error_count + item.duplicate_count,
+              <Status value={item.status} />,
+              <button className="small-button" onClick={() => openBatch(item.id)}>
+                Review
+              </button>,
+            ])}
+          />
+        </Panel>
+        <Panel
+          title="Exception queue"
+          subtitle="Warnings and blocking rows require an explicit disposition"
+        >
+          <Table
+            columns={["Code", "Severity", "Message", "Status", "Action"]}
+            rows={exceptions.slice(0, 20).map((item) => [
+              label(item.code),
+              <Status value={item.severity} />,
+              item.message,
+              <Status value={item.status} />,
+              item.status === "open" && can("operate") ? (
+                <button className="small-button" onClick={() => resolveException(item)}>
+                  Resolve
+                </button>
+              ) : (
+                "—"
+              ),
+            ])}
+          />
+        </Panel>
+      </div>
+      {preview && (
+        <Panel
+          title={`Review ${preview.filename}`}
+          subtitle={`SHA-256 ${preview.file_sha256.slice(0, 16)}… · template v${preview.template_version}`}
+        >
+          <div className="review-strip">
+            <DescriptionList
+              items={[
+                ["Rows", preview.row_count],
+                ["Valid", preview.valid_count],
+                ["Errors", preview.error_count],
+                ["Duplicates", preview.duplicate_count],
+                ["Status", <Status value={preview.status} />],
+              ]}
+            />
+            {preview.status === "staged" && can("operate") && (
+              <button
+                className="primary"
+                disabled={busy || !preview.valid_count}
+                onClick={approveAndApply}
+              >
+                {busy
+                  ? "Applying…"
+                  : preview.error_count || preview.duplicate_count
+                    ? "Apply valid rows only"
+                    : "Approve and apply"}
+              </button>
+            )}
+          </div>
+          <Table
+            columns={["CSV row", "Natural key", "Status", "Validation result", "Created record"]}
+            rows={preview.rows.map((item) => [
+              item.row_number,
+              item.natural_key,
+              <Status value={item.status} />,
+              item.errors.length ? item.errors.join("; ") : "Passed",
+              item.applied_entity_id
+                ? `${label(item.applied_entity_type)} ${item.applied_entity_id}`
+                : "—",
+            ])}
+          />
+        </Panel>
+      )}
+      {showStage && (
+        <Dialog
+          title="Stage a controlled import"
+          subtitle="Nothing is applied until validation completes and you approve the row preview."
+          close={() => setShowStage(false)}
+        >
+          <form className="form-stack" onSubmit={stage}>
+            <Field
+              label="Template"
+              name="template_key"
+              as="select"
+              value={templateKey}
+              onChange={(event) => setTemplateKey(event.target.value)}
+              options={templates.map((item) => [item.key, `${item.name} · v${item.version}`])}
+            />
+            <Field label="Source filename" name="filename" placeholder={`${templateKey}.csv`} />
+            {templateKey === "bank_transactions" && (
+              <>
+                <Field
+                  label="Cash account"
+                  name="cash_account_id"
+                  as="select"
+                  options={accounts
+                    .filter((account) => account.type === "asset")
+                    .map((account) => [account.id, `${account.code} · ${account.name}`])}
+                />
+                <div className="form-grid">
+                  <Field label="Statement start" name="start_date" type="date" />
+                  <Field label="Statement end" name="end_date" type="date" />
+                  <Field label="Opening balance" name="opening" type="number" step="0.01" />
+                  <Field label="Closing balance" name="closing" type="number" step="0.01" />
+                </div>
+              </>
+            )}
+            <Field
+              label="CSV data"
+              name="csv"
+              as="textarea"
+              placeholder={selectedTemplate.sample_header}
+              hint={`Expected mapped headers: ${selectedTemplate.fields.map((item) => item.key).join(", ")}. Formula-like text is rejected.`}
+            />
+            <DialogActions
+              close={() => setShowStage(false)}
+              label={busy ? "Validating…" : "Validate and preview"}
+            />
           </form>
         </Dialog>
       )}

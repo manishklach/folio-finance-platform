@@ -492,6 +492,30 @@ button,
   padding: 14px 18px;
   border-bottom: 1px solid #edf0ee;
 }
+
+.review-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.review-strip .description-list {
+  flex: 1;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .review-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 .description-list dt {
   color: var(--muted);
   font-size: 12px;

@@ -31,6 +31,7 @@ const idempotentRoutes = new Set([
   "/api/receivables/refunds",
   "/api/integrations/connections",
   "/api/integrations/sync-runs",
+  "/api/imports/stage",
 ]);
 
 export function createFolioServer(options = {}) {
@@ -427,6 +428,33 @@ async function api(req, res, url, ledger, platform, session) {
     return json(res, 201, ledger.createIntegrationMapping(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/integrations/exceptions/status")
     return json(res, 200, ledger.resolveIntegrationDeadLetter(await readJson(req)));
+  if (req.method === "GET" && url.pathname === "/api/imports/templates")
+    return json(res, 200, ledger.importTemplateCatalog());
+  if (req.method === "GET" && url.pathname === "/api/imports/batches")
+    return json(res, 200, ledger.importBatches());
+  if (req.method === "GET" && url.pathname === "/api/imports/mapping-profiles")
+    return json(res, 200, ledger.importMappingProfiles());
+  if (req.method === "GET" && url.pathname === "/api/imports/exceptions")
+    return json(res, 200, ledger.importExceptions());
+  const importBatchMatch = url.pathname.match(/^\/api\/imports\/batches\/([^/]+)$/);
+  if (req.method === "GET" && importBatchMatch)
+    return json(res, 200, ledger.importBatch(importBatchMatch[1]));
+  if (req.method === "POST" && url.pathname === "/api/imports/stage")
+    return json(res, 201, ledger.stageImport(await readJson(req)));
+  const importApproveMatch = url.pathname.match(/^\/api\/imports\/batches\/([^/]+)\/approve$/);
+  if (req.method === "POST" && importApproveMatch)
+    return json(
+      res,
+      200,
+      ledger.approveImport({ ...(await readJson(req)), id: importApproveMatch[1] }),
+    );
+  const importApplyMatch = url.pathname.match(/^\/api\/imports\/batches\/([^/]+)\/apply$/);
+  if (req.method === "POST" && importApplyMatch)
+    return json(res, 200, ledger.applyImport(importApplyMatch[1]));
+  if (req.method === "POST" && url.pathname === "/api/imports/mapping-profiles")
+    return json(res, 201, ledger.createImportMappingProfile(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/imports/exceptions/status")
+    return json(res, 200, ledger.resolveImportException(await readJson(req)));
   if (req.method === "GET" && url.pathname === "/api/fixed-assets/overview")
     return json(res, 200, ledger.fixedAssetsOverview(url.searchParams.get("as_of") || today()));
   if (req.method === "GET" && url.pathname === "/api/fixed-assets")
@@ -743,7 +771,8 @@ function requiredPermission(method, path) {
   if (
     path === "/api/integrations/connections" ||
     path === "/api/integrations/connections/status" ||
-    path === "/api/integrations/mappings"
+    path === "/api/integrations/mappings" ||
+    path === "/api/imports/mapping-profiles"
   )
     return "admin";
   if (/^\/api\/journals\/\d+\/post$/.test(path)) return "post";

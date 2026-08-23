@@ -22,8 +22,8 @@ that engine without weakening its deterministic ledger controls.
 | 12. Investments subledger            | Complete | ASC 305/320/321/323/325/326/820 positions, accounting, APIs, UI and tests     |
 | 13. Fixed assets subledger           | Complete | PP&E, depreciation, CIP, ASC 360/410/835-20, controls, APIs, UI and tests     |
 | 14. Transactional product UX         | Active   | Guided daily workflows, accessibility, responsive tables/forms, design system |
-| 15. External integrations            | Pending  | Bank, billing, payroll, CRM and payments connector platform                   |
-| 16. Import and exception operations  | Pending  | Mapping, validation, idempotent apply, reconciliation workbench               |
+| 15. External integrations            | Active   | Common connector lifecycle shipped; live provider adapters remain             |
+| 16. Import and exception operations  | Active   | Ten templates and controlled apply shipped; visual mapper/scale work remains  |
 | 17. Production operations            | Pending  | Hosting, SLOs, monitoring, DR exercises, release/rollback and support         |
 | 18. Security hardening               | Pending  | Threat model, abuse tests, scanning, remediation and independent retest       |
 | 19. Edge and migration assurance     | Pending  | Complex accounting, upgrades, failure injection, load and provider contracts  |

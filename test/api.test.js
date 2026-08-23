@@ -107,6 +107,52 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
     (await call(origin, "/api/journals", { date: "2026-08-22" }, viewer)).response.status,
     403,
   );
+  const stagedImport = await call(
+    origin,
+    "/api/imports/stage",
+    {
+      template_key: "journals",
+      filename: "api-journal.csv",
+      csv: "date,memo,debit_account_code,credit_account_code,amount_cents,external_id\n2026-08-23,API import,1000,3000,2500,api-import-1",
+    },
+    { ...admin, idempotency: "import-stage-admin-1" },
+  );
+  assert.equal(stagedImport.response.status, 201);
+  assert.equal(stagedImport.body.valid_count, 1);
+  assert.equal(
+    (
+      await call(
+        origin,
+        "/api/imports/stage",
+        {
+          template_key: "journals",
+          filename: "denied.csv",
+          csv: "date,memo,debit_account_code,credit_account_code,amount_cents,external_id\n2026-08-23,Denied,1000,3000,2500,api-import-denied",
+        },
+        { ...viewer, idempotency: "import-stage-viewer-1" },
+      )
+    ).response.status,
+    403,
+  );
+  assert.equal(
+    (
+      await call(
+        origin,
+        `/api/imports/batches/${stagedImport.body.id}/approve`,
+        { apply_valid_rows: false },
+        admin,
+      )
+    ).response.status,
+    200,
+  );
+  const appliedImport = await call(
+    origin,
+    `/api/imports/batches/${stagedImport.body.id}/apply`,
+    {},
+    admin,
+  );
+  assert.equal(appliedImport.response.status, 200);
+  assert.equal(appliedImport.body.applied_count, 1);
   const configuredConnector = await call(
     origin,
     "/api/integrations/connections",
