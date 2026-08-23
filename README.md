@@ -81,6 +81,8 @@ The detailed fixed-assets matrix, lifecycle flowchart, API inventory, and scope 
 - Tenant-scoped connection lifecycle for Plaid, Stripe, Gusto, and HubSpot targets
 - Secret-manager reference boundaries with no provider credential values in the browser or ledger
 - Cursor-based synchronization runs with idempotent added, modified, and removed source records
+- Concrete Plaid, Stripe, Gusto, and HubSpot HTTP adapters with bounded paging, throttling retries,
+  normalized source outcomes, safe failures, and a tenant-scoped CLI synchronization worker
 - Versioned mapping definitions, payload hashes, run metrics, and resolvable exception/dead-letter queues
 - Administrator-only configuration and operator-scoped synchronization controls
 

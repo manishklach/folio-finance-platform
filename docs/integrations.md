@@ -1,18 +1,20 @@
 # Integration platform and initial connector design
 
-This document describes the engineering foundation introduced after v0.2.0. It does not claim that
-live Plaid, Stripe, Gusto, or HubSpot OAuth connections are production-ready. Provider HTTP clients,
-hosted authorization handoffs, verified webhooks, worker scheduling, and credentialed sandbox
-contract tests remain required before a connector can carry live financial data.
+This document describes the engineering foundation introduced after v0.2.0. Provider HTTP adapters
+and a tenant-scoped synchronization worker are implemented and contract-tested against versioned
+fixtures. This does not claim that live Plaid, Stripe, Gusto, or HubSpot OAuth connections are
+production-ready: hosted authorization handoffs, verified provider-specific webhooks, scheduling,
+provider sandbox certification and credentialed staging evidence remain required before a connector
+can carry live financial data.
 
 ## Initial matrix
 
-| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                       | Still required for live use                                                                                               |
-| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Catalog, connection state, staged records, cursor/run metrics and exceptions | Link handoff, token exchange in a worker, JWT webhook verification and Plaid sandbox contract suite                       |
-| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Same common connector contract                                               | OAuth/restricted-key exchange, raw-body signature verification, event replay/backfill and payout reconciliation           |
-| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Event timestamp plus bounded backfill  | Same common connector contract                                               | OAuth lifecycle, company-scoped token handling, versioned API adapter, verified event delivery and payroll-to-GL mappings |
-| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark                | Same common connector contract                                               | OAuth lifecycle, signed webhooks, association pagination, property mapping and contract-handoff review                    |
+| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                    | Still required for live use                                                                                    |
+| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned request/normalization adapter, full pagination restart, staged outcomes, retries and exceptions | Link handoff/token exchange, JWT webhook verification, sandbox certification and credentialed staging evidence |
+| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Resource adapter with ID paging, created watermark, normalization, retries and staged outcomes            | OAuth/restricted-key exchange, raw-body signature verification, event replay and payout reconciliation         |
+| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and departments                                  | Processed-date watermark plus page     | Versioned payroll adapter, header-driven paging, total normalization, retries and staged outcomes         | OAuth lifecycle, verified events, detailed payroll receipts, GL mappings and sandbox certification             |
+| HubSpot  | CRM                  | Companies, deals, products and line items                                                 | Updated-after watermark plus `after`   | Versioned search adapter, property normalization, updated watermark, retries and staged outcomes          | OAuth lifecycle, signed webhooks, association expansion and contract-handoff review                            |
 
 The provider behavior assumptions above follow the vendors' current official documentation:
 [Plaid transaction sync](https://plaid.com/docs/transactions/sync-migration/),
@@ -54,9 +56,20 @@ flowchart LR
   O --> X
 ```
 
-This commit implements the connection, run, staged-record, mapping and dead-letter persistence shown
-above. Automatic mapping application and the provider-specific adapter/worker layer are not yet
-implemented.
+The provider adapters resolve JSON credentials only through the configured secret reference, never
+through connection settings or browser payloads. They enforce bounded pages, 30-second request
+timeouts, capped exponential retries for throttling and transient server failures, sanitized error
+messages, immutable source hashes and idempotent replay. Plaid's documented mutation-during-paging
+condition restarts the entire update from the original persisted cursor; already-staged records are
+deduplicated. The CLI worker can be run for one tenant connection with:
+
+```sh
+npm run integrations:sync -- --database=data/tenants/<tenant>.db --connection=<connection-id>
+```
+
+The scheduler must supply one JSON credential secret file/environment reference for the selected
+connection. Automatic mapping application and hosted authorization remain separate controlled
+workflows.
 
 ## API inventory
 
@@ -79,6 +92,7 @@ implemented.
 
 Automated tests cover the four-provider catalog, secret-reference boundary, production account-ID
 requirement, legal state changes, cursor advancement, added/modified/removed records, replay
-idempotency, failed-run exception creation and operator resolution. Live acceptance additionally
-requires sandbox contract tests, webhook tamper/replay tests, throttling and stale-cursor tests, worker
-recovery, provider-schema fixtures, and a credentialed staging synchronization.
+idempotency, failed-run exception creation, operator resolution, provider schema fixtures, paging,
+Plaid cursor mutation recovery, rate-limit retry and secret-safe failures. Live acceptance additionally
+requires provider-hosted sandbox contract tests, webhook tamper/replay tests, worker crash recovery and
+a credentialed staging synchronization.
