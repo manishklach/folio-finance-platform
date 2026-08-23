@@ -125,7 +125,8 @@ cloud/WAF validation, OAuth-provider certification, and independent testing rema
   security headers include `nosniff`, deny framing, a no-referrer policy, and a restricted permissions
   policy.
 - Production fails closed on HTTPS origin and secure-cookie configuration; containers drop capabilities,
-  use read-only filesystems, and run without root privileges.
+  use read-only filesystems, run without root privileges, and omit package-manager/build tooling from the
+  runtime image.
 - CI uses reproducible installs, dependency audit, all security regressions, a production image build,
   a pinned Trivy action for fixed high/critical image vulnerabilities, Compose validation, and
   Prometheus/Alertmanager configuration validation. Dependabot covers npm and GitHub Actions.

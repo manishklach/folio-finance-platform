@@ -10,7 +10,10 @@ FROM node:22.23.2-bookworm-slim AS runtime
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4310
 WORKDIR /app
 COPY --from=build --chown=node:node /app /app
-RUN mkdir -p /var/lib/folio/tenants /var/lib/folio/attachments /var/backups/folio \
+RUN corepack disable \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    && mkdir -p /var/lib/folio/tenants /var/lib/folio/attachments /var/backups/folio \
     && chown -R node:node /var/lib/folio /var/backups/folio
 USER node
 EXPOSE 4310

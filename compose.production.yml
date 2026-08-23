@@ -124,7 +124,7 @@ services:
     volumes:
       - folio_data:/var/lib/folio
     tmpfs: [/tmp:rw, noexec, nosuid, size=32m]
-    command: [npm, run, migrate]
+    command: [node, scripts/migrate.js]
 
   backup:
     profiles: [operations]
@@ -147,7 +147,7 @@ services:
       - folio_attachments:/var/lib/folio/attachments:ro
       - folio_backups:/var/backups/folio
     tmpfs: [/tmp:rw, noexec, nosuid, size=32m]
-    command: [npm, run, backup]
+    command: [node, scripts/backup.js]
 
 networks:
   edge: {}
