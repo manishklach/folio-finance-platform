@@ -163,6 +163,61 @@ test("Stripe adapter paginates by object ID and preserves a created-time waterma
   ledger.close();
 });
 
+test("Stripe payout sync expands every settlement into fee-bearing balance components", async () => {
+  const { ledger, configured } = connection("stripe", { resource: "payouts" });
+  const urls = [];
+  const run = await synchronizeProviderConnection({
+    ledger,
+    connectionId: configured.id,
+    credentialResolver: () => ({ api_key: "rk_test_fixture" }),
+    fetchImpl: async (url) => {
+      urls.push(url);
+      if (url.includes("/v1/payouts"))
+        return response({
+          data: [
+            {
+              id: "po_1",
+              created: 1787472060,
+              amount: 9700,
+              currency: "usd",
+              status: "paid",
+            },
+          ],
+          has_more: false,
+        });
+      return response({
+        data: [
+          {
+            id: "txn_1",
+            created: 1787472000,
+            amount: 10000,
+            fee: 300,
+            net: 9700,
+            currency: "usd",
+            type: "charge",
+          },
+        ],
+        has_more: false,
+      });
+    },
+  });
+  assert.equal(run.added, 2);
+  assert.match(urls[1], /balance_transactions\?limit=100&payout=po_1/);
+  const component = ledger
+    .integrationRecords(configured.id)
+    .find((record) => record.object_type === "stripe_balance_transaction");
+  assert.deepEqual(
+    {
+      payout: component.normalized.payout_external_id,
+      gross: component.normalized.amount_cents,
+      fee: component.normalized.fee_cents,
+      net: component.normalized.net_cents,
+    },
+    { payout: "po_1", gross: 10000, fee: 300, net: 9700 },
+  );
+  ledger.close();
+});
+
 test("Stripe webhook events become versioned provider records instead of accounting commands", () => {
   const page = stripeWebhookPage({
     id: "evt_invoice_created_1",
@@ -183,13 +238,22 @@ test("Stripe webhook events become versioned provider records instead of account
   assert.equal(page.added[0].object_type, "stripe_invoice");
   assert.equal(page.added[0].external_id, "in_webhook_1");
   assert.equal(page.added[0].source_version, "evt_invoice_created_1");
-  assert.deepEqual(page.added[0].normalized, {
-    customer_external_id: "cus_1",
-    amount_cents: 7250,
-    currency: "usd",
-    status: "draft",
-    livemode: true,
-  });
+  assert.deepEqual(
+    {
+      customer_external_id: page.added[0].normalized.customer_external_id,
+      amount_cents: page.added[0].normalized.amount_cents,
+      currency: page.added[0].normalized.currency,
+      status: page.added[0].normalized.status,
+      livemode: page.added[0].normalized.livemode,
+    },
+    {
+      customer_external_id: "cus_1",
+      amount_cents: 7250,
+      currency: "usd",
+      status: "draft",
+      livemode: true,
+    },
+  );
   assert.throws(
     () =>
       stripeWebhookPage({

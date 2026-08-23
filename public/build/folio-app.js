@@ -758,24 +758,24 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		return null;
 	}
-	var ce = Array.isArray, D = n.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, O = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, le = {
+	var ce = Array.isArray, D = n.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, O = r.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, k = {
 		pending: !1,
 		data: null,
 		method: null,
 		action: null
-	}, ue = [], de = -1;
-	function fe(e) {
+	}, le = [], ue = -1;
+	function de(e) {
 		return { current: e };
 	}
-	function pe(e) {
-		0 > de || (e.current = ue[de], ue[de] = null, de--);
+	function fe(e) {
+		0 > ue || (e.current = le[ue], le[ue] = null, ue--);
 	}
-	function k(e, t) {
-		de++, ue[de] = e.current, e.current = t;
-	}
-	var me = fe(null), he = fe(null), ge = fe(null), _e = fe(null);
 	function A(e, t) {
-		switch (k(ge, t), k(he, e), k(me, null), t.nodeType) {
+		ue++, le[ue] = e.current, e.current = t;
+	}
+	var pe = de(null), me = de(null), he = de(null), ge = de(null);
+	function _e(e, t) {
+		switch (A(he, t), A(me, e), A(pe, null), t.nodeType) {
 			case 9:
 			case 11:
 				e = (e = t.documentElement) && (e = e.namespaceURI) ? Dd(e) : 0;
@@ -791,18 +791,18 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				default: e = 0;
 			}
 		}
-		pe(me), k(me, e);
+		fe(pe), A(pe, e);
 	}
 	function ve() {
-		pe(me), pe(he), pe(ge);
+		fe(pe), fe(me), fe(he);
 	}
 	function j(e) {
-		e.memoizedState !== null && k(_e, e);
-		var t = me.current, n = Od(t, e.type);
-		t !== n && (k(he, e), k(me, n));
+		e.memoizedState !== null && A(ge, e);
+		var t = pe.current, n = Od(t, e.type);
+		t !== n && (A(me, e), A(pe, n));
 	}
 	function M(e) {
-		he.current === e && (pe(me), pe(he)), _e.current === e && (pe(_e), Ff._currentValue = le);
+		me.current === e && (fe(pe), fe(me)), ge.current === e && (fe(ge), Ff._currentValue = k);
 	}
 	var N = Object.prototype.hasOwnProperty, ye = t.unstable_scheduleCallback, P = t.unstable_cancelCallback, F = t.unstable_shouldYield, be = t.unstable_requestPaint, xe = t.unstable_now, Se = t.unstable_getCurrentPriorityLevel, Ce = t.unstable_ImmediatePriority, we = t.unstable_UserBlockingPriority, Te = t.unstable_NormalPriority, Ee = t.unstable_LowPriority, De = t.unstable_IdlePriority, Oe = t.log, I = t.unstable_setDisableYieldValue, ke = null, Ae = null;
 	function je(e) {
@@ -2017,7 +2017,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function pi(e, t, n, r, a, o) {
 		var s = 0;
 		if (r = e, typeof e == "function") ui(e) && (s = 1);
-		else if (typeof e == "string") s = Tf(e, n, me.current) ? 26 : e === "html" || e === "head" || e === "body" ? 27 : 5;
+		else if (typeof e == "string") s = Tf(e, n, pe.current) ? 26 : e === "html" || e === "head" || e === "body" ? 27 : 5;
 		else a: switch (e) {
 			case ie: return e = li(31, n, t, a), e.elementType = ie, e.lanes = o, e;
 			case v: return mi(n.children, a, o, t);
@@ -2173,12 +2173,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function Bi(e) {
 		ji === null ? ji = [e] : ji.push(e);
 	}
-	var Vi = fe(null), Hi = null, Ui = null;
+	var Vi = de(null), Hi = null, Ui = null;
 	function Wi(e, t, n) {
-		k(Vi, t._currentValue), t._currentValue = n;
+		A(Vi, t._currentValue), t._currentValue = n;
 	}
 	function Gi(e) {
-		e._currentValue = Vi.current, pe(Vi);
+		e._currentValue = Vi.current, fe(Vi);
 	}
 	function Ki(e, t, n) {
 		for (; e !== null;) {
@@ -2236,7 +2236,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					var c = a.type;
 					Sr(a.pendingProps.value, s.value) || (e === null ? e = [c] : e.push(c));
 				}
-			} else if (a === _e.current) {
+			} else if (a === ge.current) {
 				if (s = a.alternate, s === null) throw Error(i(387));
 				s.memoizedState.memoizedState !== a.memoizedState.memoizedState && (e === null ? e = [Ff] : e.push(Ff));
 			}
@@ -2349,13 +2349,13 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	D.S = function(e, t) {
 		typeof t == "object" && t && typeof t.then == "function" && ua(e, t), pa !== null && pa(e, t);
 	};
-	var ma = fe(null);
+	var ma = de(null);
 	function ha() {
 		var e = ma.current;
 		return e === null ? K.pooledCache : e;
 	}
 	function ga(e, t) {
-		t === null ? k(ma, ma.current) : k(ma, t.pool);
+		t === null ? A(ma, ma.current) : A(ma, t.pool);
 	}
 	function _a() {
 		var e = ha();
@@ -2556,15 +2556,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var n = e.callbacks;
 		if (n !== null) for (e.callbacks = null, e = 0; e < n.length; e++) Ra(n[e], t);
 	}
-	var Ba = fe(null), Va = fe(0);
+	var Ba = de(null), Va = de(0);
 	function Ha(e, t) {
-		e = Nl, k(Va, e), k(Ba, t), Nl = e | t.baseLanes;
+		e = Nl, A(Va, e), A(Ba, t), Nl = e | t.baseLanes;
 	}
 	function Ua() {
-		k(Va, Nl), k(Ba, Ba.current);
+		A(Va, Nl), A(Ba, Ba.current);
 	}
 	function Wa() {
-		Nl = Va.current, pe(Ba), pe(Va);
+		Nl = Va.current, fe(Ba), fe(Va);
 	}
 	var Ga = 0, z = null, B = null, Ka = null, qa = !1, Ja = !1, Ya = !1, Xa = 0, Za = 0, Qa = null, $a = 0;
 	function V() {
@@ -3076,7 +3076,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function rs(e, t, n, r) {
 		if (e.tag !== 5) throw Error(i(476));
 		var a = is(e).queue;
-		ts(e, a, t, le, n === null ? ns : function() {
+		ts(e, a, t, k, n === null ? ns : function() {
 			return as(e), n(r);
 		});
 	}
@@ -3084,15 +3084,15 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		var t = e.memoizedState;
 		if (t !== null) return t;
 		t = {
-			memoizedState: le,
-			baseState: le,
+			memoizedState: k,
+			baseState: k,
 			baseQueue: null,
 			queue: {
 				pending: null,
 				lanes: 0,
 				dispatch: null,
 				lastRenderedReducer: ho,
-				lastRenderedState: le
+				lastRenderedState: k
 			},
 			next: null
 		};
@@ -3612,26 +3612,26 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			}
 		};
 	}
-	var Os = Ds(!0), ks = Ds(!1), As = fe(null), js = null;
+	var Os = Ds(!0), ks = Ds(!1), As = de(null), js = null;
 	function Ms(e) {
 		var t = e.alternate;
-		k(Is, Is.current & 1), k(As, e), js === null && (t === null || Ba.current !== null || t.memoizedState !== null) && (js = e);
+		A(Is, Is.current & 1), A(As, e), js === null && (t === null || Ba.current !== null || t.memoizedState !== null) && (js = e);
 	}
 	function Ns(e) {
 		if (e.tag === 22) {
-			if (k(Is, Is.current), k(As, e), js === null) {
+			if (A(Is, Is.current), A(As, e), js === null) {
 				var t = e.alternate;
 				t !== null && t.memoizedState !== null && (js = e);
 			}
 		} else Ps(e);
 	}
 	function Ps() {
-		k(Is, Is.current), k(As, As.current);
+		A(Is, Is.current), A(As, As.current);
 	}
 	function Fs(e) {
-		pe(As), js === e && (js = null), pe(Is);
+		fe(As), js === e && (js = null), fe(Is);
 	}
-	var Is = fe(0);
+	var Is = de(0);
 	function Ls(e) {
 		for (var t = e; t !== null;) {
 			if (t.tag === 13) {
@@ -4024,7 +4024,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			}
 			r &= 1;
 		}
-		switch (k(Is, r), i) {
+		switch (A(Is, r), i) {
 			case "forwards":
 				for (n = t.child, i = null; n !== null;) e = n.alternate, e !== null && Ls(e) === null && (i = n), n = n.sibling;
 				n = i, n === null ? (i = t.child, t.child = null) : (i = n.sibling, n.sibling = null), bc(t, !1, i, n, a);
@@ -4065,14 +4065,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function wc(e, t, n) {
 		switch (t.tag) {
 			case 3:
-				A(t, t.stateNode.containerInfo), Wi(t, ra, e.memoizedState.cache), Ri();
+				_e(t, t.stateNode.containerInfo), Wi(t, ra, e.memoizedState.cache), Ri();
 				break;
 			case 27:
 			case 5:
 				j(t);
 				break;
 			case 4:
-				A(t, t.stateNode.containerInfo);
+				_e(t, t.stateNode.containerInfo);
 				break;
 			case 10:
 				Wi(t, t.type, t.memoizedProps.value);
@@ -4088,7 +4088,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					if (r) return xc(e, t, n);
 					t.flags |= 128;
 				}
-				if (i = t.memoizedState, i !== null && (i.rendering = null, i.tail = null, i.lastEffect = null), k(Is, Is.current), r) break;
+				if (i = t.memoizedState, i !== null && (i.rendering = null, i.tail = null, i.lastEffect = null), A(Is, Is.current), r) break;
 				return null;
 			case 22:
 			case 23: return t.lanes = 0, ac(e, t, n);
@@ -4129,7 +4129,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 1: return r = t.type, a = Hs(r, t.pendingProps), uc(e, t, r, a, n);
 			case 3:
 				a: {
-					if (A(t, t.stateNode.containerInfo), e === null) throw Error(i(387));
+					if (_e(t, t.stateNode.containerInfo), e === null) throw Error(i(387));
 					r = t.pendingProps;
 					var o = t.memoizedState;
 					a = o.element, Aa(e, t), La(t, r, null, n);
@@ -4164,12 +4164,12 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					t = t.child;
 				}
 				return t;
-			case 26: return sc(e, t), e === null ? (n = df(t.type, null, t.pendingProps, null)) ? t.memoizedState = n : R || (n = t.type, e = t.pendingProps, r = Ed(ge.current).createElement(n), r[et] = t, r[tt] = e, Sd(r, n, e), pt(r), t.stateNode = r) : t.memoizedState = df(t.type, e.memoizedProps, t.pendingProps, e.memoizedState), null;
-			case 27: return j(t), e === null && R && (r = t.stateNode = qd(t.type, t.pendingProps, ge.current), Ai = t, Mi = !0, a = L, Ld(t.type) ? (Gd = a, L = Wd(r.firstChild)) : L = a), tc(e, t, t.pendingProps.children, n), sc(e, t), e === null && (t.flags |= 4194304), t.child;
+			case 26: return sc(e, t), e === null ? (n = df(t.type, null, t.pendingProps, null)) ? t.memoizedState = n : R || (n = t.type, e = t.pendingProps, r = Ed(he.current).createElement(n), r[et] = t, r[tt] = e, Sd(r, n, e), pt(r), t.stateNode = r) : t.memoizedState = df(t.type, e.memoizedProps, t.pendingProps, e.memoizedState), null;
+			case 27: return j(t), e === null && R && (r = t.stateNode = qd(t.type, t.pendingProps, he.current), Ai = t, Mi = !0, a = L, Ld(t.type) ? (Gd = a, L = Wd(r.firstChild)) : L = a), tc(e, t, t.pendingProps.children, n), sc(e, t), e === null && (t.flags |= 4194304), t.child;
 			case 5: return e === null && R && ((a = r = L) && (r = Bd(r, t.type, t.pendingProps, Mi), r === null ? a = !1 : (t.stateNode = r, Ai = t, L = Wd(r.firstChild), Mi = !1, a = !0)), a || Pi(t)), j(t), a = t.type, o = t.pendingProps, s = e === null ? null : e.memoizedProps, r = o.children, kd(a, o) ? r = null : s !== null && kd(a, s) && (t.flags |= 32), t.memoizedState !== null && (a = to(e, t, io, null, null, n), Ff._currentValue = a), sc(e, t), tc(e, t, r, n), t.child;
 			case 6: return e === null && R && ((e = n = L) && (n = Vd(n, t.pendingProps, Mi), n === null ? e = !1 : (t.stateNode = n, Ai = t, L = null, e = !0)), e || Pi(t)), null;
 			case 13: return hc(e, t, n);
-			case 4: return A(t, t.stateNode.containerInfo), r = t.pendingProps, e === null ? t.child = Os(t, null, r, n) : tc(e, t, r, n), t.child;
+			case 4: return _e(t, t.stateNode.containerInfo), r = t.pendingProps, e === null ? t.child = Os(t, null, r, n) : tc(e, t, r, n), t.child;
 			case 11: return nc(e, t, t.type, t.pendingProps, n);
 			case 7: return tc(e, t, t.pendingProps, n), t.child;
 			case 8: return tc(e, t, t.pendingProps.children, n), t.child;
@@ -4244,7 +4244,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 3: return n = t.stateNode, r = null, e !== null && (r = e.memoizedState.cache), t.memoizedState.cache !== r && (t.flags |= 2048), Gi(ra), ve(), n.pendingContext && (n.context = n.pendingContext, n.pendingContext = null), (e === null || e.child === null) && (Li(t) ? Ec(t) : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, zi())), H(t), null;
 			case 26: return n = t.memoizedState, e === null ? (Ec(t), n === null ? (H(t), t.flags &= -16777217) : (H(t), Dc(t, n))) : n ? n === e.memoizedState ? (H(t), t.flags &= -16777217) : (Ec(t), H(t), Dc(t, n)) : (e.memoizedProps !== r && Ec(t), H(t), t.flags &= -16777217), null;
 			case 27:
-				M(t), n = ge.current;
+				M(t), n = he.current;
 				var a = t.type;
 				if (e !== null && t.stateNode != null) e.memoizedProps !== r && Ec(t);
 				else {
@@ -4252,7 +4252,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						if (t.stateNode === null) throw Error(i(166));
 						return H(t), null;
 					}
-					e = me.current, Li(t) ? Fi(t, e) : (e = qd(a, r, n), t.stateNode = e, Ec(t));
+					e = pe.current, Li(t) ? Fi(t, e) : (e = qd(a, r, n), t.stateNode = e, Ec(t));
 				}
 				return H(t), null;
 			case 5:
@@ -4262,9 +4262,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 						if (t.stateNode === null) throw Error(i(166));
 						return H(t), null;
 					}
-					if (e = me.current, Li(t)) Fi(t, e);
+					if (e = pe.current, Li(t)) Fi(t, e);
 					else {
-						switch (a = Ed(ge.current), e) {
+						switch (a = Ed(he.current), e) {
 							case 1:
 								e = a.createElementNS("http://www.w3.org/2000/svg", n);
 								break;
@@ -4322,7 +4322,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				if (e && t.stateNode != null) e.memoizedProps !== r && Ec(t);
 				else {
 					if (typeof r != "string" && t.stateNode === null) throw Error(i(166));
-					if (e = ge.current, Li(t)) {
+					if (e = he.current, Li(t)) {
 						if (e = t.stateNode, n = t.memoizedProps, r = null, a = Ai, a !== null) switch (a.tag) {
 							case 27:
 							case 5: r = a.memoizedProps;
@@ -4353,14 +4353,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case 4: return ve(), e === null && ld(t.stateNode.containerInfo), H(t), null;
 			case 10: return Gi(t.type), H(t), null;
 			case 19:
-				if (pe(Is), a = t.memoizedState, a === null) return H(t), null;
+				if (fe(Is), a = t.memoizedState, a === null) return H(t), null;
 				if (r = !!(t.flags & 128), o = a.rendering, o === null) {
 					if (r) kc(a, !1);
 					else {
 						if (X !== 0 || e !== null && e.flags & 128) for (e = t.child; e !== null;) {
 							if (o = Ls(e), o !== null) {
 								for (t.flags |= 128, kc(a, !1), e = o.updateQueue, t.updateQueue = e, Oc(t, e), t.subtreeFlags = 0, e = n, n = t.child; n !== null;) fi(n, e), n = n.sibling;
-								return k(Is, Is.current & 1 | 2), t.child;
+								return A(Is, Is.current & 1 | 2), t.child;
 							}
 							e = e.sibling;
 						}
@@ -4374,9 +4374,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					}
 					a.isBackwards ? (o.sibling = t.child, t.child = o) : (e = a.last, e === null ? t.child = o : e.sibling = o, a.last = o);
 				}
-				return a.tail === null ? (H(t), null) : (t = a.tail, a.rendering = t, a.tail = t.sibling, a.renderingStartTime = xe(), t.sibling = null, e = Is.current, k(Is, r ? e & 1 | 2 : e & 1), t);
+				return a.tail === null ? (H(t), null) : (t = a.tail, a.rendering = t, a.tail = t.sibling, a.renderingStartTime = xe(), t.sibling = null, e = Is.current, A(Is, r ? e & 1 | 2 : e & 1), t);
 			case 22:
-			case 23: return Fs(t), Wa(), r = t.memoizedState !== null, e === null ? r && (t.flags |= 8192) : e.memoizedState !== null !== r && (t.flags |= 8192), r ? n & 536870912 && !(t.flags & 128) && (H(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : H(t), n = t.updateQueue, n !== null && Oc(t, n.retryQueue), n = null, e !== null && e.memoizedState !== null && e.memoizedState.cachePool !== null && (n = e.memoizedState.cachePool.pool), r = null, t.memoizedState !== null && t.memoizedState.cachePool !== null && (r = t.memoizedState.cachePool.pool), r !== n && (t.flags |= 2048), e !== null && pe(ma), null;
+			case 23: return Fs(t), Wa(), r = t.memoizedState !== null, e === null ? r && (t.flags |= 8192) : e.memoizedState !== null !== r && (t.flags |= 8192), r ? n & 536870912 && !(t.flags & 128) && (H(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : H(t), n = t.updateQueue, n !== null && Oc(t, n.retryQueue), n = null, e !== null && e.memoizedState !== null && e.memoizedState.cachePool !== null && (n = e.memoizedState.cachePool.pool), r = null, t.memoizedState !== null && t.memoizedState.cachePool !== null && (r = t.memoizedState.cachePool.pool), r !== n && (t.flags |= 2048), e !== null && fe(ma), null;
 			case 24: return n = null, e !== null && (n = e.memoizedState.cache), t.memoizedState.cache !== n && (t.flags |= 2048), Gi(ra), H(t), null;
 			case 25: return null;
 			case 30: return null;
@@ -4396,11 +4396,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					Ri();
 				}
 				return e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
-			case 19: return pe(Is), null;
+			case 19: return fe(Is), null;
 			case 4: return ve(), null;
 			case 10: return Gi(t.type), null;
 			case 22:
-			case 23: return Fs(t), Wa(), e !== null && pe(ma), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
+			case 23: return Fs(t), Wa(), e !== null && fe(ma), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
 			case 24: return Gi(ra), null;
 			case 25: return null;
 			default: return null;
@@ -4423,14 +4423,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				Fs(t);
 				break;
 			case 19:
-				pe(Is);
+				fe(Is);
 				break;
 			case 10:
 				Gi(t.type);
 				break;
 			case 22:
 			case 23:
-				Fs(t), Wa(), e !== null && pe(ma);
+				Fs(t), Wa(), e !== null && fe(ma);
 				break;
 			case 24: Gi(ra);
 		}
@@ -7141,7 +7141,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 	}
 	function df(e, t, n, r) {
-		var a = (a = ge.current) ? Zd(a) : null;
+		var a = (a = he.current) ? Zd(a) : null;
 		if (!a) throw Error(i(446));
 		switch (e) {
 			case "meta":
@@ -7374,8 +7374,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		$$typeof: S,
 		Provider: null,
 		Consumer: null,
-		_currentValue: le,
-		_currentValue2: le,
+		_currentValue: k,
+		_currentValue2: k,
 		_threadCount: 0
 	};
 	function If(e, t, n, r, i, a, o, s) {
@@ -8136,33 +8136,44 @@ function D({ auth: e, setAuth: t }) {
 }
 function O({ active: e, ...t }) {
 	let n = {
-		overview: de,
-		journals: fe,
-		revenue: pe,
-		receivables: k,
-		"bank-close": me,
-		integrations: le,
-		imports: ue,
-		investments: he,
-		"fixed-assets": ge,
-		reports: _e,
-		administration: A
+		overview: ue,
+		journals: de,
+		revenue: fe,
+		receivables: A,
+		"bank-close": pe,
+		integrations: k,
+		imports: le,
+		investments: me,
+		"fixed-assets": he,
+		reports: ge,
+		administration: _e
 	}[e];
 	return /* @__PURE__ */ (0, b.jsx)(n, { ...t });
 }
-function le({ can: e, notify: t }) {
-	let n = E(() => T("/api/integrations/overview"), []), [r, i] = (0, _.useState)(!1), [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)(!1), [l, u] = (0, _.useState)(null), [d, f] = (0, _.useState)(null), [p, m] = (0, _.useState)(!1);
+function k({ can: e, notify: t }) {
+	let n = E(() => T("/api/integrations/overview"), []), [r, i] = (0, _.useState)(!1), [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)(!1), [l, u] = (0, _.useState)(null), [d, f] = (0, _.useState)(null), [p, m] = (0, _.useState)(null), [h, g] = (0, _.useState)(!1);
 	(0, _.useEffect)(() => {
 		!a && n.data?.connections?.length && o(n.data.connections[0].id);
 	}, [n.data, a]);
-	let h = E(() => a ? Promise.all([T(`/api/integrations/connections/${a}/records`), T(`/api/integrations/mappings?connection_id=${a}`)]) : Promise.resolve([[], []]), [a]);
+	let v = E(() => a ? Promise.all([
+		T(`/api/integrations/connections/${a}/records`),
+		T(`/api/integrations/mappings?connection_id=${a}`),
+		T(`/api/integrations/stripe-reconciliation?connection_id=${a}`)
+	]) : Promise.resolve([
+		[],
+		[],
+		{
+			records: [],
+			metrics: {}
+		}
+	]), [a]);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
 		error: n.error,
 		retry: n.refresh
 	});
-	let g = n.data;
-	async function v(e) {
+	let y = n.data;
+	async function ee(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
 		try {
@@ -8189,7 +8200,7 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function y(e, r) {
+	async function x(e, r) {
 		try {
 			await T("/api/integrations/connections/status", {
 				method: "POST",
@@ -8208,7 +8219,7 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function ee(e) {
+	async function C(e) {
 		try {
 			await T("/api/integrations/exceptions/status", {
 				method: "POST",
@@ -8228,7 +8239,7 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function x(e) {
+	async function te(e) {
 		try {
 			await T("/api/jobs/provider-syncs", {
 				method: "POST",
@@ -8247,7 +8258,7 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function C(e) {
+	async function ne(e) {
 		e.preventDefault();
 		let n = new FormData(e.currentTarget), r = n.get("default");
 		try {
@@ -8262,7 +8273,7 @@ function le({ can: e, notify: t }) {
 					required: n.get("required") === "on",
 					...r === "" ? {} : { default: r }
 				}
-			}), c(!1), await h.refresh(), t({
+			}), c(!1), await v.refresh(), t({
 				kind: "success",
 				message: "Versioned mapping activated for future previews."
 			});
@@ -8273,13 +8284,13 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function te(e) {
+	async function re(e) {
 		try {
 			let t = await T(`/api/integrations/records/${e.id}/preview`, {
 				method: "POST",
 				body: {}
 			});
-			u(t), t.ready || await Promise.all([n.refresh(), h.refresh()]);
+			u(t), t.ready || await Promise.all([n.refresh(), v.refresh()]);
 		} catch (e) {
 			t({
 				kind: "error",
@@ -8287,10 +8298,10 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function ne(e) {
+	async function ie(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
-		m(!0);
+		g(!0);
 		try {
 			let e = await T(`/api/integrations/records/${l.record.id}/apply`, {
 				method: "POST",
@@ -8300,7 +8311,7 @@ function le({ can: e, notify: t }) {
 					mapping_fingerprint: l.mapping_fingerprint
 				}
 			});
-			u(null), await Promise.all([n.refresh(), h.refresh()]), t(e.status === "applied" ? {
+			u(null), await Promise.all([n.refresh(), v.refresh()]), t(e.status === "applied" ? {
 				kind: "success",
 				message: `Draft journal ${e.journal.id} created for independent posting review.`
 			} : {
@@ -8313,16 +8324,16 @@ function le({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			m(!1);
+			g(!1);
 		}
 	}
-	async function re(e) {
+	async function ae(e) {
 		try {
 			let t = await T(`/api/integrations/records/${e.id}/bank-preview`, {
 				method: "POST",
 				body: {}
 			});
-			f(t), t.ready || await Promise.all([n.refresh(), h.refresh()]);
+			f(t), t.ready || await Promise.all([n.refresh(), v.refresh()]);
 		} catch (e) {
 			t({
 				kind: "error",
@@ -8330,10 +8341,10 @@ function le({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function ie(e) {
+	async function oe(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
-		m(!0);
+		g(!0);
 		try {
 			let e = await T(`/api/integrations/records/${d.record.id}/bank-apply`, {
 				method: "POST",
@@ -8342,7 +8353,7 @@ function le({ can: e, notify: t }) {
 					approval_note: r.get("approval_note")
 				}
 			});
-			f(null), await Promise.all([n.refresh(), h.refresh()]), t(e.status === "applied" ? {
+			f(null), await Promise.all([n.refresh(), v.refresh()]), t(e.status === "applied" ? {
 				kind: "success",
 				message: e.transaction.status === "matched" ? "Bank activity matched to posted cash with source lineage retained." : `Bank activity entered the ${w(e.transaction.status)} queue.`
 			} : {
@@ -8355,10 +8366,60 @@ function le({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			m(!1);
+			g(!1);
 		}
 	}
-	let [ae, oe] = h.data || [[], []], se = g.connections.find((e) => e.id === a);
+	async function se(e) {
+		try {
+			let t = await T(`/api/integrations/records/${e.id}/stripe-preview`, {
+				method: "POST",
+				body: {}
+			});
+			m(t), t.ready || await Promise.all([n.refresh(), v.refresh()]);
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		}
+	}
+	async function ce(e) {
+		e.preventDefault();
+		let r = new FormData(e.currentTarget);
+		g(!0);
+		try {
+			let e = await T(`/api/integrations/records/${p.record.id}/stripe-apply`, {
+				method: "POST",
+				body: {
+					approved: !0,
+					approval_note: r.get("approval_note"),
+					...r.get("target_entity_id") ? { target_entity_id: r.get("target_entity_id") } : {}
+				}
+			});
+			m(null), await Promise.all([n.refresh(), v.refresh()]), t(e.status === "applied" ? {
+				kind: "success",
+				message: e.reconciliation.status === "component" ? "Stripe payout component retained for net-settlement proof." : "Stripe activity reconciled without creating duplicate accounting."
+			} : {
+				kind: "error",
+				message: "Stripe activity entered the exception queue."
+			});
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		} finally {
+			g(!1);
+		}
+	}
+	let [D, O, k] = v.data || [
+		[],
+		[],
+		{
+			records: [],
+			metrics: {}
+		}
+	], le = y.connections.find((e) => e.id === a);
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
@@ -8376,25 +8437,25 @@ function le({ can: e, notify: t }) {
 				children: [
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Connections",
-						value: g.connections.length,
+						value: y.connections.length,
 						detail: "Configured providers"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Active",
-						value: g.metrics.active_connections,
+						value: y.metrics.active_connections,
 						detail: "Eligible to synchronize"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Provider errors",
-						value: g.metrics.error_connections,
+						value: y.metrics.error_connections,
 						detail: "Connections needing attention",
-						warning: g.metrics.error_connections > 0
+						warning: y.metrics.error_connections > 0
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Exceptions",
-						value: g.metrics.open_exceptions,
+						value: y.metrics.open_exceptions,
 						detail: "Open connector failures",
-						warning: g.metrics.open_exceptions > 0
+						warning: y.metrics.open_exceptions > 0
 					})
 				]
 			}),
@@ -8412,7 +8473,7 @@ function le({ can: e, notify: t }) {
 							"Status",
 							"Action"
 						],
-						rows: g.connections.map((t) => [
+						rows: y.connections.map((t) => [
 							w(t.provider),
 							t.display_name,
 							w(t.environment),
@@ -8422,15 +8483,15 @@ function le({ can: e, notify: t }) {
 								className: "button-row",
 								children: [t.status === "active" && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
 									className: "small-button",
-									onClick: () => x(t),
+									onClick: () => te(t),
 									children: "Sync now"
 								}), e("admin") && (t.status === "configured" || t.status === "paused" || t.status === "error" ? /* @__PURE__ */ (0, b.jsx)("button", {
 									className: "small-button",
-									onClick: () => y(t, "active"),
+									onClick: () => x(t, "active"),
 									children: "Activate"
 								}) : t.status === "active" ? /* @__PURE__ */ (0, b.jsx)("button", {
 									className: "small-button",
-									onClick: () => y(t, "paused"),
+									onClick: () => x(t, "paused"),
 									children: "Pause"
 								}) : null)]
 							})
@@ -8441,7 +8502,7 @@ function le({ can: e, notify: t }) {
 					subtitle: "Approved production-integration targets",
 					children: /* @__PURE__ */ (0, b.jsx)("div", {
 						className: "attention-list",
-						children: g.catalog.map((e) => /* @__PURE__ */ (0, b.jsxs)("div", {
+						children: y.catalog.map((e) => /* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "attention",
 							children: [
 								/* @__PURE__ */ (0, b.jsx)("span", {
@@ -8473,9 +8534,9 @@ function le({ can: e, notify: t }) {
 						"Removed",
 						"Status"
 					],
-					rows: g.runs.map((e) => [
+					rows: y.runs.map((e) => [
 						(/* @__PURE__ */ new Date(`${e.started_at}Z`)).toLocaleString(),
-						g.connections.find((t) => t.id === e.connection_id)?.display_name,
+						y.connections.find((t) => t.id === e.connection_id)?.display_name,
 						w(e.trigger),
 						e.added,
 						e.modified,
@@ -8487,12 +8548,12 @@ function le({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Accounting application workbench",
 				subtitle: "Route provider records into native subledgers or controlled draft journals",
-				action: e("admin") && se ? /* @__PURE__ */ (0, b.jsx)("button", {
+				action: e("admin") && le && !["plaid", "stripe"].includes(le.provider) ? /* @__PURE__ */ (0, b.jsx)("button", {
 					className: "secondary",
 					onClick: () => c(!0),
 					children: "Add mapping"
 				}) : null,
-				children: g.connections.length ? /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsxs)("div", {
+				children: y.connections.length ? /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "workflow-toolbar",
 					children: [/* @__PURE__ */ (0, b.jsx)(I, {
 						label: "Connection",
@@ -8500,11 +8561,11 @@ function le({ can: e, notify: t }) {
 						as: "select",
 						value: a,
 						onChange: (e) => o(e.target.value),
-						options: g.connections.map((e) => [e.id, e.display_name])
-					}), /* @__PURE__ */ (0, b.jsx)("span", { children: se?.provider === "plaid" ? "Plaid bank transactions reconcile to posted cash through the native bank feed" : `${oe.length} active mapping${oe.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals` })]
-				}), h.loading ? /* @__PURE__ */ (0, b.jsx)(Se, {}) : h.error ? /* @__PURE__ */ (0, b.jsx)(we, {
-					error: h.error,
-					retry: h.refresh
+						options: y.connections.map((e) => [e.id, e.display_name])
+					}), /* @__PURE__ */ (0, b.jsx)("span", { children: le?.provider === "plaid" ? "Plaid bank transactions reconcile to posted cash through the native bank feed" : le?.provider === "stripe" ? "Stripe billing and payment objects reconcile to Folio subledgers; payouts prove net settlement through the bank feed" : `${O.length} active mapping${O.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals` })]
+				}), v.loading ? /* @__PURE__ */ (0, b.jsx)(Se, {}) : v.error ? /* @__PURE__ */ (0, b.jsx)(we, {
+					error: v.error,
+					retry: v.refresh
 				}) : /* @__PURE__ */ (0, b.jsx)(P, {
 					caption: "Provider accounting application queue",
 					emptyTitle: "No synchronized records",
@@ -8517,26 +8578,67 @@ function le({ can: e, notify: t }) {
 						"Status",
 						"Action"
 					],
-					rows: ae.map((t) => [
+					rows: D.map((t) => [
 						w(t.object_type),
 						t.external_id,
 						w(t.operation),
-						t.effective_at ? new Date(t.effective_at).toLocaleDateString() : "—",
+						t.effective_at ? t.effective_at.slice(0, 10) : "—",
 						/* @__PURE__ */ (0, b.jsx)(F, { value: t.status }),
-						["staged", "error"].includes(t.status) && e("operate") ? se?.provider === "plaid" && t.object_type === "bank_transaction" ? /* @__PURE__ */ (0, b.jsx)("button", {
+						["staged", "error"].includes(t.status) && e("operate") ? le?.provider === "plaid" && t.object_type === "bank_transaction" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => re(t),
+							onClick: () => ae(t),
 							children: "Review bank feed"
+						}) : le?.provider === "stripe" && t.object_type.startsWith("stripe_") ? /* @__PURE__ */ (0, b.jsx)("button", {
+							className: "small-button",
+							onClick: () => se(t),
+							children: "Reconcile Stripe"
 						}) : /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => te(t),
+							onClick: () => re(t),
 							children: "Review mapping"
-						}) : t.applied_entity_id ? t.applied_entity_type === "bank_feed_transaction" ? "Bank feed applied" : `Draft ${t.applied_entity_id}` : "—"
+						}) : t.applied_entity_id ? t.applied_entity_type === "bank_feed_transaction" ? "Bank feed applied" : t.applied_entity_type === "stripe_reconciliation" ? "Stripe reconciled" : `Draft ${t.applied_entity_id}` : "—"
 					])
 				})] }) : /* @__PURE__ */ (0, b.jsx)(xe, {
 					title: "No connector configured",
 					detail: "Configure a provider connection before building an accounting mapping."
 				})
+			}),
+			le?.provider === "stripe" && /* @__PURE__ */ (0, b.jsxs)(M, {
+				title: "Stripe settlement ledger",
+				subtitle: "Immutable provider versions linked to contracts, AR activity, fees and matched bank deposits",
+				children: [/* @__PURE__ */ (0, b.jsx)("div", {
+					className: "workflow-toolbar",
+					children: /* @__PURE__ */ (0, b.jsxs)("span", { children: [
+						k.metrics?.matched || 0,
+						" matched ·",
+						" ",
+						k.metrics?.components || 0,
+						" payout components ·",
+						" ",
+						k.metrics?.exceptions || 0,
+						" exceptions"
+					] })
+				}), /* @__PURE__ */ (0, b.jsx)(P, {
+					caption: "Stripe reconciliation decisions",
+					emptyTitle: "No reconciled Stripe activity",
+					emptyDetail: "Synchronize Stripe and reconcile staged source versions above.",
+					columns: [
+						"Type",
+						"Stripe ID",
+						"Amount",
+						"Folio target",
+						"Status",
+						"Reviewed by"
+					],
+					rows: k.records.map((e) => [
+						w(e.object_type),
+						e.external_id,
+						Number.isSafeInteger(e.amount_cents) ? S(e.amount_cents) : "—",
+						e.matched_entity_type ? `${w(e.matched_entity_type)} ${e.matched_entity_id}` : e.status === "component" ? `Payout ${e.payout_external_id}` : "—",
+						/* @__PURE__ */ (0, b.jsx)(F, { value: e.status }),
+						e.approved_by
+					])
+				})]
 			}),
 			/* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Integration exception queue",
@@ -8550,15 +8652,15 @@ function le({ can: e, notify: t }) {
 						"Status",
 						"Action"
 					],
-					rows: g.dead_letters.map((t) => [
+					rows: y.dead_letters.map((t) => [
 						(/* @__PURE__ */ new Date(`${t.created_at}Z`)).toLocaleString(),
-						g.connections.find((e) => e.id === t.connection_id)?.display_name,
+						y.connections.find((e) => e.id === t.connection_id)?.display_name,
 						t.error_code,
 						t.error_message,
 						/* @__PURE__ */ (0, b.jsx)(F, { value: t.status }),
 						t.status === "open" && e("operate") ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => ee(t),
+							onClick: () => C(t),
 							children: "Resolve"
 						}) : "—"
 					])
@@ -8570,7 +8672,7 @@ function le({ can: e, notify: t }) {
 				close: () => i(!1),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: v,
+					onSubmit: ee,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "form-grid",
@@ -8578,7 +8680,7 @@ function le({ can: e, notify: t }) {
 								label: "Provider",
 								name: "provider",
 								as: "select",
-								options: g.catalog.map((e) => [e.provider, e.name])
+								options: y.catalog.map((e) => [e.provider, e.name])
 							}), /* @__PURE__ */ (0, b.jsx)(I, {
 								label: "Environment",
 								name: "environment",
@@ -8618,13 +8720,13 @@ function le({ can: e, notify: t }) {
 					]
 				})
 			}),
-			s && se && /* @__PURE__ */ (0, b.jsx)(De, {
+			s && le && /* @__PURE__ */ (0, b.jsx)(De, {
 				title: "Add versioned accounting mapping",
-				subtitle: `Map one ${se.display_name} source field into the controlled journal draft shape.`,
+				subtitle: `Map one ${le.display_name} source field into the controlled journal draft shape.`,
 				close: () => c(!1),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: C,
+					onSubmit: ne,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "form-grid",
@@ -8718,7 +8820,7 @@ function le({ can: e, notify: t }) {
 						}),
 						l.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: ne,
+							onSubmit: ie,
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Approval note",
@@ -8733,7 +8835,7 @@ function le({ can: e, notify: t }) {
 								}),
 								/* @__PURE__ */ (0, b.jsx)(Oe, {
 									close: () => u(null),
-									label: p ? "Applying…" : "Approve and create draft"
+									label: h ? "Applying…" : "Approve and create draft"
 								})
 							]
 						}) : /* @__PURE__ */ (0, b.jsx)("div", {
@@ -8781,7 +8883,7 @@ function le({ can: e, notify: t }) {
 						}),
 						d.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: ie,
+							onSubmit: oe,
 							children: [/* @__PURE__ */ (0, b.jsx)(I, {
 								label: "Reviewer rationale",
 								name: "approval_note",
@@ -8789,8 +8891,8 @@ function le({ can: e, notify: t }) {
 								hint: "Confirm the source version, account binding and effect of a modification or removal."
 							}), /* @__PURE__ */ (0, b.jsx)(Oe, {
 								close: () => f(null),
-								label: p ? "Applying…" : "Apply to bank feed",
-								disabled: p
+								label: h ? "Applying…" : "Apply to bank feed",
+								disabled: h
 							})]
 						}) : /* @__PURE__ */ (0, b.jsx)(Oe, {
 							close: () => f(null),
@@ -8798,11 +8900,73 @@ function le({ can: e, notify: t }) {
 						})
 					]
 				})
+			}),
+			p && /* @__PURE__ */ (0, b.jsx)(De, {
+				title: "Reconcile native Stripe activity",
+				subtitle: `${w(p.record.object_type)} · ${p.record.external_id}`,
+				close: () => m(null),
+				children: /* @__PURE__ */ (0, b.jsxs)("div", {
+					className: "application-review",
+					children: [
+						/* @__PURE__ */ (0, b.jsxs)("div", {
+							className: "source-summary",
+							children: [
+								/* @__PURE__ */ (0, b.jsx)(N, {
+									label: "Operation",
+									value: w(p.record.operation)
+								}),
+								/* @__PURE__ */ (0, b.jsx)(N, {
+									label: "Amount",
+									value: Number.isSafeInteger(p.normalized.amount_cents) ? S(p.normalized.amount_cents) : "—"
+								}),
+								/* @__PURE__ */ (0, b.jsx)(N, {
+									label: "Currency",
+									value: p.normalized.currency?.toUpperCase() || "—"
+								}),
+								/* @__PURE__ */ (0, b.jsx)(N, {
+									label: "Target",
+									value: w(p.target_type)
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, b.jsxs)("div", {
+							className: p.ready ? "control-note" : "control-note warning-note",
+							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: p.ready ? "Ready for controller reconciliation" : "Reconciliation blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: p.ready ? "This records a source-to-subledger decision only. Folio will not create or post a duplicate journal." : p.issues.join(" · ") })]
+						}),
+						p.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
+							className: "form-stack",
+							onSubmit: ce,
+							children: [
+								!["component", "removed"].includes(p.target_type) && /* @__PURE__ */ (0, b.jsx)(I, {
+									label: `Eligible ${w(p.target_type)}`,
+									name: "target_entity_id",
+									as: "select",
+									options: p.candidates.map((e) => [e.id, `${e.label || e.name || e.id}${Number.isSafeInteger(e.amount_cents) ? ` · ${S(e.amount_cents)}` : ""}`])
+								}),
+								/* @__PURE__ */ (0, b.jsx)(I, {
+									label: "Controller rationale",
+									name: "approval_note",
+									as: "textarea",
+									minLength: "5",
+									placeholder: "Document the customer identity, amount, currency and supporting evidence reviewed."
+								}),
+								/* @__PURE__ */ (0, b.jsx)(Oe, {
+									close: () => m(null),
+									label: h ? "Reconciling…" : "Approve reconciliation",
+									disabled: h
+								})
+							]
+						}) : /* @__PURE__ */ (0, b.jsx)(Oe, {
+							close: () => m(null),
+							label: "Close and resolve"
+						})
+					]
+				})
 			})
 		]
 	});
 }
-function ue({ can: e, notify: t }) {
+function le({ can: e, notify: t }) {
 	let [n, r] = (0, _.useState)("open"), [i, a] = (0, _.useState)(1), o = E(() => Promise.all([
 		T("/api/imports/templates"),
 		T("/api/imports/batches"),
@@ -8814,13 +8978,13 @@ function ue({ can: e, notify: t }) {
 		field_key: "name",
 		threshold_percent: "88",
 		active: !0
-	}), [se, ce] = (0, _.useState)(null), [D, O] = (0, _.useState)(""), [le, ue] = (0, _.useState)(null);
+	}), [se, ce] = (0, _.useState)(null), [D, O] = (0, _.useState)(""), [k, le] = (0, _.useState)(null);
 	if (o.loading || s.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (o.error || s.error) return /* @__PURE__ */ (0, b.jsx)(we, {
 		error: o.error || s.error,
 		retry: () => Promise.all([o.refresh(), s.refresh()])
 	});
-	let [de, fe, pe, k, me] = o.data, { items: he, page: ge, open_total: _e } = s.data, A = de.find((e) => e.key === f.template_key) || de[0], ve = k.find((e) => e.id === f.mapping_profile_id), N = ne(f.csv), xe = A.fields.filter((e) => e.required).every((e) => f.mapping[e.key]), Ce = fe.filter((e) => `${e.filename} ${e.template_key} ${e.status}`.toLowerCase().includes(y.trim().toLowerCase())), Ee = m?.mapping_profile_id ? k.find((e) => e.id === m.mapping_profile_id) : null, ke = (de.find((e) => e.key === C.template_key) || de[0]).fields.filter((e) => e.type === "string");
+	let [ue, de, fe, A, pe] = o.data, { items: me, page: he, open_total: ge } = s.data, _e = ue.find((e) => e.key === f.template_key) || ue[0], ve = A.find((e) => e.id === f.mapping_profile_id), N = ne(f.csv), xe = _e.fields.filter((e) => e.required).every((e) => f.mapping[e.key]), Ce = de.filter((e) => `${e.filename} ${e.template_key} ${e.status}`.toLowerCase().includes(y.trim().toLowerCase())), Ee = m?.mapping_profile_id ? A.find((e) => e.id === m.mapping_profile_id) : null, ke = (ue.find((e) => e.key === C.template_key) || ue[0]).fields.filter((e) => e.type === "string");
 	function Ae() {
 		p(te()), d(1), l(!0);
 	}
@@ -8834,7 +8998,7 @@ function ue({ can: e, notify: t }) {
 		p(te(e));
 	}
 	function Ne(e = "customers") {
-		let t = de.find((t) => t.key === e) || de[0], n = me.find((e) => e.template_key === t.key), r = t.fields.filter((e) => e.type === "string");
+		let t = ue.find((t) => t.key === e) || ue[0], n = pe.find((e) => e.template_key === t.key), r = t.fields.filter((e) => e.type === "string");
 		oe({
 			template_key: t.key,
 			field_key: n?.field_key || r[0]?.key || "",
@@ -8883,8 +9047,8 @@ function ue({ can: e, notify: t }) {
 		});
 	}
 	function Ie() {
-		let e = new Blob([`${A.sample_header}\n`], { type: "text/csv;charset=utf-8" }), t = URL.createObjectURL(e), n = document.createElement("a");
-		n.href = t, n.download = `${A.key}-v${A.version}-template.csv`, document.body.append(n), n.click(), n.remove(), URL.revokeObjectURL(t);
+		let e = new Blob([`${_e.sample_header}\n`], { type: "text/csv;charset=utf-8" }), t = URL.createObjectURL(e), n = document.createElement("a");
+		n.href = t, n.download = `${_e.key}-v${_e.version}-template.csv`, document.body.append(n), n.click(), n.remove(), URL.revokeObjectURL(t);
 	}
 	function Le() {
 		if (!f.filename.trim() || !f.csv.trim()) {
@@ -8914,13 +9078,13 @@ function ue({ can: e, notify: t }) {
 			});
 			return;
 		}
-		je({ mapping: re(A, N, f.mapping) }), d(2);
+		je({ mapping: re(_e, N, f.mapping) }), d(2);
 	}
 	function Re(e) {
-		let t = k.find((t) => t.id === e);
+		let t = A.find((t) => t.id === e);
 		je({
 			mapping_profile_id: t?.id || "",
-			mapping: t ? re(A, N, t.mapping) : re(A, N, f.mapping)
+			mapping: t ? re(_e, N, t.mapping) : re(_e, N, f.mapping)
 		});
 	}
 	async function ze(e) {
@@ -8945,11 +9109,11 @@ function ue({ can: e, notify: t }) {
 						options: e
 					}
 				});
-				ue(n), l(!1), t({
+				le(n), l(!1), t({
 					kind: "success",
 					message: "Import source secured and queued for validation. No accounting records were created."
 				});
-				let r = await T(`/api/imports/batches/${(await ae(n.id, ue)).result.batch_id}?page=1&page_size=100`), i = !1, a = "";
+				let r = await T(`/api/imports/batches/${(await ae(n.id, le)).result.batch_id}?page=1&page_size=100`), i = !1, a = "";
 				if (f.mapping_profile_name.trim()) try {
 					await T("/api/imports/mapping-profiles", {
 						method: "POST",
@@ -9029,11 +9193,11 @@ function ue({ can: e, notify: t }) {
 				method: "POST",
 				body: { batch_id: m.id }
 			});
-			ue(n), t({
+			le(n), t({
 				kind: "success",
 				message: "Approved import queued for controlled application."
 			});
-			let r = await T(`/api/imports/batches/${(await ae(n.id, ue)).result.batch_id}?page=1&page_size=100`);
+			let r = await T(`/api/imports/batches/${(await ae(n.id, le)).result.batch_id}?page=1&page_size=100`);
 			h(r), await Promise.all([o.refresh(), s.refresh()]), t({
 				kind: "success",
 				message: `${r.applied_count} validated rows applied with retained lineage.`
@@ -9110,20 +9274,20 @@ function ue({ can: e, notify: t }) {
 					})]
 				})
 			}),
-			le && /* @__PURE__ */ (0, b.jsx)(M, {
+			k && /* @__PURE__ */ (0, b.jsx)(M, {
 				title: "Import processing",
 				subtitle: "Durable work continues if this page closes; retry and failure details remain auditable.",
 				children: /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "review-strip",
 					"aria-live": "polite",
 					children: [/* @__PURE__ */ (0, b.jsx)(be, { items: [
-						["Operation", w(le.kind)],
-						["Status", /* @__PURE__ */ (0, b.jsx)(F, { value: le.status })],
-						["Attempts", `${le.attempts} of ${le.max_attempts}`],
-						["Outcome", le.result?.batch_id ? `Batch ${le.result.batch_id.slice(0, 8)}…` : le.last_error || "Waiting for a worker"]
-					] }), le.status === "completed" && /* @__PURE__ */ (0, b.jsx)("button", {
+						["Operation", w(k.kind)],
+						["Status", /* @__PURE__ */ (0, b.jsx)(F, { value: k.status })],
+						["Attempts", `${k.attempts} of ${k.max_attempts}`],
+						["Outcome", k.result?.batch_id ? `Batch ${k.result.batch_id.slice(0, 8)}…` : k.last_error || "Waiting for a worker"]
+					] }), k.status === "completed" && /* @__PURE__ */ (0, b.jsx)("button", {
 						className: "secondary",
-						onClick: () => ue(null),
+						onClick: () => le(null),
 						children: "Dismiss"
 					})]
 				})
@@ -9133,24 +9297,24 @@ function ue({ can: e, notify: t }) {
 				children: [
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Templates",
-						value: de.length,
+						value: ue.length,
 						detail: "Versioned entity formats"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Staged",
-						value: fe.filter((e) => e.status === "staged").length,
+						value: de.filter((e) => e.status === "staged").length,
 						detail: "Awaiting approval"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Applied rows",
-						value: fe.reduce((e, t) => e + t.applied_count, 0),
+						value: de.reduce((e, t) => e + t.applied_count, 0),
 						detail: "With entity lineage"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(j, {
 						label: "Open exceptions",
-						value: _e,
+						value: ge,
 						detail: "Validation or apply issues",
-						warning: _e > 0
+						warning: ge > 0
 					})
 				]
 			}),
@@ -9169,7 +9333,7 @@ function ue({ can: e, notify: t }) {
 					caption: "Configured duplicate candidate policies",
 					emptyTitle: "Exact-key checks only",
 					emptyDetail: "An administrator can add a fuzzy candidate policy for a text field.",
-					rows: me.map((t) => [
+					rows: pe.map((t) => [
 						w(t.template_key),
 						w(t.field_key),
 						`${t.threshold_percent}% · v${t.version}`,
@@ -9245,7 +9409,7 @@ function ue({ can: e, notify: t }) {
 									["ignored", "Ignored"],
 									["all", "All statuses"]
 								]
-							}), /* @__PURE__ */ (0, b.jsx)("span", { children: ge.total ? `${ge.from}–${ge.to} of ${ge.total}` : "Queue clear" })]
+							}), /* @__PURE__ */ (0, b.jsx)("span", { children: he.total ? `${he.from}–${he.to} of ${he.total}` : "Queue clear" })]
 						}),
 						/* @__PURE__ */ (0, b.jsx)(P, {
 							columns: [
@@ -9259,7 +9423,7 @@ function ue({ can: e, notify: t }) {
 							caption: "Import exception queue",
 							emptyTitle: "No matching exceptions",
 							emptyDetail: "This queue is clear for the selected status.",
-							rows: he.map((t) => [
+							rows: me.map((t) => [
 								w(t.code),
 								/* @__PURE__ */ (0, b.jsx)(F, { value: t.severity }),
 								t.message,
@@ -9278,13 +9442,13 @@ function ue({ can: e, notify: t }) {
 								}) : "—"
 							])
 						}),
-						ge.total_pages > 1 && /* @__PURE__ */ (0, b.jsxs)("nav", {
+						he.total_pages > 1 && /* @__PURE__ */ (0, b.jsxs)("nav", {
 							className: "table-pagination",
 							"aria-label": "Import exception pages",
 							children: [
 								/* @__PURE__ */ (0, b.jsx)("button", {
 									className: "secondary",
-									disabled: ge.page === 1,
+									disabled: he.page === 1,
 									onClick: () => a((e) => e - 1),
 									children: "Previous"
 								}),
@@ -9292,14 +9456,14 @@ function ue({ can: e, notify: t }) {
 									"aria-live": "polite",
 									children: [
 										"Page ",
-										ge.page,
+										he.page,
 										" of ",
-										ge.total_pages
+										he.total_pages
 									]
 								}),
 								/* @__PURE__ */ (0, b.jsx)("button", {
 									className: "secondary",
-									disabled: ge.page === ge.total_pages,
+									disabled: he.page === he.total_pages,
 									onClick: () => a((e) => e + 1),
 									children: "Next"
 								})
@@ -9404,7 +9568,7 @@ function ue({ can: e, notify: t }) {
 							as: "select",
 							value: C.template_key,
 							onChange: (e) => {
-								let t = de.find((t) => t.key === e.target.value), n = me.find((t) => t.template_key === e.target.value), r = t.fields.filter((e) => e.type === "string");
+								let t = ue.find((t) => t.key === e.target.value), n = pe.find((t) => t.template_key === e.target.value), r = t.fields.filter((e) => e.type === "string");
 								oe({
 									template_key: t.key,
 									field_key: n?.field_key || r[0]?.key || "",
@@ -9412,7 +9576,7 @@ function ue({ can: e, notify: t }) {
 									active: n?.active ?? !0
 								});
 							},
-							options: de.filter((e) => e.fields.some((e) => e.type === "string")).map((e) => [e.key, e.name])
+							options: ue.filter((e) => e.fields.some((e) => e.type === "string")).map((e) => [e.key, e.name])
 						}),
 						/* @__PURE__ */ (0, b.jsx)(I, {
 							label: "Text field to compare",
@@ -9513,7 +9677,7 @@ function ue({ can: e, notify: t }) {
 								as: "select",
 								value: f.template_key,
 								onChange: (e) => Me(e.target.value),
-								options: de.map((e) => [e.key, `${e.name} · version ${e.version}`])
+								options: ue.map((e) => [e.key, `${e.name} · version ${e.version}`])
 							}),
 							/* @__PURE__ */ (0, b.jsxs)("div", {
 								className: "template-download",
@@ -9523,12 +9687,12 @@ function ue({ can: e, notify: t }) {
 									onClick: Ie,
 									children: [
 										"Download blank ",
-										A.name.toLowerCase(),
+										_e.name.toLowerCase(),
 										" template"
 									]
 								}), /* @__PURE__ */ (0, b.jsxs)("span", { children: [
 									"CSV headers match template version ",
-									A.version,
+									_e.version,
 									"."
 								] })]
 							}),
@@ -9574,8 +9738,8 @@ function ue({ can: e, notify: t }) {
 										mapping: ie(N, ne(t)) ? f.mapping : {}
 									});
 								},
-								placeholder: `${A.sample_header}\n`,
-								hint: `Choose a file above or paste its contents. Expected fields: ${A.fields.map((e) => e.key).join(", ")}.`
+								placeholder: `${_e.sample_header}\n`,
+								hint: `Choose a file above or paste its contents. Expected fields: ${_e.fields.map((e) => e.key).join(", ")}.`
 							}),
 							f.template_key === "bank_transactions" && /* @__PURE__ */ (0, b.jsxs)("div", {
 								className: "source-options",
@@ -9587,7 +9751,7 @@ function ue({ can: e, notify: t }) {
 										as: "select",
 										value: f.cash_account_id,
 										onChange: (e) => je({ cash_account_id: e.target.value }),
-										options: [["", "Select a cash account"], ...pe.filter((e) => e.type === "asset").map((e) => [e.id, `${e.code} · ${e.name}`])]
+										options: [["", "Select a cash account"], ...fe.filter((e) => e.type === "asset").map((e) => [e.id, `${e.code} · ${e.name}`])]
 									}),
 									/* @__PURE__ */ (0, b.jsxs)("div", {
 										className: "form-grid",
@@ -9643,7 +9807,7 @@ function ue({ can: e, notify: t }) {
 								children: [
 									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Source" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: f.filename })] }),
 									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Detected columns" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: N.length })] }),
-									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Target" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: A.name })] })
+									/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("span", { children: "Target" }), /* @__PURE__ */ (0, b.jsx)("strong", { children: _e.name })] })
 								]
 							}),
 							/* @__PURE__ */ (0, b.jsx)(I, {
@@ -9652,14 +9816,14 @@ function ue({ can: e, notify: t }) {
 								required: !1,
 								defaultValue: "",
 								onChange: (e) => Re(e.target.value),
-								options: [["", "Automatic exact-name mapping"], ...k.filter((e) => e.template_key === f.template_key).map((e) => [e.id, `${e.name} · version ${e.version}`])],
+								options: [["", "Automatic exact-name mapping"], ...A.filter((e) => e.template_key === f.template_key).map((e) => [e.id, `${e.name} · version ${e.version}`])],
 								hint: "Profiles are tenant-scoped and retain their template version."
 							}),
 							/* @__PURE__ */ (0, b.jsx)("div", {
 								className: "mapping-list",
 								role: "group",
 								"aria-label": "Column mappings",
-								children: A.fields.map((e) => /* @__PURE__ */ (0, b.jsxs)("div", {
+								children: _e.fields.map((e) => /* @__PURE__ */ (0, b.jsxs)("div", {
 									className: "mapping-row",
 									children: [
 										/* @__PURE__ */ (0, b.jsxs)("div", { children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: e.label }), /* @__PURE__ */ (0, b.jsxs)("small", { children: [
@@ -9720,7 +9884,7 @@ function ue({ can: e, notify: t }) {
 								className: "review-card",
 								children: /* @__PURE__ */ (0, b.jsx)(be, { items: [
 									["Source file", f.filename],
-									["Template", `${A.name} · v${A.version}`],
+									["Template", `${_e.name} · v${_e.version}`],
 									["Detected columns", N.length],
 									["Mapped fields", Object.values(f.mapping).filter(Boolean).length],
 									["Correction source", f.restaged_from_batch_id ? `${f.correction_source_filename} · ${f.correction_row_count} rows` : "Original source batch"],
@@ -9735,7 +9899,7 @@ function ue({ can: e, notify: t }) {
 									"Source column",
 									"Requirement"
 								],
-								rows: A.fields.map((e) => [
+								rows: _e.fields.map((e) => [
 									e.label,
 									f.mapping[e.key] || "Not mapped",
 									e.required ? "Required" : "Optional"
@@ -9766,7 +9930,7 @@ function ue({ can: e, notify: t }) {
 		]
 	});
 }
-function de() {
+function ue() {
 	let e = E(() => Promise.all([T("/api/dashboard"), T("/api/reconciliation-exceptions")]), []);
 	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (e.error) return /* @__PURE__ */ (0, b.jsx)(we, {
@@ -9844,7 +10008,7 @@ function de() {
 		})]
 	});
 }
-function fe({ can: e, notify: t }) {
+function de({ can: e, notify: t }) {
 	let n = E(() => Promise.all([T("/api/journals"), T("/api/accounts")]), []), [r, i] = (0, _.useState)(!1);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
@@ -9988,7 +10152,7 @@ function fe({ can: e, notify: t }) {
 		]
 	});
 }
-function pe({ can: e, notify: t }) {
+function fe({ can: e, notify: t }) {
 	let n = E(() => T("/api/saas/overview"), []);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
@@ -10073,7 +10237,7 @@ function pe({ can: e, notify: t }) {
 		]
 	});
 }
-function k({ can: e, notify: t }) {
+function A({ can: e, notify: t }) {
 	let n = E(() => Promise.all([T("/api/receivables"), T("/api/saas/overview")]), []), [r, i] = (0, _.useState)(null);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(we, {
@@ -10292,7 +10456,7 @@ function k({ can: e, notify: t }) {
 		]
 	});
 }
-function me({ can: e, notify: t }) {
+function pe({ can: e, notify: t }) {
 	let n = E(() => Promise.all([
 		T("/api/bank-statements"),
 		T("/api/bank-feed"),
@@ -10682,7 +10846,7 @@ function me({ can: e, notify: t }) {
 		]
 	});
 }
-function he() {
+function me() {
 	let e = E(() => T("/api/investments/overview"), []);
 	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (e.error) return /* @__PURE__ */ (0, b.jsx)(we, {
@@ -10746,7 +10910,7 @@ function he() {
 		]
 	});
 }
-function ge() {
+function he() {
 	let e = E(() => T("/api/fixed-assets/overview"), []);
 	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(Se, {});
 	if (e.error) return /* @__PURE__ */ (0, b.jsx)(we, {
@@ -10811,7 +10975,7 @@ function ge() {
 		]
 	});
 }
-function _e({ can: e, notify: t }) {
+function ge({ can: e, notify: t }) {
 	let n = [
 		"trial_balance",
 		"income_statement",
@@ -10954,7 +11118,7 @@ function _e({ can: e, notify: t }) {
 		]
 	});
 }
-function A({ auth: e, setAuth: t, notify: n }) {
+function _e({ auth: e, setAuth: t, notify: n }) {
 	async function r(e) {
 		try {
 			let r = await T("/api/auth/switch-org", {

@@ -634,6 +634,12 @@ async function api(req, res, url, ledger, platform, session, environment) {
       200,
       ledger.integrationMappings(url.searchParams.get("connection_id") || null),
     );
+  if (req.method === "GET" && url.pathname === "/api/integrations/stripe-reconciliation")
+    return json(
+      res,
+      200,
+      ledger.stripeReconciliationOverview(url.searchParams.get("connection_id") || null),
+    );
   const integrationRecordsMatch = url.pathname.match(
     /^\/api\/integrations\/connections\/([^/]+)\/records$/,
   );
@@ -729,6 +735,27 @@ async function api(req, res, url, ledger, platform, session, environment) {
       ledger.applyBankFeedRecord({
         ...(await readJson(req)),
         record_id: bankFeedApplyMatch[1],
+      }),
+    );
+  const stripePreviewMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/stripe-preview$/,
+  );
+  if (req.method === "POST" && stripePreviewMatch)
+    return json(
+      res,
+      200,
+      ledger.previewStripeRecordApplication({ record_id: stripePreviewMatch[1], classify: true }),
+    );
+  const stripeApplyMatch = url.pathname.match(
+    /^\/api\/integrations\/records\/([^/]+)\/stripe-apply$/,
+  );
+  if (req.method === "POST" && stripeApplyMatch)
+    return json(
+      res,
+      200,
+      ledger.applyStripeRecordApplication({
+        ...(await readJson(req)),
+        record_id: stripeApplyMatch[1],
       }),
     );
   if (req.method === "POST" && url.pathname === "/api/integrations/exceptions/status")

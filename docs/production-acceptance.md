@@ -83,6 +83,15 @@ sign-off. Multiple exact candidates require an operator-selected, commit-time-re
 a retained rationale. Tolerance/date-window matching, hosted Plaid Link/token exchange, signed Plaid
 webhooks and credentialed sandbox evidence remain production acceptance gates.
 
+Repository acceptance for Stripe now includes immutable customer, subscription, invoice, credit,
+charge, refund, dispute, balance-transaction and payout source versions; explicit links to existing
+Folio subledger records; identity, amount, currency and lifecycle validation; controller rationale;
+idempotent replay; and non-duplication of journals. Payout synchronization expands fee-bearing balance
+transactions, proves gross less fee equals net and total components equal the payout, then links a paid
+payout to matched bank-feed cash within seven days. An unresolved payout blocks bank-close sign-off.
+OAuth/restricted-key lifecycle, provider sandbox certification, credentialed staging and deployed soak
+remain production acceptance gates.
+
 ## 3. Imports, mappings and exception operations
 
 Repository acceptance now includes versioned tenant fuzzy-match policies for one configured text field,

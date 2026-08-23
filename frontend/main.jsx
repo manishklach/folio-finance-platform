@@ -324,6 +324,7 @@ function Integrations({ can, notify }) {
   const [showMapping, setShowMapping] = useState(false);
   const [applicationPreview, setApplicationPreview] = useState(null);
   const [bankPreview, setBankPreview] = useState(null);
+  const [stripePreview, setStripePreview] = useState(null);
   const [applicationBusy, setApplicationBusy] = useState(false);
   useEffect(() => {
     if (!selectedConnectionId && resource.data?.connections?.length)
@@ -335,8 +336,9 @@ function Integrations({ can, notify }) {
         ? Promise.all([
             api(`/api/integrations/connections/${selectedConnectionId}/records`),
             api(`/api/integrations/mappings?connection_id=${selectedConnectionId}`),
+            api(`/api/integrations/stripe-reconciliation?connection_id=${selectedConnectionId}`),
           ])
-        : Promise.resolve([[], []]),
+        : Promise.resolve([[], [], { records: [], metrics: {} }]),
     [selectedConnectionId],
   );
   if (resource.loading) return <Loading />;
@@ -523,7 +525,61 @@ function Integrations({ can, notify }) {
     }
   }
 
-  const [records, mappings] = workbench.data || [[], []];
+  async function previewStripeApplication(record) {
+    try {
+      const preview = await api(`/api/integrations/records/${record.id}/stripe-preview`, {
+        method: "POST",
+        body: {},
+      });
+      setStripePreview(preview);
+      if (!preview.ready) await Promise.all([resource.refresh(), workbench.refresh()]);
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function approveStripeApplication(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setApplicationBusy(true);
+    try {
+      const result = await api(
+        `/api/integrations/records/${stripePreview.record.id}/stripe-apply`,
+        {
+          method: "POST",
+          body: {
+            approved: true,
+            approval_note: form.get("approval_note"),
+            ...(form.get("target_entity_id")
+              ? { target_entity_id: form.get("target_entity_id") }
+              : {}),
+          },
+        },
+      );
+      setStripePreview(null);
+      await Promise.all([resource.refresh(), workbench.refresh()]);
+      notify(
+        result.status === "applied"
+          ? {
+              kind: "success",
+              message:
+                result.reconciliation.status === "component"
+                  ? "Stripe payout component retained for net-settlement proof."
+                  : "Stripe activity reconciled without creating duplicate accounting.",
+            }
+          : { kind: "error", message: "Stripe activity entered the exception queue." },
+      );
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    } finally {
+      setApplicationBusy(false);
+    }
+  }
+
+  const [records, mappings, stripeReconciliation] = workbench.data || [
+    [],
+    [],
+    { records: [], metrics: {} },
+  ];
   const selectedConnection = value.connections.find((item) => item.id === selectedConnectionId);
 
   return (
@@ -641,7 +697,9 @@ function Integrations({ can, notify }) {
         title="Accounting application workbench"
         subtitle="Route provider records into native subledgers or controlled draft journals"
         action={
-          can("admin") && selectedConnection ? (
+          can("admin") &&
+          selectedConnection &&
+          !["plaid", "stripe"].includes(selectedConnection.provider) ? (
             <button className="secondary" onClick={() => setShowMapping(true)}>
               Add mapping
             </button>
@@ -662,7 +720,9 @@ function Integrations({ can, notify }) {
               <span>
                 {selectedConnection?.provider === "plaid"
                   ? "Plaid bank transactions reconcile to posted cash through the native bank feed"
-                  : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
+                  : selectedConnection?.provider === "stripe"
+                    ? "Stripe billing and payment objects reconcile to Folio subledgers; payouts prove net settlement through the bank feed"
+                    : `${mappings.length} active mapping${mappings.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals`}
               </span>
             </div>
             {workbench.loading ? (
@@ -679,13 +739,21 @@ function Integrations({ can, notify }) {
                   label(item.object_type),
                   item.external_id,
                   label(item.operation),
-                  item.effective_at ? new Date(item.effective_at).toLocaleDateString() : "—",
+                  item.effective_at ? item.effective_at.slice(0, 10) : "—",
                   <Status value={item.status} />,
                   ["staged", "error"].includes(item.status) && can("operate") ? (
                     selectedConnection?.provider === "plaid" &&
                     item.object_type === "bank_transaction" ? (
                       <button className="small-button" onClick={() => previewBankApplication(item)}>
                         Review bank feed
+                      </button>
+                    ) : selectedConnection?.provider === "stripe" &&
+                      item.object_type.startsWith("stripe_") ? (
+                      <button
+                        className="small-button"
+                        onClick={() => previewStripeApplication(item)}
+                      >
+                        Reconcile Stripe
                       </button>
                     ) : (
                       <button className="small-button" onClick={() => previewApplication(item)}>
@@ -695,6 +763,8 @@ function Integrations({ can, notify }) {
                   ) : item.applied_entity_id ? (
                     item.applied_entity_type === "bank_feed_transaction" ? (
                       "Bank feed applied"
+                    ) : item.applied_entity_type === "stripe_reconciliation" ? (
+                      "Stripe reconciled"
                     ) : (
                       `Draft ${item.applied_entity_id}`
                     )
@@ -712,6 +782,38 @@ function Integrations({ can, notify }) {
           />
         )}
       </Panel>
+      {selectedConnection?.provider === "stripe" && (
+        <Panel
+          title="Stripe settlement ledger"
+          subtitle="Immutable provider versions linked to contracts, AR activity, fees and matched bank deposits"
+        >
+          <div className="workflow-toolbar">
+            <span>
+              {stripeReconciliation.metrics?.matched || 0} matched ·{" "}
+              {stripeReconciliation.metrics?.components || 0} payout components ·{" "}
+              {stripeReconciliation.metrics?.exceptions || 0} exceptions
+            </span>
+          </div>
+          <Table
+            caption="Stripe reconciliation decisions"
+            emptyTitle="No reconciled Stripe activity"
+            emptyDetail="Synchronize Stripe and reconcile staged source versions above."
+            columns={["Type", "Stripe ID", "Amount", "Folio target", "Status", "Reviewed by"]}
+            rows={stripeReconciliation.records.map((item) => [
+              label(item.object_type),
+              item.external_id,
+              Number.isSafeInteger(item.amount_cents) ? money(item.amount_cents) : "—",
+              item.matched_entity_type
+                ? `${label(item.matched_entity_type)} ${item.matched_entity_id}`
+                : item.status === "component"
+                  ? `Payout ${item.payout_external_id}`
+                  : "—",
+              <Status value={item.status} />,
+              item.approved_by,
+            ])}
+          />
+        </Panel>
+      )}
       <Panel
         title="Integration exception queue"
         subtitle="Provider failures remain visible until an authorized operator records a disposition"
@@ -966,6 +1068,73 @@ function Integrations({ can, notify }) {
               </form>
             ) : (
               <DialogActions close={() => setBankPreview(null)} label="Close and correct" />
+            )}
+          </div>
+        </Dialog>
+      )}
+      {stripePreview && (
+        <Dialog
+          title="Reconcile native Stripe activity"
+          subtitle={`${label(stripePreview.record.object_type)} · ${stripePreview.record.external_id}`}
+          close={() => setStripePreview(null)}
+        >
+          <div className="application-review">
+            <div className="source-summary">
+              <ReviewValue label="Operation" value={label(stripePreview.record.operation)} />
+              <ReviewValue
+                label="Amount"
+                value={
+                  Number.isSafeInteger(stripePreview.normalized.amount_cents)
+                    ? money(stripePreview.normalized.amount_cents)
+                    : "—"
+                }
+              />
+              <ReviewValue
+                label="Currency"
+                value={stripePreview.normalized.currency?.toUpperCase() || "—"}
+              />
+              <ReviewValue label="Target" value={label(stripePreview.target_type)} />
+            </div>
+            <div className={stripePreview.ready ? "control-note" : "control-note warning-note"}>
+              <strong>
+                {stripePreview.ready
+                  ? "Ready for controller reconciliation"
+                  : "Reconciliation blocked"}
+              </strong>
+              <span>
+                {stripePreview.ready
+                  ? "This records a source-to-subledger decision only. Folio will not create or post a duplicate journal."
+                  : stripePreview.issues.join(" · ")}
+              </span>
+            </div>
+            {stripePreview.ready ? (
+              <form className="form-stack" onSubmit={approveStripeApplication}>
+                {!["component", "removed"].includes(stripePreview.target_type) && (
+                  <Field
+                    label={`Eligible ${label(stripePreview.target_type)}`}
+                    name="target_entity_id"
+                    as="select"
+                    options={stripePreview.candidates.map((item) => [
+                      item.id,
+                      `${item.label || item.name || item.id}${Number.isSafeInteger(item.amount_cents) ? ` · ${money(item.amount_cents)}` : ""}`,
+                    ])}
+                  />
+                )}
+                <Field
+                  label="Controller rationale"
+                  name="approval_note"
+                  as="textarea"
+                  minLength="5"
+                  placeholder="Document the customer identity, amount, currency and supporting evidence reviewed."
+                />
+                <DialogActions
+                  close={() => setStripePreview(null)}
+                  label={applicationBusy ? "Reconciling…" : "Approve reconciliation"}
+                  disabled={applicationBusy}
+                />
+              </form>
+            ) : (
+              <DialogActions close={() => setStripePreview(null)} label="Close and resolve" />
             )}
           </div>
         </Dialog>
