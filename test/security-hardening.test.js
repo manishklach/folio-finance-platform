@@ -57,6 +57,41 @@ test("production origin enforcement requires an exact supplied Origin", () => {
   );
 });
 
+test("first-administrator HTTP setup requires the configured deployment bootstrap token", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "folio-bootstrap-http-"));
+  const token = "test-bootstrap-token-with-at-least-thirty-two-bytes";
+  const app = createFolioServer({
+    platformDbPath: join(directory, "platform.db"),
+    tenantDir: join(directory, "tenants"),
+    environment: { NODE_ENV: "test", BOOTSTRAP_TOKEN: token },
+  });
+  await new Promise((resolve) => app.server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${app.server.address().port}`;
+  t.after(async () => {
+    await new Promise((resolve) => app.close(resolve));
+    rmSync(directory, { recursive: true, force: true });
+  });
+  const body = {
+    organization_name: "Protected organization",
+    name: "First Admin",
+    email: "admin@example.test",
+    password,
+  };
+  const register = (bootstrapToken) =>
+    fetch(`${origin}/api/auth/register`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(bootstrapToken ? { "x-folio-bootstrap-token": bootstrapToken } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  assert.equal((await register()).status, 403);
+  assert.equal((await register("wrong-token")).status, 403);
+  assert.equal((await register(token)).status, 201);
+  assert.equal(app.platform.db.prepare("SELECT COUNT(*) count FROM users").get().count, 1);
+});
+
 test("HTTP boundaries reject ambiguous bodies and sanitize attacker-controlled metadata", async (t) => {
   const directory = mkdtempSync(join(tmpdir(), "folio-http-hardening-"));
   const app = createFolioServer({

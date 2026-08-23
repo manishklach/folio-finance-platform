@@ -49,6 +49,7 @@ Required production secret files:
 | `ALERT_WEBHOOK_URL_FILE`     | On-call webhook consumed directly by Alertmanager | Successful test alert and resolved notification                             |
 | `SENTRY_DSN_FILE`            | Production error project                          | Synthetic captured error without PII                                        |
 | `OPENAI_API_KEY_FILE`        | Optional journal drafting; file may be empty      | Provider rotation record and draft evaluation when enabled                  |
+| `BOOTSTRAP_TOKEN_FILE`       | One-time first-administrator authorization        | Setup event, token rotation/removal decision and named operator record      |
 
 Provider connector references point to the deployment secrets manager and are not Docker secrets in
 this initial adapter-neutral stack. Live adapters must add their secret files and least-privilege
@@ -58,7 +59,8 @@ identities before certification.
 
 Use an immutable registry digest, never `latest` or a mutable tag. The preflight rejects insecure
 cookies, HTTP origins, loopback production binding, mutable images, malformed backup keys, missing
-secret files, a non-HTTPS alert route, or a domain/origin mismatch.
+secret files, a bootstrap token shorter than 32 bytes, a non-HTTPS alert route, or a domain/origin
+mismatch.
 
 ```sh
 export NODE_ENV=production HOST=0.0.0.0 SESSION_COOKIE_SECURE=true
@@ -69,6 +71,7 @@ export BACKUP_ENCRYPTION_KEY_FILE=/secure/folio/backup-key
 export ALERT_WEBHOOK_URL_FILE=/secure/folio/alert-webhook
 export SENTRY_DSN_FILE=/secure/folio/sentry-dsn
 export OPENAI_API_KEY_FILE=/secure/folio/openai-key
+export BOOTSTRAP_TOKEN_FILE=/secure/folio/bootstrap-token
 npm run ops:preflight
 ```
 
@@ -84,8 +87,11 @@ Release procedure:
    `docker compose -f compose.production.yml --profile operations run --rm migrate` against the
    production volume only during the approved window.
 5. Start the pinned release with `docker compose -f compose.production.yml up -d --wait`. Confirm
-   `/livez`, `/readyz`, sign-in, dashboard, a read-only statement, Prometheus targets, Alertmanager,
-   structured logs, and error tracking.
+   `/livez` and `/readyz`. For a new deployment, keep public access restricted, give the bootstrap
+   token to the named setup operator out of band, create the first administrator through the setup
+   screen, confirm the setup route has closed, then rotate the mounted token and record the event.
+   Open approved access and confirm sign-in, dashboard, a read-only statement, Prometheus targets,
+   Alertmanager, structured logs, and error tracking.
 6. Run journal integrity and subledger/GL reconciliation checks, then record the release evidence.
 
 This single-node release has a short controlled restart; it does not claim zero downtime.

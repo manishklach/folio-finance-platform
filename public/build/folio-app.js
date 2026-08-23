@@ -7786,20 +7786,20 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	style: "currency",
 	currency: "USD"
 }).format(e / 100), te = (e) => e ? (/* @__PURE__ */ new Date(`${e}T00:00:00`)).toLocaleDateString() : "—", C = (e = "") => String(e).replaceAll("_", " ");
-async function w(e, { method: t = "GET", body: n, idempotent: r = !0 } = {}) {
-	let i = { Accept: "application/json" };
-	n !== void 0 && (i["Content-Type"] = "application/json"), t !== "GET" && ee && (i["X-CSRF-Token"] = ee), t !== "GET" && r && (i["Idempotency-Key"] = crypto.randomUUID());
-	let a = await fetch(e, {
+async function w(e, { method: t = "GET", body: n, idempotent: r = !0, headers: i } = {}) {
+	let a = { Accept: "application/json" };
+	Object.assign(a, i), n !== void 0 && (a["Content-Type"] = "application/json"), t !== "GET" && ee && (a["X-CSRF-Token"] = ee), t !== "GET" && r && (a["Idempotency-Key"] = crypto.randomUUID());
+	let o = await fetch(e, {
 		method: t,
-		headers: i,
+		headers: a,
 		credentials: "same-origin",
 		...n === void 0 ? {} : { body: JSON.stringify(n) }
-	}), o = await a.json().catch(() => ({}));
-	if (!a.ok) {
-		let e = Error(o.error || "The request could not be completed.");
-		throw e.status = a.status, e.requestId = o.request_id, e;
+	}), s = await o.json().catch(() => ({}));
+	if (!o.ok) {
+		let e = Error(s.error || "The request could not be completed.");
+		throw e.status = o.status, e.requestId = s.request_id, e;
 	}
-	return o.csrf_token && (ee = o.csrf_token), o;
+	return s.csrf_token && (ee = s.csrf_token), s;
 }
 function ne(e, t = []) {
 	let [n, r] = (0, _.useState)({
@@ -7916,6 +7916,7 @@ function ae({ needsSetup: e, onAuthenticated: t }) {
 			t(await w(e ? "/api/auth/register" : "/api/auth/login", {
 				method: "POST",
 				idempotent: !1,
+				headers: e ? { "X-Folio-Bootstrap-Token": i.get("bootstrap_token") } : void 0,
 				body: {
 					email: i.get("email"),
 					password: i.get("password"),
@@ -7965,15 +7966,25 @@ function ae({ needsSetup: e, onAuthenticated: t }) {
 					onSubmit: o,
 					className: "form-stack",
 					children: [
-						e && /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsx)(M, {
-							label: "Organization",
-							name: "organization_name",
-							autoComplete: "organization"
-						}), /* @__PURE__ */ (0, b.jsx)(M, {
-							label: "Your name",
-							name: "name",
-							autoComplete: "name"
-						})] }),
+						e && /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [
+							/* @__PURE__ */ (0, b.jsx)(M, {
+								label: "Organization",
+								name: "organization_name",
+								autoComplete: "organization"
+							}),
+							/* @__PURE__ */ (0, b.jsx)(M, {
+								label: "Your name",
+								name: "name",
+								autoComplete: "name"
+							}),
+							/* @__PURE__ */ (0, b.jsx)(M, {
+								label: "Deployment bootstrap token",
+								name: "bootstrap_token",
+								type: "password",
+								autoComplete: "off",
+								hint: "Provided by the person who deployed Folio. Local development may leave this blank."
+							})
+						] }),
 						/* @__PURE__ */ (0, b.jsx)(M, {
 							label: "Email",
 							name: "email",

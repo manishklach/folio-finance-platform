@@ -133,10 +133,15 @@ cloud/WAF validation, OAuth-provider certification, and independent testing rema
 
 ## Open external validation gates
 
+The repository-grounded threat model is maintained in [`codex-ledger-threat-model.md`](codex-ledger-threat-model.md).
+
 These are evidence gaps, not claims of repository defects:
 
 1. Independent authenticated penetration test across every role and two or more tenants.
-2. Cloud network, DNS, certificate, firewall/WAF, secret-manager, IAM, and log-retention review.
+2. Cloud network, DNS, certificate, firewall/WAF, bootstrap ceremony, secret-manager, IAM, and
+   log-retention review. Repository preflight and the setup API now require a one-time
+   secret-file-backed bootstrap token in production; live network restriction and alert evidence
+   remain deployment gates.
 3. Credentialed provider sandbox tests including genuine OAuth and webhook verification.
 4. Off-host encrypted-backup execution and timed restore/failover exercises.
 5. Load/soak and denial-of-service validation against the deployed topology.

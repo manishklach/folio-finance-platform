@@ -11,7 +11,11 @@ import { runWithRequestContext } from "./lib/request-context.js";
 import { financialReport, reportCsv, reportPdf } from "./lib/reports.js";
 import * as Sentry from "@sentry/node";
 import { secret } from "./lib/secrets.js";
-import { validateBrowserOrigin, validateProductionConfig } from "./lib/runtime-config.js";
+import {
+  validateBootstrapRequest,
+  validateBrowserOrigin,
+  validateProductionConfig,
+} from "./lib/runtime-config.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -39,6 +43,7 @@ const idempotentRoutes = new Set([
 ]);
 
 export function createFolioServer(options = {}) {
+  const environment = options.environment || process.env;
   const platform =
     options.platform ||
     createPlatform(
@@ -81,7 +86,7 @@ export function createFolioServer(options = {}) {
       if (url.pathname.startsWith("/webhooks/"))
         return await webhook(req, res, url, platform, ledgers, requestId);
       if (url.pathname.startsWith("/api/"))
-        return await apiRequest(req, res, url, platform, ledgers, requestId);
+        return await apiRequest(req, res, url, platform, ledgers, requestId, environment);
       return await staticFile(res, url.pathname);
     } catch (error) {
       metrics.errors += 1;
@@ -152,7 +157,7 @@ export function createFolioServer(options = {}) {
   return { server, platform, ledgers, runtime, close };
 }
 
-async function apiRequest(req, res, url, platform, ledgers, requestId) {
+async function apiRequest(req, res, url, platform, ledgers, requestId, environment) {
   if (stateMethods.has(req.method)) validateBrowserOrigin(req.headers);
   const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
   if (
@@ -160,6 +165,8 @@ async function apiRequest(req, res, url, platform, ledgers, requestId) {
     url.pathname === "/api/auth/register" &&
     platform.status().needs_setup
   ) {
+    if (!validateBootstrapRequest(req.headers, environment))
+      throw problem("Invalid deployment bootstrap token", 403);
     const body = await readJson(req);
     const result = await platform.setup(
       {

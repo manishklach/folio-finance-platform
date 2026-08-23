@@ -147,6 +147,8 @@ npm run dev
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the architecture, accounting invariants, and change
 workflow. See [`ROADMAP.md`](ROADMAP.md) for the ordered path from this engineering MVP to a
 production financial system. The completed engineering matrix and remaining independent launch gates are in [`docs/production-readiness.md`](docs/production-readiness.md), [`docs/security-and-compliance.md`](docs/security-and-compliance.md), and the evidence-based [`docs/security-best-practices-report.md`](docs/security-best-practices-report.md).
+The repository-grounded trust boundaries, attacker model, abuse paths and prioritized mitigations are
+in [`docs/codex-ledger-threat-model.md`](docs/codex-ledger-threat-model.md).
 
 Operational commands include `npm run migrate`, `npm run migrate:rehearse`, `npm run backup`,
 `npm run restore -- --source=<backup> --target=<empty-directory>`, `npm run ops:preflight`,
@@ -156,6 +158,8 @@ and `npm run privacy -- export|delete ...`.
 The single-node TLS/container topology, production preflight, Prometheus/Alertmanager rules, encrypted
 backup and restore drills, release/rollback steps, SLOs and remaining external operations gates are in
 [`docs/production-operations.md`](docs/production-operations.md).
+Production first-administrator setup requires a secret-manager-mounted, 32-byte-or-longer bootstrap
+token entered once in the setup screen; local development may omit it.
 Platform upgrade, drift detection, rollback, and interrupted-migration guarantees are documented in
 [`docs/migration-assurance.md`](docs/migration-assurance.md).
 The qualified-accountant review pack, finding lifecycle and machine-enforced evidence gate are in

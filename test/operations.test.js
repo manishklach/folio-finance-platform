@@ -9,7 +9,7 @@ import { createBackup, restoreBackup } from "../lib/backup.js";
 import { createLedger } from "../lib/db.js";
 import { createPlatform } from "../lib/platform.js";
 import { validateOperationsConfig } from "../lib/operations-config.js";
-import { validateBrowserOrigin } from "../lib/runtime-config.js";
+import { validateBootstrapRequest, validateBrowserOrigin } from "../lib/runtime-config.js";
 import { createFolioServer, validateProductionConfig } from "../server.js";
 
 test("encrypted backup and restore authenticate files, rebase tenant paths, and emit drill evidence", async (t) => {
@@ -122,7 +122,11 @@ test("liveness, dependency readiness, bounded Prometheus labels, and shutdown re
   assert.equal((await fetch(`${origin}/readyz`)).status, 503);
 });
 
-test("production startup fails closed without HTTPS, secure cookies, or a safe bind address", () => {
+test("production startup fails closed without HTTPS, secure cookies, a safe bind, or bootstrap secret", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "folio-runtime-config-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bootstrap = join(root, "bootstrap-token");
+  writeFileSync(bootstrap, randomBytes(32).toString("base64"));
   assert.throws(
     () => validateProductionConfig({ NODE_ENV: "production", PUBLIC_ORIGIN: "https://folio.test" }),
     /SESSION_COOKIE_SECURE/,
@@ -153,8 +157,23 @@ test("production startup fails closed without HTTPS, secure cookies, or a safe b
       PUBLIC_ORIGIN: "https://folio.test",
       HOST: "0.0.0.0",
       PORT: "4310",
+      BOOTSTRAP_TOKEN_FILE: bootstrap,
     }),
     true,
+  );
+  assert.equal(
+    validateBootstrapRequest(
+      { "x-folio-bootstrap-token": readFileSync(bootstrap, "utf8") },
+      { NODE_ENV: "production", BOOTSTRAP_TOKEN_FILE: bootstrap },
+    ),
+    true,
+  );
+  assert.equal(
+    validateBootstrapRequest(
+      { "x-folio-bootstrap-token": "incorrect-token-that-is-definitely-long-enough" },
+      { NODE_ENV: "production", BOOTSTRAP_TOKEN_FILE: bootstrap },
+    ),
+    false,
   );
 });
 
@@ -166,11 +185,13 @@ test("production preflight requires immutable images, mounted secrets, encryptio
     alert: join(root, "alert-url"),
     sentry: join(root, "sentry-dsn"),
     openai: join(root, "openai-key"),
+    bootstrap: join(root, "bootstrap-token"),
   };
   writeFileSync(paths.backup, randomBytes(32).toString("base64"));
   writeFileSync(paths.alert, "https://alerts.example.test/folio");
   writeFileSync(paths.sentry, "https://public@example.test/1");
   writeFileSync(paths.openai, "");
+  writeFileSync(paths.bootstrap, randomBytes(32).toString("base64"));
   const environment = {
     NODE_ENV: "production",
     HOST: "0.0.0.0",
@@ -184,6 +205,7 @@ test("production preflight requires immutable images, mounted secrets, encryptio
     ALERT_WEBHOOK_URL_FILE: paths.alert,
     SENTRY_DSN_FILE: paths.sentry,
     OPENAI_API_KEY_FILE: paths.openai,
+    BOOTSTRAP_TOKEN_FILE: paths.bootstrap,
   };
   assert.equal(validateOperationsConfig(environment).status, "ready");
   assert.throws(

@@ -9,8 +9,9 @@ const money = (value = 0) =>
 const date = (value) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString() : "—");
 const label = (value = "") => String(value).replaceAll("_", " ");
 
-async function api(path, { method = "GET", body, idempotent = true } = {}) {
+async function api(path, { method = "GET", body, idempotent = true, headers: extraHeaders } = {}) {
   const headers = { Accept: "application/json" };
+  Object.assign(headers, extraHeaders);
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
   if (method !== "GET" && idempotent) headers["Idempotency-Key"] = crypto.randomUUID();
@@ -92,6 +93,9 @@ function AuthScreen({ needsSetup, onAuthenticated }) {
         await api(needsSetup ? "/api/auth/register" : "/api/auth/login", {
           method: "POST",
           idempotent: false,
+          headers: needsSetup
+            ? { "X-Folio-Bootstrap-Token": form.get("bootstrap_token") }
+            : undefined,
           body: {
             email: form.get("email"),
             password: form.get("password"),
@@ -130,6 +134,13 @@ function AuthScreen({ needsSetup, onAuthenticated }) {
             <>
               <Field label="Organization" name="organization_name" autoComplete="organization" />
               <Field label="Your name" name="name" autoComplete="name" />
+              <Field
+                label="Deployment bootstrap token"
+                name="bootstrap_token"
+                type="password"
+                autoComplete="off"
+                hint="Provided by the person who deployed Folio. Local development may leave this blank."
+              />
             </>
           )}
           <Field label="Email" name="email" type="email" autoComplete="email" />

@@ -22,11 +22,13 @@ services:
       ATTACHMENT_DIR: /var/lib/folio/attachments
       SENTRY_DSN_FILE: /run/secrets/sentry_dsn
       OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
       AI_MONTHLY_DRAFT_LIMIT: ${AI_MONTHLY_DRAFT_LIMIT:-200}
       SHUTDOWN_TIMEOUT_MS: 20000
     secrets:
       - sentry_dsn
       - openai_api_key
+      - bootstrap_token
     volumes:
       - folio_data:/var/lib/folio
       - folio_attachments:/var/lib/folio/attachments
@@ -164,6 +166,8 @@ volumes:
   alertmanager_data: {}
 
 secrets:
+  bootstrap_token:
+    file: ${BOOTSTRAP_TOKEN_FILE:?Set BOOTSTRAP_TOKEN_FILE}
   alert_webhook_url:
     file: ${ALERT_WEBHOOK_URL_FILE:?Set ALERT_WEBHOOK_URL_FILE}
   backup_encryption_key:
