@@ -19,6 +19,14 @@ into place. The API checks both job tenancy and artifact-root containment before
 jobs resolve the connection inside that tenant ledger and use the existing provider adapter,
 credential reference, cursor, source-record staging, and integration-exception semantics.
 
+Report artifacts receive a deletion deadline when the worker completes the job. The worker sweeps
+expired artifacts on startup and periodically thereafter, rejects paths or symbolic links outside the
+configured root, removes the file, clears its download metadata, and records
+`background_job_artifact_deleted` in the platform audit log. Configure the policy with
+`JOB_ARTIFACT_RETENTION_DAYS` (1–3,650; default 30) and the sweep interval with
+`JOB_ARTIFACT_SWEEP_MINUTES` (1–1,440; default 60). A missing file is treated as an idempotent purge;
+the database evidence is still finalized.
+
 Run a worker with:
 
 ```sh
@@ -47,5 +55,5 @@ stage/apply and the compatibility `/api/reports/*.(csv|pdf)` endpoints remain sy
 admission limits. The queue is backed by the single platform SQLite writer; horizontal worker scale
 and regional failover require the production-database migration described in ADR-001. Job artifacts
 are derived but contain financial information: the deployment owner must define retention, encrypted
-storage, backup/exclusion, and defensible deletion. Automatic artifact retention deletion is not
-implemented in this release.
+storage, and backup/exclusion policy. Folio enforces the configured application-level expiry, while
+storage snapshots and backups must independently honor the approved retention schedule.

@@ -34,8 +34,16 @@ test("oldest supported platform schema upgrades, rolls back, and re-upgrades wit
   );
   db.prepare("INSERT INTO memberships(user_id,org_id,role) VALUES(?,?,'admin')").run(userId, orgId);
 
-  assert.deepEqual(migratePlatform(db), [2, 3, 4, 5]);
+  assert.deepEqual(migratePlatform(db), [2, 3, 4, 5, 6]);
   assert.equal(db.prepare("SELECT name FROM users WHERE id=?").get(userId).name, "controller");
+  assert.deepEqual(migratePlatform(db, "down"), [6]);
+  assert.equal(
+    db
+      .prepare("PRAGMA table_info(background_jobs)")
+      .all()
+      .some(({ name }) => name === "artifact_expires_at"),
+    false,
+  );
   assert.deepEqual(migratePlatform(db, "down"), [5]);
   assert.equal(
     db
@@ -60,7 +68,7 @@ test("oldest supported platform schema upgrades, rolls back, and re-upgrades wit
       .some(({ name }) => name === "name"),
     false,
   );
-  assert.deepEqual(migratePlatform(db), [3, 4, 5]);
+  assert.deepEqual(migratePlatform(db), [3, 4, 5, 6]);
   assert.equal(
     db.prepare("SELECT email FROM users WHERE id=?").get(userId).email,
     "controller@example.test",
@@ -89,7 +97,7 @@ test("failed platform migration is atomic and can be resumed", () => {
     "CREATE TRIGGER simulate_migration_interruption BEFORE UPDATE ON users BEGIN SELECT RAISE(ABORT,'simulated interruption'); END",
   );
   assert.throws(() => migratePlatform(db), /simulated interruption/);
-  assert.deepEqual(platformMigrationStatus(db).pending, [3, 4, 5]);
+  assert.deepEqual(platformMigrationStatus(db).pending, [3, 4, 5, 6]);
   assert.equal(
     db
       .prepare("PRAGMA table_info(users)")
@@ -98,7 +106,7 @@ test("failed platform migration is atomic and can be resumed", () => {
     false,
   );
   db.exec("DROP TRIGGER simulate_migration_interruption");
-  assert.deepEqual(migratePlatform(db), [3, 4, 5]);
+  assert.deepEqual(migratePlatform(db), [3, 4, 5, 6]);
   assert.equal(db.prepare("SELECT name FROM users WHERE id=?").get(userId).name, "interrupted");
   db.close();
 });

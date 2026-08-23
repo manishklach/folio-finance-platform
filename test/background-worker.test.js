@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { processNextBackgroundJob } from "../lib/background-worker.js";
+import { processNextBackgroundJob, purgeExpiredJobArtifacts } from "../lib/background-worker.js";
 import { createLedger } from "../lib/db.js";
 import { createPlatform } from "../lib/platform.js";
 import { createFolioServer } from "../server.js";
@@ -72,6 +72,29 @@ test("durable report jobs are idempotent, tenant-bound, leased, and artifact-bac
     recovered.job.status,
     "completed",
     "a renamed artifact is reusable after lease recovery",
+  );
+  const recoveredInternal = platform.backgroundJob(queued.id, setup.session.org_id, {
+    internal: true,
+  });
+  assert.ok(recoveredInternal.artifact_expires_at);
+  platform.db
+    .prepare(
+      "UPDATE background_jobs SET artifact_expires_at=datetime('now','-1 second') WHERE id=?",
+    )
+    .run(queued.id);
+  assert.deepEqual(purgeExpiredJobArtifacts(platform, artifactDir), {
+    candidates: 1,
+    deleted: 1,
+  });
+  assert.equal(existsSync(recoveredInternal.artifact_path), false);
+  const purged = platform.backgroundJob(queued.id, setup.session.org_id);
+  assert.equal(purged.has_artifact, false);
+  assert.ok(purged.artifact_deleted_at);
+  assert.equal(
+    platform.db
+      .prepare("SELECT action FROM platform_audit WHERE action='background_job_artifact_deleted'")
+      .get().action,
+    "background_job_artifact_deleted",
   );
 });
 

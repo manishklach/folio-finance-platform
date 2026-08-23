@@ -182,8 +182,10 @@ rows or manufacture a successful result directly in SQLite.
 Provider secret files and their reference environment variables must be mounted into both the API and
 background-worker services through the environment-specific deployment overlay. Record a sandbox
 provider pull and a generated report download in release evidence. `JOB_ARTIFACT_DIR` contains
-sensitive derived financial statements; set an approved retention schedule and encrypted volume or
-object-storage policy before live use. Automatic artifact expiry is not implemented. See
+sensitive derived financial statements; set `JOB_ARTIFACT_RETENTION_DAYS` to the approved schedule
+and use an encrypted volume or object-storage policy before live use. The background worker deletes
+expired live artifacts and audits deletion, but backup/snapshot expiry remains an infrastructure
+responsibility. See
 [`background-jobs.md`](background-jobs.md) for lifecycle and scope.
 
 ## Backup, recovery, and support schedule
