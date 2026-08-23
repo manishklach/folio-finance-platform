@@ -368,6 +368,87 @@ async function api(req, res, url, ledger, platform, session) {
     return json(res, 201, ledger.transitionInvestmentModel(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/investments/credit-losses")
     return json(res, 201, ledger.assessInvestmentCreditLoss(await readJson(req)));
+  if (req.method === "GET" && url.pathname === "/api/fixed-assets/overview")
+    return json(res, 200, ledger.fixedAssetsOverview(url.searchParams.get("as_of") || today()));
+  if (req.method === "GET" && url.pathname === "/api/fixed-assets")
+    return json(res, 200, ledger.listFixedAssets());
+  if (req.method === "GET" && url.pathname === "/api/fixed-assets/classes")
+    return json(res, 200, ledger.fixedAssetClasses());
+  if (req.method === "GET" && url.pathname === "/api/fixed-assets/disclosures")
+    return json(
+      res,
+      200,
+      ledger.fixedAssetDisclosures(
+        url.searchParams.get("as_of") || today(),
+        url.searchParams.get("from") || "0000-01-01",
+      ),
+    );
+  if (req.method === "GET" && url.pathname === "/api/fixed-assets/reconciliation")
+    return json(
+      res,
+      200,
+      ledger.fixedAssetReconciliation(url.searchParams.get("as_of") || today()),
+    );
+  if (req.method === "GET" && url.pathname === "/api/fixed-assets/cip")
+    return json(res, 200, ledger.cipProjects());
+  const fixedAssetMatch = url.pathname.match(/^\/api\/fixed-assets\/(\d+)$/);
+  if (req.method === "GET" && fixedAssetMatch)
+    return json(res, 200, ledger.fixedAsset(Number(fixedAssetMatch[1])));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/policies")
+    return json(res, 201, ledger.setFixedAssetPolicy(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/classes")
+    return json(res, 201, ledger.createFixedAssetClass(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets")
+    return json(res, 201, ledger.acquireFixedAsset(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/place-in-service")
+    return json(res, 200, ledger.placeAssetInService(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/depreciation/recognize")
+    return json(res, 200, ledger.recognizeDepreciationThrough((await readJson(req)).as_of));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/usage")
+    return json(res, 201, ledger.recordAssetUsage(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/estimate-changes")
+    return json(res, 201, ledger.changeFixedAssetEstimate(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/improvements")
+    return json(res, 201, ledger.addFixedAssetImprovement(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/transfers")
+    return json(res, 201, ledger.transferFixedAsset(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/cip")
+    return json(res, 201, ledger.createCipProject(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/cip/costs")
+    return json(res, 201, ledger.addCipCost(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/cip/interest")
+    return json(res, 201, ledger.capitalizeCipInterest(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/cip/status")
+    return json(res, 200, ledger.setCipStatus(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/cip/place-in-service")
+    return json(res, 201, ledger.placeCipInService(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/cip/abandon")
+    return json(res, 200, ledger.abandonCipProject(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/impairments")
+    return json(res, 201, ledger.assessFixedAssetImpairment(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/held-for-sale/remeasure")
+    return json(res, 201, ledger.remeasureHeldForSale(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/held-for-sale/return-to-use")
+    return json(res, 201, ledger.returnAssetToHeldAndUsed(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/disposals")
+    return json(res, 201, ledger.disposeFixedAsset(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/retirement-obligations")
+    return json(res, 201, ledger.recognizeAssetRetirementObligation(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/retirement-obligations/accrete")
+    return json(res, 200, ledger.recognizeAroAccretionThrough((await readJson(req)).as_of));
+  if (
+    req.method === "POST" &&
+    url.pathname === "/api/fixed-assets/retirement-obligations/remeasure"
+  )
+    return json(res, 200, ledger.remeasureAssetRetirementObligation(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/retirement-obligations/settle")
+    return json(res, 200, ledger.settleAssetRetirementObligation(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/inventory-counts")
+    return json(res, 201, ledger.startFixedAssetInventoryCount(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/inventory-observations")
+    return json(res, 201, ledger.observeFixedAsset(await readJson(req)));
+  if (req.method === "POST" && url.pathname === "/api/fixed-assets/inventory-counts/complete")
+    return json(res, 200, ledger.completeFixedAssetInventoryCount(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/gaap/policies")
     return json(res, 201, ledger.setGaapPolicy(await readJson(req)));
   if (req.method === "POST" && url.pathname === "/api/gaap/assessments")

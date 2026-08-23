@@ -64,6 +64,18 @@ A working accounting-system MVP built around a deterministic double-entry ledger
 
 The detailed classification matrix, system flow, API inventory, and scope boundaries are in [`docs/investments.md`](docs/investments.md).
 
+### Fixed assets
+
+- Separate PP&E class, asset/component, depreciation, CIP, ARO, inventory-count, and transaction subledger
+- Effective capitalization thresholds, below-threshold expense treatment, direct acquisitions, and placed-in-service controls
+- Straight-line, declining-balance, double-declining and units-of-production depreciation with exact-cent conventions
+- Prospective life/method/residual changes, capital improvements, class/location/custody transfers, and versioned schedules
+- ASC 360 held-and-used impairment, held-for-sale measurement/recovery, return to use, and full/partial disposals
+- ASC 835-20 qualifying CIP interest and ASC 410 ARO recognition, accretion, remeasurement, and settlement
+- Physical counts, PP&E/accumulated-depreciation/CIP/ARO reconciliation, rollforwards, disclosures, APIs and UI
+
+The detailed fixed-assets matrix, lifecycle flowchart, API inventory, and scope boundaries are in [`docs/fixed-assets.md`](docs/fixed-assets.md).
+
 The exact supported and excluded scope is maintained in [`docs/gaap-coverage-matrix.md`](docs/gaap-coverage-matrix.md). The complete processing and close flow is illustrated in [`docs/gaap-system-flow.md`](docs/gaap-system-flow.md), and request contracts are in [`docs/gaap-api.md`](docs/gaap-api.md).
 
 AI suggestions never post automatically. The server validates account IDs, amount shape, and debit/credit equality before saving a draft, then validates again before posting.
@@ -118,7 +130,7 @@ Operational commands include `npm run migrate`, `npm run backup`, `npm run resto
 npm test
 ```
 
-The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, leases, stock compensation, tax provisions, credit losses, contingencies, fair value, debt, classification, business combinations, VIEs, EPS, OCI, investments, effective yield, AFS OCI, equity method, proportional amortization, reporting cutoffs, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals.
+The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, leases, stock compensation, tax provisions, credit losses, contingencies, fair value, debt, classification, business combinations, VIEs, EPS, OCI, investments, fixed assets, depreciation, CIP, impairment, AROs, physical counts, reporting cutoffs, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals.
 
 ## Receivables API
 

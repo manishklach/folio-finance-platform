@@ -63,6 +63,27 @@ test("API enforces authentication, roles, CSRF, and tenant isolation", async (t)
   assert.equal(investment.response.status, 201);
   const investments = await call(origin, "/api/investments/overview", null, admin);
   assert.equal(investments.body.instruments[0].instrument_number, "API-EQ-1");
+  const fixedAsset = await call(
+    origin,
+    "/api/fixed-assets",
+    {
+      asset_number: "API-FA-1",
+      class_code: "COMPUTER",
+      description: "API server equipment",
+      acquisition_date: "2026-08-22",
+      placed_in_service_date: "2026-08-22",
+      cost_cents: 500000,
+      useful_life_months: 36,
+      depreciation_method: "straight_line",
+      depreciation_convention: "full_month",
+      qualifying_ppe: true,
+      policy_basis: "Invoice and receiving evidence support capitalization under the PP&E policy.",
+    },
+    admin,
+  );
+  assert.equal(fixedAsset.response.status, 201);
+  const fixedAssets = await call(origin, "/api/fixed-assets/overview", null, admin);
+  assert.equal(fixedAssets.body.assets[0].asset_number, "API-FA-1");
   assert.equal(
     (
       await call(

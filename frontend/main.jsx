@@ -11,6 +11,7 @@ const modules = {
   "Close & Controls": "/api/reconciliation-exceptions",
   "GAAP Compliance": "/api/gaap/overview",
   Investments: "/api/investments/overview",
+  "Fixed Assets": "/api/fixed-assets/overview",
   "Admin & Users": "/api/ai/history",
 };
 
@@ -45,6 +46,7 @@ function App() {
         "Reports",
         "GAAP Compliance",
         "Investments",
+        "Fixed Assets",
       ].includes(name),
   );
   return (

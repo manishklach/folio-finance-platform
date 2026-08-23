@@ -7791,6 +7791,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	"Close & Controls": "/api/reconciliation-exceptions",
 	"GAAP Compliance": "/api/gaap/overview",
 	Investments: "/api/investments/overview",
+	"Fixed Assets": "/api/fixed-assets/overview",
 	"Admin & Users": "/api/ai/history"
 };
 function x() {
@@ -7811,7 +7812,8 @@ function x() {
 		"Receivables & Collections",
 		"Reports",
 		"GAAP Compliance",
-		"Investments"
+		"Investments",
+		"Fixed Assets"
 	].includes(t));
 	return /* @__PURE__ */ (0, b.jsxs)("section", {
 		className: "module-console",
