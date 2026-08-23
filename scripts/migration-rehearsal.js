@@ -37,16 +37,16 @@ try {
     throw error;
   }
 
-  assert.deepEqual(migratePlatform(db), [2, 3]);
+  assert.deepEqual(migratePlatform(db), [2, 3, 4]);
   assert.equal(db.prepare("SELECT COUNT(*) count FROM users WHERE name='' ").get().count, 0);
   assert.equal(db.prepare("PRAGMA integrity_check").get().integrity_check, "ok");
-  assert.deepEqual(migratePlatform(db, "down"), [3]);
-  assert.deepEqual(migratePlatform(db), [3]);
+  assert.deepEqual(migratePlatform(db, "down"), [4]);
+  assert.deepEqual(migratePlatform(db), [4]);
   const status = platformMigrationStatus(db);
   assert.equal(status.valid, true);
   assert.deepEqual(status.pending, []);
   process.stdout.write(
-    `${JSON.stringify({ database: "temporary", oldest_supported: 1, target: status.latest, rows: volume, rollback_reapplied: 3, integrity: "ok" })}\n`,
+    `${JSON.stringify({ database: "temporary", oldest_supported: 1, target: status.latest, rows: volume, rollback_reapplied: 4, integrity: "ok" })}\n`,
   );
 } finally {
   db.close();

@@ -69,6 +69,31 @@ services:
       folio:
         condition: service_healthy
 
+  webhook-worker:
+    image: ${FOLIO_IMAGE:-folio:local}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    stop_grace_period: 30s
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      NODE_ENV: production
+      PLATFORM_DB_PATH: /var/lib/folio/platform.db
+      TENANT_DB_DIR: /var/lib/folio/tenants
+      WEBHOOK_WORKER_POLL_MS: ${WEBHOOK_WORKER_POLL_MS:-1000}
+      WEBHOOK_WORKER_LEASE_SECONDS: ${WEBHOOK_WORKER_LEASE_SECONDS:-60}
+      WEBHOOK_WORKER_MAX_ATTEMPTS: ${WEBHOOK_WORKER_MAX_ATTEMPTS:-8}
+    volumes:
+      - folio_data:/var/lib/folio
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    networks: [backend]
+    depends_on:
+      folio:
+        condition: service_healthy
+    command: [npm, run, webhooks:worker]
+
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped

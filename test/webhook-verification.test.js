@@ -6,6 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { createLedger } from "../lib/db.js";
 import { createFolioServer } from "../server.js";
+import { processNextWebhookDelivery } from "../lib/webhook-worker.js";
 import { verifyStripeSignature, verifyWebhookSignature } from "../lib/webhook-verification.js";
 
 const secret = "whsec_test_endpoint_secret";
@@ -189,10 +190,14 @@ test("Stripe connection endpoint uses its secret reference and binds provider ac
   assert.equal((await send("acct_wrong")).status, 401);
   const first = await send("acct_expected", "invoice.created");
   const replay = await send("acct_expected", "invoice.created");
-  assert.equal(first.status, 200);
-  assert.equal(replay.status, 200);
+  assert.equal(first.status, 202);
+  assert.equal(replay.status, 202);
+  assert.equal((await first.json()).duplicate, false);
   assert.equal((await replay.json()).duplicate, true);
   const activeLedger = app.ledgers.get(setup.session.org_id);
+  assert.equal(activeLedger.integrationRecords(connection.id).length, 0);
+  const processed = await processNextWebhookDelivery(app.platform);
+  assert.equal(processed.delivery.status, "completed");
   const records = activeLedger.integrationRecords(connection.id);
   assert.equal(records.length, 1);
   assert.equal(records[0].object_type, "stripe_invoice");

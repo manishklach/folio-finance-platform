@@ -33,3 +33,19 @@ groups:
         annotations:
           summary: Folio p95 request latency exceeds 500 ms
           runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
+      - alert: FolioWebhookBacklogStale
+        expr: folio_webhook_oldest_unfinished_seconds > 300
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: Folio webhook delivery queue has been stalled for more than five minutes
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md
+      - alert: FolioWebhookDeadLetters
+        expr: folio_webhook_deliveries{status="dead_letter"} > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Folio has webhook deliveries requiring operator intervention
+          runbook_url: https://github.com/manishklach/folio-saas-accounting/blob/main/docs/production-operations.md

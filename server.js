@@ -17,8 +17,8 @@ import {
   validateProductionConfig,
 } from "./lib/runtime-config.js";
 import { verifyWebhookSignature } from "./lib/webhook-verification.js";
-import { stripeWebhookPage } from "./lib/provider-adapters.js";
 import { apiRoutePolicy } from "./lib/api-route-policies.js";
+import { applyWebhookEvent } from "./lib/webhook-application.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -797,6 +797,22 @@ async function webhook(req, res, url, platform, ledgers, requestId, environment)
   )
     throw problem("Webhook provider account does not match the connection", 401);
   const payloadHash = digest(raw);
+  if (connection) {
+    const delivery = platform.enqueueWebhookDelivery({
+      provider,
+      eventId: event.id,
+      orgId: org.id,
+      connectionId: connection.id,
+      payload: event,
+      payloadHash,
+    });
+    return json(res, 202, {
+      queued: true,
+      duplicate: delivery.duplicate,
+      delivery_id: delivery.id,
+      status: delivery.status,
+    });
+  }
   const existing = platform.webhookLookup(provider, event.id, org.id, payloadHash);
   if (existing) return json(res, 200, { duplicate: true, result: existing.result });
   ledger ||= tenantLedger(ledgers, { org_id: org.id, database_path: org.database_path });
@@ -804,31 +820,11 @@ async function webhook(req, res, url, platform, ledgers, requestId, environment)
     { actor: `webhook.${provider}`, orgId: org.id, role: "system", requestId },
     () =>
       ledger.applyExternalEvent(provider, event.id, payloadHash, () =>
-        applyWebhook(provider, event, ledger, connection),
+        applyWebhookEvent(provider, event, ledger, connection),
       ),
   );
   platform.webhookRecord(provider, event.id, org.id, payloadHash, "processed", application.result);
   return json(res, 200, application);
-}
-
-function applyWebhook(provider, event, ledger, connection) {
-  if (provider === "stripe" && connection) {
-    const run = ledger.startIntegrationSync({ connection_id: connection.id, trigger: "webhook" });
-    return ledger.ingestIntegrationPage({ sync_run_id: run.id, ...stripeWebhookPage(event) });
-  }
-  if (provider === "stripe" && event.type === "payment.received")
-    return ledger.recordPayment(event.data);
-  if (provider === "stripe" && event.type === "invoice.created")
-    return ledger.createInvoice(event.data);
-  if (provider === "payroll" && event.type === "payroll.posted") {
-    const draft = ledger.createDraft({ ...event.data, source: "payroll_webhook" });
-    return ledger.postJournal(draft.id);
-  }
-  if (provider === "expenses" && event.type === "expense.posted") {
-    const draft = ledger.createDraft({ ...event.data, source: "expense_webhook" });
-    return ledger.postJournal(draft.id);
-  }
-  throw problem("Unsupported webhook event", 422);
 }
 
 function tenantLedger(cache, session) {
@@ -1039,6 +1035,7 @@ function health(platform, ledgers, runtime = { accepting: true }) {
 }
 function prometheus(res, metrics, platform, ledgers, runtime) {
   const ready = health(platform, ledgers, runtime).status === "ok" ? 1 : 0;
+  const webhookQueue = platform.webhookQueueMetrics();
   const lines = [
     "# HELP folio_up Whether the Folio process is running.",
     "# TYPE folio_up gauge",
@@ -1055,6 +1052,15 @@ function prometheus(res, metrics, platform, ledgers, runtime) {
     "# HELP folio_tenant_connections Open tenant ledger connections.",
     "# TYPE folio_tenant_connections gauge",
     `folio_tenant_connections ${ledgers.size}`,
+    "# HELP folio_webhook_deliveries Webhook deliveries by durable queue status.",
+    "# TYPE folio_webhook_deliveries gauge",
+    ...["pending", "processing", "retry", "completed", "dead_letter"].map(
+      (status) =>
+        `folio_webhook_deliveries{status="${status}"} ${webhookQueue.counts[status] || 0}`,
+    ),
+    "# HELP folio_webhook_oldest_unfinished_seconds Age of the oldest unfinished delivery.",
+    "# TYPE folio_webhook_oldest_unfinished_seconds gauge",
+    `folio_webhook_oldest_unfinished_seconds ${webhookQueue.oldest_unfinished_seconds}`,
     "# HELP folio_http_requests_total HTTP requests by bounded route and status.",
     "# TYPE folio_http_requests_total counter",
     "# HELP folio_http_request_duration_seconds Request duration by bounded route.",

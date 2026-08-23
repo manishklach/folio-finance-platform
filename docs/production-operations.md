@@ -129,6 +129,24 @@ Every quarter, send a synthetic page through the configured route and record ale
 delivery, acknowledgement, escalation, and resolved delivery times. A configured file alone is not
 proof that anyone will be paged.
 
+### Webhook delivery operations
+
+Connection-bound provider requests return HTTP 202 only after the signed payload has committed to the
+platform delivery queue. The `webhook-worker` Compose service claims deliveries with a 60-second lease,
+reclaims abandoned work, retries transient failures with capped backoff and dead-letters a delivery
+after eight failed attempts by default. The tenant inbox remains the accounting exactly-once boundary.
+
+- Page on `FolioWebhookBacklogStale` or `FolioWebhookDeadLetters`; correlate the delivery ID from worker
+  logs without copying payload data into tickets or chat.
+- Correct the connection, mapping, schema or provider condition first. Never edit the stored payload,
+  event ID, hash, attempt count or tenant database manually.
+- Requeue one reviewed dead letter with
+  `docker compose -f compose.production.yml exec webhook-worker npm run webhooks:worker -- --retry-delivery=<delivery-id>`.
+- Confirm the delivery reaches `completed`, the oldest-unfinished metric returns to normal, the tenant
+  integration record/inbox has one source version and downstream reconciliation remains balanced.
+- During release and recovery exercises, kill the worker after claim and after tenant commit; retain
+  evidence that lease recovery completes without a second accounting effect.
+
 The Compose dependency health behavior follows [Docker's current service-health guidance](https://docs.docker.com/compose/how-tos/startup-order/).
 Prometheus loads and validates rules through `rule_files`, and Alertmanager routes those alerts to a
 receiver using a secret-backed `url_file`, as described in the official

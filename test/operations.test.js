@@ -109,6 +109,8 @@ test("liveness, dependency readiness, bounded Prometheus labels, and shutdown re
   await fetch(`${origin}/api/journals/123`);
   const metrics = await (await fetch(`${origin}/metrics`)).text();
   assert.match(metrics, /folio_ready 1/);
+  assert.match(metrics, /folio_webhook_deliveries\{status="pending"\} 0/);
+  assert.match(metrics, /folio_webhook_oldest_unfinished_seconds 0/);
   assert.match(metrics, /folio_http_request_duration_seconds_bucket\{/);
   assert.match(metrics, /route="\/api\/journals\/:id"/);
   assert.doesNotMatch(metrics, /\/api\/journals\/123/);
