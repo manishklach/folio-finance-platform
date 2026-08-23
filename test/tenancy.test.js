@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -150,6 +150,39 @@ test("two organizations cannot leak list, get, subledger, or aggregate data", as
       .find((item) => item.name === "org_id");
     assert.equal(column?.notnull, 1, `${name}.org_id must be NOT NULL`);
   }
+});
+
+test("cached ledger handles fail closed when the verified organization path changes", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "folio-tenant-cache-"));
+  const app = createFolioServer({
+    platformDbPath: join(root, "platform.db"),
+    tenantDir: join(root, "tenants"),
+  });
+  await new Promise((resolve) => app.server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${app.server.address().port}`;
+  t.after(async () => {
+    await new Promise((resolve) => app.close(resolve));
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  const setup = await request(origin, "POST", "/api/auth/register", {
+    organization_name: "Cache Binding Books",
+    email: "owner@example.com",
+    password: "OwnerPassword123",
+  });
+  const auth = authFrom(setup);
+  assert.equal((await request(origin, "GET", "/api/dashboard", null, auth)).status, 200);
+  const originalLedger = app.ledgers.get(setup.body.organization.id);
+  const redirectedPath = join(root, "tenants", "redirected.db");
+  app.platform.db
+    .prepare("UPDATE organizations SET database_path=? WHERE id=?")
+    .run(redirectedPath, setup.body.organization.id);
+
+  const rejected = await request(origin, "GET", "/api/dashboard", null, auth);
+  assert.equal(rejected.status, 500);
+  assert.equal(rejected.body.error, "Unexpected server error");
+  assert.equal(app.ledgers.get(setup.body.organization.id), originalLedger);
+  assert.equal(existsSync(redirectedPath), false);
 });
 
 async function request(origin, method, path, body, auth = {}, extraHeaders = {}) {

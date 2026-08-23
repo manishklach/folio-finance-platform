@@ -32,6 +32,7 @@ if (sentryDsn)
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
 const stateMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const tenantCacheBinding = Symbol("folioTenantCacheBinding");
 const latencyBuckets = [0.05, 0.1, 0.25, 0.5, 0.75, 1, 2, 5, 10];
 const maxMetricSeries = 512;
 const idempotentRoutes = new Set([
@@ -831,12 +832,24 @@ function applyWebhook(provider, event, ledger, connection) {
 }
 
 function tenantLedger(cache, session) {
-  if (!cache.has(session.org_id))
-    cache.set(
-      session.org_id,
-      createLedger(session.database_path, { seed: true, orgId: session.org_id }),
-    );
-  return cache.get(session.org_id);
+  const orgId = String(session.org_id || "");
+  const databasePath = resolve(String(session.database_path || ""));
+  if (!orgId || !session.database_path) throw new Error("Invalid tenant database binding");
+  if (!cache.has(orgId)) {
+    const ledger = createLedger(databasePath, { seed: true, orgId });
+    Object.defineProperty(ledger, tenantCacheBinding, {
+      value: Object.freeze({ orgId, databasePath }),
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+    cache.set(orgId, ledger);
+  }
+  const ledger = cache.get(orgId);
+  const binding = ledger?.[tenantCacheBinding];
+  if (binding?.orgId !== orgId || binding?.databasePath !== databasePath)
+    throw new Error("Tenant ledger cache binding mismatch");
+  return ledger;
 }
 async function prepareIdempotency(req, res, platform, session, route) {
   const key = String(req.headers["idempotency-key"] || "");

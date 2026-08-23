@@ -3,7 +3,7 @@
 ## Implemented engineering controls
 
 - Argon2id passwords, server-side expiring sessions, secure cookie options, CSRF tokens, login throttling and lockout.
-- Server-side admin/bookkeeper/approver/read-only authorization and physically separated organization databases. Organization selection comes only from a verified membership. A fail-closed route manifest declares the scope and minimum permission for every API method/path; undeclared handlers cannot execute.
+- Server-side admin/bookkeeper/approver/read-only authorization and physically separated organization databases. Organization selection comes only from a verified membership. A fail-closed route manifest declares the scope and minimum permission for every API method/path; undeclared handlers cannot execute. Cached ledger handles remain bound to both the verified organization and its resolved database path.
 - SQLite foreign keys, WAL/busy timeout, posted-entry immutability triggers, journal hash verification, backups with SHA-256 manifests, and a restore verifier.
 - Request/body limits, CSP and defensive headers, signed/idempotent webhooks, attachment type/size checks and non-public storage.
 - Request/user/org correlated JSON logs, readiness latency, metrics, and optional Sentry error capture without default PII.
