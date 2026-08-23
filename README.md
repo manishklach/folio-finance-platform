@@ -164,7 +164,7 @@ Platform upgrade, drift detection, rollback, and interrupted-migration guarantee
 npm test
 ```
 
-The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, leases, stock compensation, tax provisions, credit losses, contingencies, fair value, debt, classification, business combinations, VIEs, EPS, OCI, investments, fixed assets, depreciation, CIP, impairment, AROs, physical counts, reporting cutoffs, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals.
+The automated suite covers ledger balance and period controls, ASC 606 allocation and recognition, SaaS metrics, capitalized software, leases, stock compensation, tax provisions, credit losses, contingencies, fair value, debt, classification, business combinations, VIEs, EPS, OCI, investments, fixed assets, depreciation, CIP, impairment, AROs, physical counts, reporting cutoffs, FX and consolidations, contract modifications, AR aging, cash application, credits, write-offs, refunds, disputes, collections, and invoice/payment void reversals. Generated property tests exercise cents rounding, journal balance, ASC 606 conservation, residual floors, idempotency, and tenant binding; see [`docs/accounting-edge-test-catalog.md`](docs/accounting-edge-test-catalog.md).
 
 ## Receivables API
 
