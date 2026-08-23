@@ -150,13 +150,16 @@ production financial system. The completed engineering matrix and remaining inde
 
 Operational commands include `npm run migrate`, `npm run migrate:rehearse`, `npm run backup`,
 `npm run restore -- --source=<backup> --target=<empty-directory>`, `npm run ops:preflight`,
-`npm run verify-integrity`, `npm run test:load`, and `npm run privacy -- export|delete ...`.
+`npm run verify-integrity`, `npm run test:load`, `npm run accounting-validation -- init|check|gate`,
+and `npm run privacy -- export|delete ...`.
 
 The single-node TLS/container topology, production preflight, Prometheus/Alertmanager rules, encrypted
 backup and restore drills, release/rollback steps, SLOs and remaining external operations gates are in
 [`docs/production-operations.md`](docs/production-operations.md).
 Platform upgrade, drift detection, rollback, and interrupted-migration guarantees are documented in
 [`docs/migration-assurance.md`](docs/migration-assurance.md).
+The qualified-accountant review pack, finding lifecycle and machine-enforced evidence gate are in
+[`docs/accounting-validation-process.md`](docs/accounting-validation-process.md).
 
 ## Test
 

@@ -6,6 +6,7 @@ data/
 node_modules/
 coverage/
 backups/
+accounting-validation*.json
 .tmp/
 .runtime/
 secrets/

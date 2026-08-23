@@ -27,7 +27,7 @@ that engine without weakening its deterministic ledger controls.
 | 17. Production operations            | Active   | Hardened single-node stack and encrypted DR shipped; live exercises remain                                 |
 | 18. Security hardening               | Active   | Repository audit, abuse regressions and image scanning shipped; threat model and independent retest remain |
 | 19. Edge and migration assurance     | Active   | Migration and accounting property suites shipped; provider failure and launch-volume soak evidence remain  |
-| 20. Accounting validation            | Pending  | CPA/controller test packs, findings, remediation and signed evidence                                       |
+| 20. Accounting validation            | Active   | Complete pack generator and findings gate shipped; named reviewer execution and signed evidence remain     |
 | Independent launch approvals         | Pending  | Pen test, accounting, legal/privacy, deployment and support sign-off                                       |
 
 ## Dependency rules

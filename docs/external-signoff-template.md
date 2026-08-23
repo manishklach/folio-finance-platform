@@ -19,6 +19,9 @@
 - Contract fact patterns tested:
 - Applicable GAAP/ASC literature considered:
 - Engine version / commit tested:
+- Production image digest tested:
+- Validation-pack evidence identifier:
+- Validation gate result and date:
 - Exceptions and remediation:
 - Approval date and signature:
 

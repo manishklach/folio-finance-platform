@@ -19,6 +19,7 @@
     "build": "vite build",
     "test:load": "node scripts/load-benchmark.js",
     "integrations:sync": "node --env-file-if-exists=.env scripts/sync-integration.js",
+    "accounting-validation": "node scripts/accounting-validation.js",
     "ops:preflight": "node scripts/ops-preflight.js",
     "privacy": "node scripts/privacy.js"
   },
