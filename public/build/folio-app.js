@@ -8233,7 +8233,7 @@ function ae({ can: e, notify: t }) {
 		}
 	}
 	async function se(e) {
-		try {
+		if (window.confirm(`Revoke ${e.display_name} and stop future provider access?`)) try {
 			await D(`/api/integrations/oauth/${e.id}/revoke`, {
 				method: "POST",
 				body: {}

@@ -116,8 +116,8 @@ AI suggestions never post automatically. The server validates account IDs, amoun
 Folio pins Node.js in [`.nvmrc`](.nvmrc). From a fresh clone:
 
 ```sh
-git clone https://github.com/manishklach/folio-saas-accounting.git
-cd folio-saas-accounting
+git clone https://github.com/manishklach/folio-finance-platform.git
+cd folio-finance-platform
 nvm install
 nvm use
 npm ci

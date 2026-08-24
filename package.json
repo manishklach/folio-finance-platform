@@ -1,8 +1,8 @@
 {
-  "name": "codex-ledger",
+  "name": "folio-finance-platform",
   "version": "0.2.0",
   "private": true,
-  "description": "Audit-oriented SaaS accounting platform with ASC 606, receivables, SaaS metrics, and AI-assisted journal drafting",
+  "description": "Enterprise cloud finance platform with GAAP accounting, controlled integrations, reconciliation, financial reporting, and SaaS metrics",
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
