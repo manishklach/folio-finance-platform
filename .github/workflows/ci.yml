@@ -42,6 +42,8 @@ jobs:
           BACKUP_KEY_ID: ci-backup-key
           ALERT_WEBHOOK_URL_FILE: .env.example
           BACKUP_ENCRYPTION_KEY_FILE: .env.example
+          PROVIDER_TOKEN_ENCRYPTION_KEY_FILE: .env.example
+          PROVIDER_TOKEN_KEY_ID: ci-provider-token-key
           OPENAI_API_KEY_FILE: .env.example
           SENTRY_DSN_FILE: .env.example
           BOOTSTRAP_TOKEN_FILE: .env.example
