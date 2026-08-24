@@ -25,6 +25,8 @@ services:
       SENTRY_DSN_FILE: /run/secrets/sentry_dsn
       OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
       BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
+      PROVIDER_TOKEN_ENCRYPTION_KEY_FILE: /run/secrets/provider_token_encryption_key
+      PROVIDER_TOKEN_KEY_ID: ${PROVIDER_TOKEN_KEY_ID:-provider-token-v1}
       AI_MONTHLY_DRAFT_LIMIT: ${AI_MONTHLY_DRAFT_LIMIT:-200}
       ADMISSION_GLOBAL_CONCURRENCY: ${ADMISSION_GLOBAL_CONCURRENCY:-64}
       ADMISSION_TENANT_CONCURRENCY: ${ADMISSION_TENANT_CONCURRENCY:-8}
@@ -37,6 +39,7 @@ services:
       - sentry_dsn
       - openai_api_key
       - bootstrap_token
+      - provider_token_encryption_key
     volumes:
       - folio_data:/var/lib/folio
       - folio_attachments:/var/lib/folio/attachments
@@ -121,6 +124,10 @@ services:
       IMPORT_ORPHAN_GRACE_MINUTES: ${IMPORT_ORPHAN_GRACE_MINUTES:-60}
       BACKGROUND_WORKER_POLL_MS: ${BACKGROUND_WORKER_POLL_MS:-1000}
       BACKGROUND_WORKER_LEASE_SECONDS: ${BACKGROUND_WORKER_LEASE_SECONDS:-120}
+      PROVIDER_TOKEN_ENCRYPTION_KEY_FILE: /run/secrets/provider_token_encryption_key
+      PROVIDER_TOKEN_KEY_ID: ${PROVIDER_TOKEN_KEY_ID:-provider-token-v1}
+    secrets:
+      - provider_token_encryption_key
     volumes:
       - folio_data:/var/lib/folio
     tmpfs:
@@ -234,6 +241,8 @@ secrets:
     file: ${ALERT_WEBHOOK_URL_FILE:?Set ALERT_WEBHOOK_URL_FILE}
   backup_encryption_key:
     file: ${BACKUP_ENCRYPTION_KEY_FILE:?Set BACKUP_ENCRYPTION_KEY_FILE}
+  provider_token_encryption_key:
+    file: ${PROVIDER_TOKEN_ENCRYPTION_KEY_FILE:?Set PROVIDER_TOKEN_ENCRYPTION_KEY_FILE}
   openai_api_key:
     file: ${OPENAI_API_KEY_FILE:?Set OPENAI_API_KEY_FILE}
   sentry_dsn:

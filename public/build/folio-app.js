@@ -56,10 +56,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	function w(e, t) {
 		return C(e.type, t, void 0, void 0, void 0, e.props);
 	}
-	function te(e) {
+	function T(e) {
 		return typeof e == "object" && !!e && e.$$typeof === t;
 	}
-	function ne(e) {
+	function te(e) {
 		var t = {
 			"=": "=0",
 			":": "=2"
@@ -68,16 +68,16 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			return t[e];
 		});
 	}
-	var T = /\/+/g;
-	function re(e, t) {
-		return typeof e == "object" && e && e.key != null ? ne("" + e.key) : t.toString(36);
+	var E = /\/+/g;
+	function ne(e, t) {
+		return typeof e == "object" && e && e.key != null ? te("" + e.key) : t.toString(36);
 	}
-	function E() {}
-	function ie(e) {
+	function D() {}
+	function re(e) {
 		switch (e.status) {
 			case "fulfilled": return e.value;
 			case "rejected": throw e.reason;
-			default: switch (typeof e.status == "string" ? e.then(E, E) : (e.status = "pending", e.then(function(t) {
+			default: switch (typeof e.status == "string" ? e.then(D, D) : (e.status = "pending", e.then(function(t) {
 				e.status === "pending" && (e.status = "fulfilled", e.value = t);
 			}, function(t) {
 				e.status === "pending" && (e.status = "rejected", e.reason = t);
@@ -88,7 +88,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		throw e;
 	}
-	function D(e, r, i, a, o) {
+	function O(e, r, i, a, o) {
 		var s = typeof e;
 		(s === "undefined" || s === "boolean") && (e = null);
 		var c = !1;
@@ -104,26 +104,26 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				case n:
 					c = !0;
 					break;
-				case d: return c = e._init, D(c(e._payload), r, i, a, o);
+				case d: return c = e._init, O(c(e._payload), r, i, a, o);
 			}
 		}
-		if (c) return o = o(e), c = a === "" ? "." + re(e, 0) : a, ee(o) ? (i = "", c != null && (i = c.replace(T, "$&/") + "/"), D(o, r, i, "", function(e) {
+		if (c) return o = o(e), c = a === "" ? "." + ne(e, 0) : a, ee(o) ? (i = "", c != null && (i = c.replace(E, "$&/") + "/"), O(o, r, i, "", function(e) {
 			return e;
-		})) : o != null && (te(o) && (o = w(o, i + (o.key == null || e && e.key === o.key ? "" : ("" + o.key).replace(T, "$&/") + "/") + c)), r.push(o)), 1;
+		})) : o != null && (T(o) && (o = w(o, i + (o.key == null || e && e.key === o.key ? "" : ("" + o.key).replace(E, "$&/") + "/") + c)), r.push(o)), 1;
 		c = 0;
 		var l = a === "" ? "." : a + ":";
-		if (ee(e)) for (var u = 0; u < e.length; u++) a = e[u], s = l + re(a, u), c += D(a, r, i, s, o);
-		else if (u = p(e), typeof u == "function") for (e = u.call(e), u = 0; !(a = e.next()).done;) a = a.value, s = l + re(a, u++), c += D(a, r, i, s, o);
+		if (ee(e)) for (var u = 0; u < e.length; u++) a = e[u], s = l + ne(a, u), c += O(a, r, i, s, o);
+		else if (u = p(e), typeof u == "function") for (e = u.call(e), u = 0; !(a = e.next()).done;) a = a.value, s = l + ne(a, u++), c += O(a, r, i, s, o);
 		else if (s === "object") {
-			if (typeof e.then == "function") return D(ie(e), r, i, a, o);
+			if (typeof e.then == "function") return O(re(e), r, i, a, o);
 			throw r = String(e), Error("Objects are not valid as a React child (found: " + (r === "[object Object]" ? "object with keys {" + Object.keys(e).join(", ") + "}" : r) + "). If you meant to render a collection of children, use an array instead.");
 		}
 		return c;
 	}
-	function O(e, t, n) {
+	function ie(e, t, n) {
 		if (e == null) return e;
 		var r = [], i = 0;
-		return D(e, r, "", "", function(e) {
+		return O(e, r, "", "", function(e) {
 			return t.call(n, e, i++);
 		}), r;
 	}
@@ -156,25 +156,25 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	};
 	function j() {}
 	e.Children = {
-		map: O,
+		map: ie,
 		forEach: function(e, t, n) {
-			O(e, function() {
+			ie(e, function() {
 				t.apply(this, arguments);
 			}, n);
 		},
 		count: function(e) {
 			var t = 0;
-			return O(e, function() {
+			return ie(e, function() {
 				t++;
 			}), t;
 		},
 		toArray: function(e) {
-			return O(e, function(e) {
+			return ie(e, function(e) {
 				return e;
 			}) || [];
 		},
 		only: function(e) {
-			if (!te(e)) throw Error("React.Children.only expected to receive a single React element child.");
+			if (!T(e)) throw Error("React.Children.only expected to receive a single React element child.");
 			return e;
 		}
 	}, e.Component = _, e.Fragment = r, e.Profiler = a, e.PureComponent = y, e.StrictMode = i, e.Suspense = l, e.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = x, e.__COMPILER_RUNTIME = {
@@ -227,7 +227,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			$$typeof: c,
 			render: e
 		};
-	}, e.isValidElement = te, e.lazy = function(e) {
+	}, e.isValidElement = T, e.lazy = function(e) {
 		return {
 			$$typeof: d,
 			_payload: {
@@ -347,18 +347,18 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	}
 	function ee(e) {
 		if (h = !1, b(e), !m) {
-			if (n(c) !== null) m = !0, x || (x = !0, T());
+			if (n(c) !== null) m = !0, x || (x = !0, E());
 			else {
 				var t = n(l);
-				t !== null && ie(ee, t.startTime - e);
+				t !== null && re(ee, t.startTime - e);
 			}
 		}
 	}
 	var x = !1, S = -1, C = 5, w = -1;
-	function te() {
+	function T() {
 		return g ? !0 : !(e.unstable_now() - w < C);
 	}
-	function ne() {
+	function te() {
 		if (g = !1, x) {
 			var t = e.unstable_now();
 			w = t;
@@ -369,7 +369,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					var a = f;
 					try {
 						b: {
-							for (b(t), d = n(c); d !== null && !(d.expirationTime > t && te());) {
+							for (b(t), d = n(c); d !== null && !(d.expirationTime > t && T());) {
 								var o = d.callback;
 								if (typeof o == "function") {
 									d.callback = null, f = d.priorityLevel;
@@ -385,7 +385,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 							if (d !== null) i = !0;
 							else {
 								var u = n(l);
-								u !== null && ie(ee, u.startTime - t), i = !1;
+								u !== null && re(ee, u.startTime - t), i = !1;
 							}
 						}
 						break a;
@@ -395,23 +395,23 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					i = void 0;
 				}
 			} finally {
-				i ? T() : x = !1;
+				i ? E() : x = !1;
 			}
 		}
 	}
-	var T;
-	if (typeof y == "function") T = function() {
-		y(ne);
+	var E;
+	if (typeof y == "function") E = function() {
+		y(te);
 	};
 	else if (typeof MessageChannel < "u") {
-		var re = new MessageChannel(), E = re.port2;
-		re.port1.onmessage = ne, T = function() {
-			E.postMessage(null);
+		var ne = new MessageChannel(), D = ne.port2;
+		ne.port1.onmessage = te, E = function() {
+			D.postMessage(null);
 		};
-	} else T = function() {
-		_(ne, 0);
+	} else E = function() {
+		_(te, 0);
 	};
-	function ie(t, n) {
+	function re(t, n) {
 		S = _(function() {
 			t(e.unstable_now());
 		}, n);
@@ -480,8 +480,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			startTime: a,
 			expirationTime: s,
 			sortIndex: -1
-		}, a > o ? (r.sortIndex = a, t(l, r), n(c) === null && r === n(l) && (h ? (v(S), S = -1) : h = !0, ie(ee, a - o))) : (r.sortIndex = s, t(c, r), m || p || (m = !0, x || (x = !0, T()))), r;
-	}, e.unstable_shouldYield = te, e.unstable_wrapCallback = function(e) {
+		}, a > o ? (r.sortIndex = a, t(l, r), n(c) === null && r === n(l) && (h ? (v(S), S = -1) : h = !0, re(ee, a - o))) : (r.sortIndex = s, t(c, r), m || p || (m = !0, x || (x = !0, E()))), r;
+	}, e.unstable_shouldYield = T, e.unstable_wrapCallback = function(e) {
 		var t = f;
 		return function() {
 			var n = f;
@@ -725,22 +725,22 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		return null;
 	}
-	var p = Object.assign, h = Symbol.for("react.element"), g = Symbol.for("react.transitional.element"), _ = Symbol.for("react.portal"), v = Symbol.for("react.fragment"), y = Symbol.for("react.strict_mode"), b = Symbol.for("react.profiler"), ee = Symbol.for("react.provider"), x = Symbol.for("react.consumer"), S = Symbol.for("react.context"), C = Symbol.for("react.forward_ref"), w = Symbol.for("react.suspense"), te = Symbol.for("react.suspense_list"), ne = Symbol.for("react.memo"), T = Symbol.for("react.lazy"), re = Symbol.for("react.activity"), E = Symbol.for("react.memo_cache_sentinel"), ie = Symbol.iterator;
-	function D(e) {
-		return typeof e != "object" || !e ? null : (e = ie && e[ie] || e["@@iterator"], typeof e == "function" ? e : null);
+	var p = Object.assign, h = Symbol.for("react.element"), g = Symbol.for("react.transitional.element"), _ = Symbol.for("react.portal"), v = Symbol.for("react.fragment"), y = Symbol.for("react.strict_mode"), b = Symbol.for("react.profiler"), ee = Symbol.for("react.provider"), x = Symbol.for("react.consumer"), S = Symbol.for("react.context"), C = Symbol.for("react.forward_ref"), w = Symbol.for("react.suspense"), T = Symbol.for("react.suspense_list"), te = Symbol.for("react.memo"), E = Symbol.for("react.lazy"), ne = Symbol.for("react.activity"), D = Symbol.for("react.memo_cache_sentinel"), re = Symbol.iterator;
+	function O(e) {
+		return typeof e != "object" || !e ? null : (e = re && e[re] || e["@@iterator"], typeof e == "function" ? e : null);
 	}
-	var O = Symbol.for("react.client.reference");
+	var ie = Symbol.for("react.client.reference");
 	function k(e) {
 		if (e == null) return null;
-		if (typeof e == "function") return e.$$typeof === O ? null : e.displayName || e.name || null;
+		if (typeof e == "function") return e.$$typeof === ie ? null : e.displayName || e.name || null;
 		if (typeof e == "string") return e;
 		switch (e) {
 			case v: return "Fragment";
 			case b: return "Profiler";
 			case y: return "StrictMode";
 			case w: return "Suspense";
-			case te: return "SuspenseList";
-			case re: return "Activity";
+			case T: return "SuspenseList";
+			case ne: return "Activity";
 		}
 		if (typeof e == "object") switch (e.$$typeof) {
 			case _: return "Portal";
@@ -749,8 +749,8 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 			case C:
 				var t = e.render;
 				return e = e.displayName, e ||= (e = t.displayName || t.name || "", e === "" ? "ForwardRef" : "ForwardRef(" + e + ")"), e;
-			case ne: return t = e.displayName || null, t === null ? k(e.type) || "Memo" : t;
-			case T:
+			case te: return t = e.displayName || null, t === null ? k(e.type) || "Memo" : t;
+			case E:
 				t = e._payload, e = e._init;
 				try {
 					return k(e(t));
@@ -2019,14 +2019,14 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (r = e, typeof e == "function") oi(e) && (s = 1);
 		else if (typeof e == "string") s = Tf(e, n, ue.current) ? 26 : e === "html" || e === "head" || e === "body" ? 27 : 5;
 		else a: switch (e) {
-			case re: return e = ai(31, n, t, a), e.elementType = re, e.lanes = o, e;
+			case ne: return e = ai(31, n, t, a), e.elementType = ne, e.lanes = o, e;
 			case v: return ui(n.children, a, o, t);
 			case y:
 				s = 8, a |= 24;
 				break;
 			case b: return e = ai(12, n, t, a | 2), e.elementType = b, e.lanes = o, e;
 			case w: return e = ai(13, n, t, a), e.elementType = w, e.lanes = o, e;
-			case te: return e = ai(19, n, t, a), e.elementType = te, e.lanes = o, e;
+			case T: return e = ai(19, n, t, a), e.elementType = T, e.lanes = o, e;
 			default:
 				if (typeof e == "object" && e) switch (e.$$typeof) {
 					case ee:
@@ -2039,10 +2039,10 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 					case C:
 						s = 11;
 						break a;
-					case ne:
+					case te:
 						s = 14;
 						break a;
-					case T:
+					case E:
 						s = 16, r = null;
 						break a;
 				}
@@ -2680,7 +2680,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		if (t ??= {
 			data: [],
 			index: 0
-		}, n === null && (n = co(), H.updateQueue = n), n.memoCache = t, n = t.data[t.index], n === void 0) for (n = t.data[t.index] = Array(e), r = 0; r < e; r++) n[r] = E;
+		}, n === null && (n = co(), H.updateQueue = n), n.memoCache = t, n = t.data[t.index], n === void 0) for (n = t.data[t.index] = Array(e), r = 0; r < e; r++) n[r] = D;
 		return t.index++, n;
 	}
 	function po(e, t) {
@@ -3448,7 +3448,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 		}
 		function l(e, t, n, r) {
 			var i = n.type;
-			return i === v ? d(e, t, n.props.children, r, n.key) : t !== null && (t.elementType === i || typeof i == "object" && i && i.$$typeof === T && ws(i) === t.type) ? (t = a(t, n.props), Ss(t, n), t.return = e, t) : (t = li(n.type, n.key, n.props, null, e.mode, r), Ss(t, n), t.return = e, t);
+			return i === v ? d(e, t, n.props.children, r, n.key) : t !== null && (t.elementType === i || typeof i == "object" && i && i.$$typeof === E && ws(i) === t.type) ? (t = a(t, n.props), Ss(t, n), t.return = e, t) : (t = li(n.type, n.key, n.props, null, e.mode, r), Ss(t, n), t.return = e, t);
 		}
 		function u(e, t, n, r) {
 			return t === null || t.tag !== 4 || t.stateNode.containerInfo !== n.containerInfo || t.stateNode.implementation !== n.implementation ? (t = fi(n, e.mode, r), t.return = e, t) : (t = a(t, n.children || []), t.return = e, t);
@@ -3462,11 +3462,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				switch (t.$$typeof) {
 					case g: return n = li(t.type, t.key, t.props, null, e.mode, n), Ss(n, t), n.return = e, n;
 					case _: return t = fi(t, e.mode, n), t.return = e, t;
-					case T:
+					case E:
 						var r = t._init;
 						return t = r(t._payload), f(e, t, n);
 				}
-				if (A(t) || D(t)) return t = ui(t, e.mode, n, null), t.return = e, t;
+				if (A(t) || O(t)) return t = ui(t, e.mode, n, null), t.return = e, t;
 				if (typeof t.then == "function") return f(e, xs(t), n);
 				if (t.$$typeof === S) return f(e, Yi(e, t), n);
 				Cs(e, t);
@@ -3480,9 +3480,9 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				switch (n.$$typeof) {
 					case g: return n.key === i ? l(e, t, n, r) : null;
 					case _: return n.key === i ? u(e, t, n, r) : null;
-					case T: return i = n._init, n = i(n._payload), p(e, t, n, r);
+					case E: return i = n._init, n = i(n._payload), p(e, t, n, r);
 				}
-				if (A(n) || D(n)) return i === null ? d(e, t, n, r, null) : null;
+				if (A(n) || O(n)) return i === null ? d(e, t, n, r, null) : null;
 				if (typeof n.then == "function") return p(e, t, xs(n), r);
 				if (n.$$typeof === S) return p(e, t, Yi(e, n), r);
 				Cs(e, n);
@@ -3495,11 +3495,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 				switch (r.$$typeof) {
 					case g: return e = e.get(r.key === null ? n : r.key) || null, l(t, e, r, i);
 					case _: return e = e.get(r.key === null ? n : r.key) || null, u(t, e, r, i);
-					case T:
+					case E:
 						var a = r._init;
 						return r = a(r._payload), m(e, t, n, r, i);
 				}
-				if (A(r) || D(r)) return e = e.get(n) || null, d(t, e, r, i, null);
+				if (A(r) || O(r)) return e = e.get(n) || null, d(t, e, r, i, null);
 				if (typeof r.then == "function") return m(e, t, n, xs(r), i);
 				if (r.$$typeof === S) return m(e, t, n, Yi(t, r), i);
 				Cs(t, r);
@@ -3559,7 +3559,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 											n(e, r.sibling), c = a(r, o.props.children), c.return = e, e = c;
 											break a;
 										}
-									} else if (r.elementType === l || typeof l == "object" && l && l.$$typeof === T && ws(l) === r.type) {
+									} else if (r.elementType === l || typeof l == "object" && l && l.$$typeof === E && ws(l) === r.type) {
 										n(e, r.sibling), c = a(r, o.props), Ss(c, o), c.return = e, e = c;
 										break a;
 									}
@@ -3587,11 +3587,11 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 							c = fi(o, e.mode, c), c.return = e, e = c;
 						}
 						return s(e);
-					case T: return l = o._init, o = l(o._payload), b(e, r, o, c);
+					case E: return l = o._init, o = l(o._payload), b(e, r, o, c);
 				}
 				if (A(o)) return h(e, r, o, c);
-				if (D(o)) {
-					if (l = D(o), typeof l != "function") throw Error(i(150));
+				if (O(o)) {
+					if (l = O(o), typeof l != "function") throw Error(i(150));
 					return o = l.call(o), y(e, r, o, c);
 				}
 				if (typeof o.then == "function") return b(e, r, xs(o), c);
@@ -4116,7 +4116,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 								t.tag = 11, t = ec(null, t, r, e, n);
 								break a;
 							}
-							if (a === ne) {
+							if (a === te) {
 								t.tag = 14, t = tc(null, t, r, e, n);
 								break a;
 							}
@@ -7786,7 +7786,7 @@ var e = Object.create, t = Object.defineProperty, n = Object.getOwnPropertyDescr
 	style: "currency",
 	currency: "USD"
 }).format(e / 100), C = (e) => e ? (/* @__PURE__ */ new Date(`${e}T00:00:00`)).toLocaleDateString() : "—", w = (e = "") => String(e).replaceAll("_", " ");
-function te(e = "chart_of_accounts") {
+function T(e = "chart_of_accounts") {
 	return {
 		template_key: e,
 		filename: `${e}.csv`,
@@ -7805,7 +7805,7 @@ function te(e = "chart_of_accounts") {
 		closing: ""
 	};
 }
-function ne(e) {
+function te(e) {
 	let t = String(e || "").replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0];
 	if (!t.trim()) return [];
 	let n = [], r = "", i = !1;
@@ -7815,14 +7815,14 @@ function ne(e) {
 	}
 	return n.push(r.trim()), n.filter(Boolean);
 }
-function T(e, t, n = {}) {
+function E(e, t, n = {}) {
 	let r = new Map(t.map((e) => [e.toLowerCase().replaceAll(" ", "_"), e]));
 	return Object.fromEntries(e.fields.map((e) => [e.key, t.includes(n[e.key]) ? n[e.key] : r.get(e.key.toLowerCase()) || ""]));
 }
-function re(e, t) {
+function ne(e, t) {
 	return e.length === t.length && e.every((e, n) => e === t[n]);
 }
-async function E(e, { method: t = "GET", body: n, idempotent: r = !0, headers: i } = {}) {
+async function D(e, { method: t = "GET", body: n, idempotent: r = !0, headers: i } = {}) {
 	let a = { Accept: "application/json" };
 	Object.assign(a, i), n !== void 0 && (a["Content-Type"] = "application/json"), t !== "GET" && ee && (a["X-CSRF-Token"] = ee), t !== "GET" && r && (a["Idempotency-Key"] = crypto.randomUUID());
 	let o = await fetch(e, {
@@ -7837,17 +7837,17 @@ async function E(e, { method: t = "GET", body: n, idempotent: r = !0, headers: i
 	}
 	return s.csrf_token && (ee = s.csrf_token), s;
 }
-async function ie(e, t, n = 12e4) {
+async function re(e, t, n = 12e4) {
 	let r = Date.now() + n;
 	for (; Date.now() < r;) {
-		let n = await E(`/api/jobs/${e}`);
+		let n = await D(`/api/jobs/${e}`);
 		if (t?.(n), n.status === "completed") return n;
 		if (["dead_letter", "cancelled"].includes(n.status)) throw Error(n.last_error || `Background job ${w(n.status)}.`);
 		await new Promise((e) => window.setTimeout(e, 750));
 	}
 	throw Error("The job is still running. Continue tracking it in Reports & jobs.");
 }
-function D(e, t = []) {
+function O(e, t = []) {
 	let [n, r] = (0, _.useState)({
 		loading: !0,
 		data: null,
@@ -7877,7 +7877,7 @@ function D(e, t = []) {
 		refresh: i
 	};
 }
-var O = [
+var ie = [
 	[
 		"overview",
 		"Overview",
@@ -7937,9 +7937,9 @@ var O = [
 function k() {
 	let [e, t] = (0, _.useState)(null), [n, r] = (0, _.useState)(!1), [i, a] = (0, _.useState)(!0);
 	return (0, _.useEffect)(() => {
-		E("/api/auth/me").then(t).catch(async (e) => {
+		D("/api/auth/me").then(t).catch(async (e) => {
 			if (e.status !== 401) throw e;
-			r((await E("/setup/status")).needs_setup);
+			r((await D("/setup/status")).needs_setup);
 		}).finally(() => a(!1));
 	}, []), i ? /* @__PURE__ */ (0, b.jsx)(be, {
 		title: "Opening Folio",
@@ -7959,7 +7959,7 @@ function A({ needsSetup: e, onAuthenticated: t }) {
 		let i = new FormData(n.currentTarget);
 		r(!0), a("");
 		try {
-			t(await E(e ? "/api/auth/register" : "/api/auth/login", {
+			t(await D(e ? "/api/auth/register" : "/api/auth/login", {
 				method: "POST",
 				idempotent: !1,
 				headers: e ? { "X-Folio-Bootstrap-Token": i.get("bootstrap_token") } : void 0,
@@ -8059,9 +8059,9 @@ function A({ needsSetup: e, onAuthenticated: t }) {
 	});
 }
 function j({ auth: e, setAuth: t }) {
-	let [n, r] = (0, _.useState)("overview"), [i, a] = (0, _.useState)(null), o = O.find(([e]) => e === n), s = (t) => e.permissions.includes(t);
+	let [n, r] = (0, _.useState)("overview"), [i, a] = (0, _.useState)(null), o = ie.find(([e]) => e === n), s = (t) => e.permissions.includes(t);
 	async function c() {
-		await E("/api/auth/logout", {
+		await D("/api/auth/logout", {
 			method: "POST",
 			idempotent: !1
 		}), ee = "", t(null);
@@ -8081,7 +8081,7 @@ function j({ auth: e, setAuth: t }) {
 				}),
 				/* @__PURE__ */ (0, b.jsx)("nav", {
 					"aria-label": "Accounting modules",
-					children: O.map(([e, t, i]) => /* @__PURE__ */ (0, b.jsxs)("button", {
+					children: ie.map(([e, t, i]) => /* @__PURE__ */ (0, b.jsxs)("button", {
 						"aria-current": n === e ? "page" : void 0,
 						onClick: () => r(e),
 						children: [/* @__PURE__ */ (0, b.jsx)("span", {
@@ -8151,18 +8151,18 @@ function M({ active: e, ...t }) {
 	return /* @__PURE__ */ (0, b.jsx)(n, { ...t });
 }
 function ae({ can: e, notify: t }) {
-	let n = D(() => E("/api/integrations/overview"), []), [r, i] = (0, _.useState)(!1), [a, o] = (0, _.useState)(""), [s, c] = (0, _.useState)(!1), [l, u] = (0, _.useState)(null), [d, f] = (0, _.useState)(null), [p, m] = (0, _.useState)(null), [h, g] = (0, _.useState)(null), [v, y] = (0, _.useState)(null), [ee, x] = (0, _.useState)(null), [C, te] = (0, _.useState)(null), [ne, T] = (0, _.useState)(null), [re, ie] = (0, _.useState)(null), [O, k] = (0, _.useState)(!1);
+	let n = O(() => D("/api/integrations/overview"), []), r = O(() => D("/api/integrations/oauth"), []), [i, a] = (0, _.useState)(!1), [o, s] = (0, _.useState)(""), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(null), [f, p] = (0, _.useState)(null), [m, h] = (0, _.useState)(null), [g, v] = (0, _.useState)(null), [y, ee] = (0, _.useState)(null), [x, C] = (0, _.useState)(null), [T, te] = (0, _.useState)(null), [E, ne] = (0, _.useState)(null), [re, ie] = (0, _.useState)(null), [k, A] = (0, _.useState)(!1);
 	(0, _.useEffect)(() => {
-		!a && n.data?.connections?.length && o(n.data.connections[0].id);
-	}, [n.data, a]);
-	let A = D(() => a ? Promise.all([
-		E(`/api/integrations/connections/${a}/records`),
-		E(`/api/integrations/mappings?connection_id=${a}`),
-		E(`/api/integrations/stripe-reconciliation?connection_id=${a}`),
-		E(`/api/payroll?connection_id=${a}`),
-		E("/api/accounts"),
-		E(`/api/crm?connection_id=${a}`),
-		E("/api/saas/overview")
+		!o && n.data?.connections?.length && s(n.data.connections[0].id);
+	}, [n.data, o]);
+	let j = O(() => o ? Promise.all([
+		D(`/api/integrations/connections/${o}/records`),
+		D(`/api/integrations/mappings?connection_id=${o}`),
+		D(`/api/integrations/stripe-reconciliation?connection_id=${o}`),
+		D(`/api/payroll?connection_id=${o}`),
+		D("/api/accounts"),
+		D(`/api/crm?connection_id=${o}`),
+		D("/api/saas/overview")
 	]) : Promise.resolve([
 		[],
 		[],
@@ -8184,18 +8184,18 @@ function ae({ can: e, notify: t }) {
 			products: [],
 			entities: []
 		}
-	]), [a]);
+	]), [o]);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: n.error,
 		retry: n.refresh
 	});
-	let j = n.data;
-	async function M(e) {
+	let M = n.data;
+	async function ae(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
 		try {
-			await E("/api/integrations/connections", {
+			await D("/api/integrations/connections", {
 				method: "POST",
 				body: {
 					provider: r.get("provider"),
@@ -8204,10 +8204,10 @@ function ae({ can: e, notify: t }) {
 					external_account_id: r.get("external_account_id") || null,
 					credential_secret_ref: r.get("credential_secret_ref"),
 					webhook_secret_ref: r.get("webhook_secret_ref") || null,
-					scopes: [],
+					scopes: String(r.get("scopes") || "").split(",").map((e) => e.trim()).filter(Boolean),
 					settings: {}
 				}
-			}), i(!1), await n.refresh(), t({
+			}), a(!1), await n.refresh(), t({
 				kind: "success",
 				message: "Connector configured without exposing its credentials."
 			});
@@ -8218,9 +8218,39 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function ae(e, r) {
+	async function oe(e) {
 		try {
-			await E("/api/integrations/connections/status", {
+			let t = await D(`/api/integrations/oauth/${e.id}/start`, {
+				method: "POST",
+				body: {}
+			});
+			window.location.assign(t.authorization_url);
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		}
+	}
+	async function se(e) {
+		try {
+			await D(`/api/integrations/oauth/${e.id}/revoke`, {
+				method: "POST",
+				body: {}
+			}), await Promise.all([n.refresh(), r.refresh()]), t({
+				kind: "success",
+				message: `${e.display_name} authorization revoked.`
+			});
+		} catch (e) {
+			t({
+				kind: "error",
+				message: e.message
+			});
+		}
+	}
+	async function ce(e, r) {
+		try {
+			await D("/api/integrations/connections/status", {
 				method: "POST",
 				body: {
 					connection_id: e.id,
@@ -8237,9 +8267,9 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function oe(e) {
+	async function le(e) {
 		try {
-			await E("/api/integrations/exceptions/status", {
+			await D("/api/integrations/exceptions/status", {
 				method: "POST",
 				body: {
 					id: e.id,
@@ -8257,9 +8287,9 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function se(e) {
+	async function N(e) {
 		try {
-			await E("/api/jobs/provider-syncs", {
+			await D("/api/jobs/provider-syncs", {
 				method: "POST",
 				body: {
 					connection_id: e.id,
@@ -8276,14 +8306,14 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function ce(e) {
+	async function ue(e) {
 		e.preventDefault();
 		let n = new FormData(e.currentTarget), r = n.get("default");
 		try {
-			await E("/api/integrations/mappings", {
+			await D("/api/integrations/mappings", {
 				method: "POST",
 				body: {
-					connection_id: a,
+					connection_id: o,
 					object_type: n.get("object_type"),
 					source_field: n.get("source_field"),
 					target_field: n.get("target_field"),
@@ -8291,7 +8321,7 @@ function ae({ can: e, notify: t }) {
 					required: n.get("required") === "on",
 					...r === "" ? {} : { default: r }
 				}
-			}), c(!1), await A.refresh(), t({
+			}), l(!1), await j.refresh(), t({
 				kind: "success",
 				message: "Versioned mapping activated for future previews."
 			});
@@ -8302,13 +8332,13 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function le(e) {
+	async function de(e) {
 		try {
-			let t = await E(`/api/integrations/records/${e.id}/preview`, {
+			let t = await D(`/api/integrations/records/${e.id}/preview`, {
 				method: "POST",
 				body: {}
 			});
-			u(t), t.ready || await Promise.all([n.refresh(), A.refresh()]);
+			d(t), t.ready || await Promise.all([n.refresh(), j.refresh()]);
 		} catch (e) {
 			t({
 				kind: "error",
@@ -8316,20 +8346,20 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function N(e) {
+	async function fe(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			let e = await E(`/api/integrations/records/${l.record.id}/apply`, {
+			let e = await D(`/api/integrations/records/${u.record.id}/apply`, {
 				method: "POST",
 				body: {
 					approved: !0,
 					approval_note: r.get("approval_note"),
-					mapping_fingerprint: l.mapping_fingerprint
+					mapping_fingerprint: u.mapping_fingerprint
 				}
 			});
-			u(null), await Promise.all([n.refresh(), A.refresh()]), t(e.status === "applied" ? {
+			d(null), await Promise.all([n.refresh(), j.refresh()]), t(e.status === "applied" ? {
 				kind: "success",
 				message: `Draft journal ${e.journal.id} created for independent posting review.`
 			} : {
@@ -8342,16 +8372,16 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function ue(e) {
+	async function pe(e) {
 		try {
-			let t = await E(`/api/integrations/records/${e.id}/bank-preview`, {
+			let t = await D(`/api/integrations/records/${e.id}/bank-preview`, {
 				method: "POST",
 				body: {}
 			});
-			f(t), t.ready || await Promise.all([n.refresh(), A.refresh()]);
+			p(t), t.ready || await Promise.all([n.refresh(), j.refresh()]);
 		} catch (e) {
 			t({
 				kind: "error",
@@ -8359,19 +8389,19 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function de(e) {
+	async function me(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			let e = await E(`/api/integrations/records/${d.record.id}/bank-apply`, {
+			let e = await D(`/api/integrations/records/${f.record.id}/bank-apply`, {
 				method: "POST",
 				body: {
 					approved: !0,
 					approval_note: r.get("approval_note")
 				}
 			});
-			f(null), await Promise.all([n.refresh(), A.refresh()]), t(e.status === "applied" ? {
+			p(null), await Promise.all([n.refresh(), j.refresh()]), t(e.status === "applied" ? {
 				kind: "success",
 				message: e.transaction.status === "matched" ? "Bank activity matched to posted cash with source lineage retained." : `Bank activity entered the ${w(e.transaction.status)} queue.`
 			} : {
@@ -8384,16 +8414,16 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function fe(e) {
+	async function he(e) {
 		try {
-			let t = await E(`/api/integrations/records/${e.id}/stripe-preview`, {
+			let t = await D(`/api/integrations/records/${e.id}/stripe-preview`, {
 				method: "POST",
 				body: {}
 			});
-			m(t), t.ready || await Promise.all([n.refresh(), A.refresh()]);
+			h(t), t.ready || await Promise.all([n.refresh(), j.refresh()]);
 		} catch (e) {
 			t({
 				kind: "error",
@@ -8401,12 +8431,12 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function pe(e) {
+	async function _e(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			let e = await E(`/api/integrations/records/${p.record.id}/stripe-apply`, {
+			let e = await D(`/api/integrations/records/${m.record.id}/stripe-apply`, {
 				method: "POST",
 				body: {
 					approved: !0,
@@ -8414,7 +8444,7 @@ function ae({ can: e, notify: t }) {
 					...r.get("target_entity_id") ? { target_entity_id: r.get("target_entity_id") } : {}
 				}
 			});
-			m(null), await Promise.all([n.refresh(), A.refresh()]), t(e.status === "applied" ? {
+			h(null), await Promise.all([n.refresh(), j.refresh()]), t(e.status === "applied" ? {
 				kind: "success",
 				message: e.reconciliation.status === "component" ? "Stripe payout component retained for net-settlement proof." : "Stripe activity reconciled without creating duplicate accounting."
 			} : {
@@ -8427,16 +8457,16 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function me(e) {
+	async function be(e) {
 		try {
-			let t = await E(`/api/integrations/records/${e.id}/payroll-preview`, {
+			let t = await D(`/api/integrations/records/${e.id}/payroll-preview`, {
 				method: "POST",
 				body: {}
 			});
-			g(t), t.ready || await Promise.all([n.refresh(), A.refresh()]);
+			v(t), t.ready || await Promise.all([n.refresh(), j.refresh()]);
 		} catch (e) {
 			t({
 				kind: "error",
@@ -8444,19 +8474,19 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function he(e) {
+	async function Se(e) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			let e = await E(`/api/integrations/records/${h.record.id}/payroll-apply`, {
+			let e = await D(`/api/integrations/records/${g.record.id}/payroll-apply`, {
 				method: "POST",
 				body: {
 					approved: !0,
 					approval_note: r.get("approval_note")
 				}
 			});
-			g(null), await Promise.all([n.refresh(), A.refresh()]), t(e.status === "applied" ? {
+			v(null), await Promise.all([n.refresh(), j.refresh()]), t(e.status === "applied" ? {
 				kind: "success",
 				message: e.journal ? `Payroll draft ${e.journal.id} created for independent posting.` : "Unposted payroll source version removed with lineage retained."
 			} : {
@@ -8469,15 +8499,15 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function _e(e) {
+	async function Ce(e) {
 		e.preventDefault();
 		let n = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			let e = await E(`/api/payroll/settlements/${v.id}/draft`, {
+			let e = await D(`/api/payroll/settlements/${y.id}/draft`, {
 				method: "POST",
 				body: {
 					approved: !0,
@@ -8486,7 +8516,7 @@ function ae({ can: e, notify: t }) {
 					approval_note: n.get("approval_note")
 				}
 			});
-			y(null), await A.refresh(), t({
+			ee(null), await j.refresh(), t({
 				kind: "success",
 				message: `Settlement draft ${e.journal.id} created for independent posting and bank matching.`
 			});
@@ -8496,21 +8526,21 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function be(e) {
+	async function Te(e) {
 		e.preventDefault();
 		let n = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			await E(`/api/payroll/settlements/${ee.id}/reconcile`, {
+			await D(`/api/payroll/settlements/${x.id}/reconcile`, {
 				method: "POST",
 				body: {
 					approved: !0,
 					approval_note: n.get("approval_note")
 				}
-			}), x(null), await A.refresh(), t({
+			}), C(null), await j.refresh(), t({
 				kind: "success",
 				message: "Gusto settlement reconciled to the native bank feed and posted cash."
 			});
@@ -8520,12 +8550,12 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function Se(e) {
+	async function Ee(e) {
 		try {
-			te(await E(`/api/integrations/records/${e.id}/crm-preview`, {
+			te(await D(`/api/integrations/records/${e.id}/crm-preview`, {
 				method: "POST",
 				body: {}
 			}));
@@ -8536,20 +8566,20 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function Ce(e) {
+	async function De(e) {
 		e.preventDefault();
-		let n = new FormData(e.currentTarget), r = ne.object_type === "hubspot_company";
-		k(!0);
+		let n = new FormData(e.currentTarget), r = E.object_type === "hubspot_company";
+		A(!0);
 		try {
-			await E(r ? "/api/crm/customer-links" : "/api/crm/product-links", {
+			await D(r ? "/api/crm/customer-links" : "/api/crm/product-links", {
 				method: "POST",
 				body: {
-					record_id: ne.id,
+					record_id: E.id,
 					[r ? "customer_id" : "product_id"]: Number(n.get("local_id")),
 					approved: !0,
 					approval_note: n.get("approval_note")
 				}
-			}), T(null), await A.refresh(), t({
+			}), ne(null), await j.refresh(), t({
 				kind: "success",
 				message: `HubSpot ${r ? "company" : "product"} identity linked with approval lineage.`
 			});
@@ -8559,15 +8589,15 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function Te(e) {
+	async function Oe(e) {
 		e.preventDefault();
 		let n = new FormData(e.currentTarget);
-		k(!0);
+		A(!0);
 		try {
-			let e = await E(`/api/integrations/records/${C.record.id}/crm-prepare`, {
+			let e = await D(`/api/integrations/records/${T.record.id}/crm-prepare`, {
 				method: "POST",
 				body: {
 					approved: !0,
@@ -8584,7 +8614,7 @@ function ae({ can: e, notify: t }) {
 				te(e.preview);
 				return;
 			}
-			te(null), await A.refresh(), t({
+			te(null), await j.refresh(), t({
 				kind: "success",
 				message: "Contract proposal prepared. A different controller must approve it before creation."
 			});
@@ -8594,20 +8624,20 @@ function ae({ can: e, notify: t }) {
 				message: e.message
 			});
 		} finally {
-			k(!1);
+			A(!1);
 		}
 	}
-	async function Ee(e) {
+	async function ke(e) {
 		e.preventDefault();
 		let n = new FormData(e.currentTarget).get("approval_note");
 		try {
-			await E(`/api/crm/proposals/${re.id}/approve`, {
+			await D(`/api/crm/proposals/${re.id}/approve`, {
 				method: "POST",
 				body: {
 					approved: !0,
 					approval_note: n
 				}
-			}), ie(null), await A.refresh(), t({
+			}), ie(null), await j.refresh(), t({
 				kind: "success",
 				message: "CRM contract proposal approved."
 			});
@@ -8618,13 +8648,13 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	async function De(e) {
+	async function Ae(e) {
 		try {
-			let n = await E(`/api/crm/proposals/${e.id}/apply`, {
+			let n = await D(`/api/crm/proposals/${e.id}/apply`, {
 				method: "POST",
 				body: {}
 			});
-			await A.refresh(), t({
+			await j.refresh(), t({
 				kind: "success",
 				message: `Folio contract ${n.contract.contract_number} created with revenue schedules.`
 			});
@@ -8635,7 +8665,7 @@ function ae({ can: e, notify: t }) {
 			});
 		}
 	}
-	let [Oe, ke, Ae, je, Me, Ne, Pe] = A.data || [
+	let [je, Me, Ne, Pe, Fe, Ie, Le] = j.data || [
 		[],
 		[],
 		{
@@ -8656,7 +8686,11 @@ function ae({ can: e, notify: t }) {
 			products: [],
 			entities: []
 		}
-	], Fe = j.connections.find((e) => e.id === a);
+	], Re = M.connections.find((e) => e.id === o), ze = r.data || [], Be = /* @__PURE__ */ new Set([
+		"stripe",
+		"gusto",
+		"hubspot"
+	]);
 	return /* @__PURE__ */ (0, b.jsxs)("div", {
 		className: "module-flow",
 		children: [
@@ -8665,7 +8699,7 @@ function ae({ can: e, notify: t }) {
 				detail: "Observable, tenant-scoped data connections without browser-visible secrets",
 				action: e("admin") && /* @__PURE__ */ (0, b.jsx)("button", {
 					className: "primary",
-					onClick: () => i(!0),
+					onClick: () => a(!0),
 					children: "Configure connector"
 				})
 			}),
@@ -8674,25 +8708,25 @@ function ae({ can: e, notify: t }) {
 				children: [
 					/* @__PURE__ */ (0, b.jsx)(P, {
 						label: "Connections",
-						value: j.connections.length,
+						value: M.connections.length,
 						detail: "Configured providers"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(P, {
 						label: "Active",
-						value: j.metrics.active_connections,
+						value: M.metrics.active_connections,
 						detail: "Eligible to synchronize"
 					}),
 					/* @__PURE__ */ (0, b.jsx)(P, {
 						label: "Provider errors",
-						value: j.metrics.error_connections,
+						value: M.metrics.error_connections,
 						detail: "Connections needing attention",
-						warning: j.metrics.error_connections > 0
+						warning: M.metrics.error_connections > 0
 					}),
 					/* @__PURE__ */ (0, b.jsx)(P, {
 						label: "Exceptions",
-						value: j.metrics.open_exceptions,
+						value: M.metrics.open_exceptions,
 						detail: "Open connector failures",
-						warning: j.metrics.open_exceptions > 0
+						warning: M.metrics.open_exceptions > 0
 					})
 				]
 			}),
@@ -8710,27 +8744,47 @@ function ae({ can: e, notify: t }) {
 							"Status",
 							"Action"
 						],
-						rows: j.connections.map((t) => [
+						rows: M.connections.map((t) => [
 							w(t.provider),
 							t.display_name,
 							w(t.environment),
 							t.last_synced_at ? new Date(t.last_synced_at).toLocaleString() : "Never",
-							/* @__PURE__ */ (0, b.jsx)(R, { value: t.status }),
+							/* @__PURE__ */ (0, b.jsxs)("div", {
+								className: "status-stack",
+								children: [/* @__PURE__ */ (0, b.jsx)(R, { value: t.status }), Be.has(t.provider) && /* @__PURE__ */ (0, b.jsxs)("small", { children: [
+									"OAuth:",
+									" ",
+									ze.find((e) => e.connection_id === t.id)?.status || "not authorized"
+								] })]
+							}),
 							/* @__PURE__ */ (0, b.jsxs)("div", {
 								className: "button-row",
-								children: [t.status === "active" && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
-									className: "small-button",
-									onClick: () => se(t),
-									children: "Sync now"
-								}), e("admin") && (t.status === "configured" || t.status === "paused" || t.status === "error" ? /* @__PURE__ */ (0, b.jsx)("button", {
-									className: "small-button",
-									onClick: () => ae(t, "active"),
-									children: "Activate"
-								}) : t.status === "active" ? /* @__PURE__ */ (0, b.jsx)("button", {
-									className: "small-button",
-									onClick: () => ae(t, "paused"),
-									children: "Pause"
-								}) : null)]
+								children: [
+									e("admin") && Be.has(t.provider) && /* @__PURE__ */ (0, b.jsx)("button", {
+										className: "small-button",
+										onClick: () => oe(t),
+										children: ze.some((e) => e.connection_id === t.id && e.status === "active") ? "Reauthorize" : "Authorize"
+									}),
+									e("admin") && ze.some((e) => e.connection_id === t.id && e.status === "active") && /* @__PURE__ */ (0, b.jsx)("button", {
+										className: "small-button",
+										onClick: () => se(t),
+										children: "Revoke"
+									}),
+									t.status === "active" && e("operate") && /* @__PURE__ */ (0, b.jsx)("button", {
+										className: "small-button",
+										onClick: () => N(t),
+										children: "Sync now"
+									}),
+									e("admin") && !Be.has(t.provider) && (t.status === "configured" || t.status === "paused" || t.status === "error" ? /* @__PURE__ */ (0, b.jsx)("button", {
+										className: "small-button",
+										onClick: () => ce(t, "active"),
+										children: "Activate"
+									}) : t.status === "active" ? /* @__PURE__ */ (0, b.jsx)("button", {
+										className: "small-button",
+										onClick: () => ce(t, "paused"),
+										children: "Pause"
+									}) : null)
+								]
 							})
 						])
 					})
@@ -8739,7 +8793,7 @@ function ae({ can: e, notify: t }) {
 					subtitle: "Approved production-integration targets",
 					children: /* @__PURE__ */ (0, b.jsx)("div", {
 						className: "attention-list",
-						children: j.catalog.map((e) => /* @__PURE__ */ (0, b.jsxs)("div", {
+						children: M.catalog.map((e) => /* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "attention",
 							children: [
 								/* @__PURE__ */ (0, b.jsx)("span", {
@@ -8771,9 +8825,9 @@ function ae({ can: e, notify: t }) {
 						"Removed",
 						"Status"
 					],
-					rows: j.runs.map((e) => [
+					rows: M.runs.map((e) => [
 						(/* @__PURE__ */ new Date(`${e.started_at}Z`)).toLocaleString(),
-						j.connections.find((t) => t.id === e.connection_id)?.display_name,
+						M.connections.find((t) => t.id === e.connection_id)?.display_name,
 						w(e.trigger),
 						e.added,
 						e.modified,
@@ -8785,29 +8839,29 @@ function ae({ can: e, notify: t }) {
 			/* @__PURE__ */ (0, b.jsx)(F, {
 				title: "Accounting application workbench",
 				subtitle: "Route provider records into native subledgers or controlled draft journals",
-				action: e("admin") && Fe && ![
+				action: e("admin") && Re && ![
 					"plaid",
 					"stripe",
 					"gusto",
 					"hubspot"
-				].includes(Fe.provider) ? /* @__PURE__ */ (0, b.jsx)("button", {
+				].includes(Re.provider) ? /* @__PURE__ */ (0, b.jsx)("button", {
 					className: "secondary",
-					onClick: () => c(!0),
+					onClick: () => l(!0),
 					children: "Add mapping"
 				}) : null,
-				children: j.connections.length ? /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsxs)("div", {
+				children: M.connections.length ? /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "workflow-toolbar",
 					children: [/* @__PURE__ */ (0, b.jsx)(B, {
 						label: "Connection",
 						name: "workbench_connection",
 						as: "select",
-						value: a,
-						onChange: (e) => o(e.target.value),
-						options: j.connections.map((e) => [e.id, e.display_name])
-					}), /* @__PURE__ */ (0, b.jsx)("span", { children: Fe?.provider === "plaid" ? "Plaid bank transactions reconcile to posted cash through the native bank feed" : Fe?.provider === "stripe" ? "Stripe billing and payment objects reconcile to Folio subledgers; payouts prove net settlement through the bank feed" : Fe?.provider === "gusto" ? "Gusto payrolls accrue wages, taxes, benefits and deductions before each disclosed cash component reconciles independently" : Fe?.provider === "hubspot" ? "HubSpot associations flow through approved identity links and contract proposals; CRM never posts accounting" : `${ke.length} active mapping${ke.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals` })]
-				}), A.loading ? /* @__PURE__ */ (0, b.jsx)(ye, {}) : A.error ? /* @__PURE__ */ (0, b.jsx)(xe, {
-					error: A.error,
-					retry: A.refresh
+						value: o,
+						onChange: (e) => s(e.target.value),
+						options: M.connections.map((e) => [e.id, e.display_name])
+					}), /* @__PURE__ */ (0, b.jsx)("span", { children: Re?.provider === "plaid" ? "Plaid bank transactions reconcile to posted cash through the native bank feed" : Re?.provider === "stripe" ? "Stripe billing and payment objects reconcile to Folio subledgers; payouts prove net settlement through the bank feed" : Re?.provider === "gusto" ? "Gusto payrolls accrue wages, taxes, benefits and deductions before each disclosed cash component reconciles independently" : Re?.provider === "hubspot" ? "HubSpot associations flow through approved identity links and contract proposals; CRM never posts accounting" : `${Me.length} active mapping${Me.length === 1 ? "" : "s"} · records become drafts, never automatically posted journals` })]
+				}), j.loading ? /* @__PURE__ */ (0, b.jsx)(ye, {}) : j.error ? /* @__PURE__ */ (0, b.jsx)(xe, {
+					error: j.error,
+					retry: j.refresh
 				}) : /* @__PURE__ */ (0, b.jsx)(L, {
 					caption: "Provider accounting application queue",
 					emptyTitle: "No synchronized records",
@@ -8820,35 +8874,35 @@ function ae({ can: e, notify: t }) {
 						"Status",
 						"Action"
 					],
-					rows: Oe.map((t) => [
+					rows: je.map((t) => [
 						w(t.object_type),
 						t.external_id,
 						w(t.operation),
 						t.effective_at ? t.effective_at.slice(0, 10) : "—",
 						/* @__PURE__ */ (0, b.jsx)(R, { value: t.status }),
-						["staged", "error"].includes(t.status) && e("operate") ? Fe?.provider === "plaid" && t.object_type === "bank_transaction" ? /* @__PURE__ */ (0, b.jsx)("button", {
+						["staged", "error"].includes(t.status) && e("operate") ? Re?.provider === "plaid" && t.object_type === "bank_transaction" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => ue(t),
+							onClick: () => pe(t),
 							children: "Review bank feed"
-						}) : Fe?.provider === "stripe" && t.object_type.startsWith("stripe_") ? /* @__PURE__ */ (0, b.jsx)("button", {
+						}) : Re?.provider === "stripe" && t.object_type.startsWith("stripe_") ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => fe(t),
+							onClick: () => he(t),
 							children: "Reconcile Stripe"
-						}) : Fe?.provider === "gusto" && t.object_type === "payroll_run" ? /* @__PURE__ */ (0, b.jsx)("button", {
+						}) : Re?.provider === "gusto" && t.object_type === "payroll_run" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => me(t),
+							onClick: () => be(t),
 							children: "Review payroll"
-						}) : Fe?.provider === "hubspot" && ["hubspot_company", "hubspot_product"].includes(t.object_type) ? /* @__PURE__ */ (0, b.jsx)("button", {
+						}) : Re?.provider === "hubspot" && ["hubspot_company", "hubspot_product"].includes(t.object_type) ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => T(t),
+							onClick: () => ne(t),
 							children: "Link identity"
-						}) : Fe?.provider === "hubspot" && t.object_type === "hubspot_deal" ? /* @__PURE__ */ (0, b.jsx)("button", {
+						}) : Re?.provider === "hubspot" && t.object_type === "hubspot_deal" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => Se(t),
+							onClick: () => Ee(t),
 							children: "Prepare contract"
-						}) : Fe?.provider === "hubspot" ? "Association component" : /* @__PURE__ */ (0, b.jsx)("button", {
+						}) : Re?.provider === "hubspot" ? "Association component" : /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => le(t),
+							onClick: () => de(t),
 							children: "Review mapping"
 						}) : t.applied_entity_id ? t.applied_entity_type === "bank_feed_transaction" ? "Bank feed applied" : t.applied_entity_type === "stripe_reconciliation" ? "Stripe reconciled" : t.applied_entity_type === "payroll_run" ? "Payroll subledger applied" : t.applied_entity_type?.startsWith("crm_") ? "CRM handoff controlled" : `Draft ${t.applied_entity_id}` : "—"
 					])
@@ -8857,19 +8911,19 @@ function ae({ can: e, notify: t }) {
 					detail: "Configure a provider connection before building an accounting mapping."
 				})
 			}),
-			Fe?.provider === "stripe" && /* @__PURE__ */ (0, b.jsxs)(F, {
+			Re?.provider === "stripe" && /* @__PURE__ */ (0, b.jsxs)(F, {
 				title: "Stripe settlement ledger",
 				subtitle: "Immutable provider versions linked to contracts, AR activity, fees and matched bank deposits",
 				children: [/* @__PURE__ */ (0, b.jsx)("div", {
 					className: "workflow-toolbar",
 					children: /* @__PURE__ */ (0, b.jsxs)("span", { children: [
-						Ae.metrics?.matched || 0,
+						Ne.metrics?.matched || 0,
 						" matched ·",
 						" ",
-						Ae.metrics?.components || 0,
+						Ne.metrics?.components || 0,
 						" payout components ·",
 						" ",
-						Ae.metrics?.exceptions || 0,
+						Ne.metrics?.exceptions || 0,
 						" exceptions"
 					] })
 				}), /* @__PURE__ */ (0, b.jsx)(L, {
@@ -8884,7 +8938,7 @@ function ae({ can: e, notify: t }) {
 						"Status",
 						"Reviewed by"
 					],
-					rows: Ae.records.map((e) => [
+					rows: Ne.records.map((e) => [
 						w(e.object_type),
 						e.external_id,
 						Number.isSafeInteger(e.amount_cents) ? S(e.amount_cents) : "—",
@@ -8894,22 +8948,22 @@ function ae({ can: e, notify: t }) {
 					])
 				})]
 			}),
-			Fe?.provider === "gusto" && /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsxs)(F, {
+			Re?.provider === "gusto" && /* @__PURE__ */ (0, b.jsxs)(b.Fragment, { children: [/* @__PURE__ */ (0, b.jsxs)(F, {
 				title: "Payroll accrual ledger",
 				subtitle: "Gross wages, employer costs and employee deductions with source-version and journal lineage",
 				children: [/* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "workflow-toolbar",
 					children: [/* @__PURE__ */ (0, b.jsxs)("span", { children: [
-						je.metrics?.runs || 0,
+						Pe.metrics?.runs || 0,
 						" current runs · ",
-						je.metrics?.draft_accruals || 0,
+						Pe.metrics?.draft_accruals || 0,
 						" ",
 						"accrual drafts · ",
-						je.metrics?.open_settlements || 0,
+						Pe.metrics?.open_settlements || 0,
 						" settlement actions"
 					] }), /* @__PURE__ */ (0, b.jsx)("button", {
 						className: "secondary",
-						onClick: A.refresh,
+						onClick: j.refresh,
 						children: "Refresh posting state"
 					})]
 				}), /* @__PURE__ */ (0, b.jsx)(L, {
@@ -8924,7 +8978,7 @@ function ae({ can: e, notify: t }) {
 						"Journal",
 						"Status"
 					],
-					rows: je.runs.map((e) => [
+					rows: Pe.runs.map((e) => [
 						e.check_date,
 						e.external_id,
 						S(e.gross_pay_cents),
@@ -8948,7 +9002,7 @@ function ae({ can: e, notify: t }) {
 						"State",
 						"Action"
 					],
-					rows: je.runs.flatMap((t) => t.settlements.map((n) => [
+					rows: Pe.runs.flatMap((t) => t.settlements.map((n) => [
 						`${t.external_id} · ${t.check_date}`,
 						w(n.component_type),
 						S(n.expected_cents),
@@ -8956,7 +9010,7 @@ function ae({ can: e, notify: t }) {
 						/* @__PURE__ */ (0, b.jsx)(R, { value: n.effective_status }),
 						e("operate") && n.effective_status === "open" ? t.accounting_status === "posted" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => y({
+							onClick: () => ee({
 								...n,
 								payroll_external_id: t.external_id,
 								check_date: t.check_date
@@ -8964,7 +9018,7 @@ function ae({ can: e, notify: t }) {
 							children: "Prepare settlement"
 						}) : "Post accrual first" : e("operate") && n.effective_status === "posted" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => x({
+							onClick: () => C({
 								...n,
 								payroll_external_id: t.external_id,
 								check_date: t.check_date
@@ -8974,18 +9028,18 @@ function ae({ can: e, notify: t }) {
 					]))
 				})
 			})] }),
-			Fe?.provider === "hubspot" && /* @__PURE__ */ (0, b.jsxs)(F, {
+			Re?.provider === "hubspot" && /* @__PURE__ */ (0, b.jsxs)(F, {
 				title: "CRM contract proposal ledger",
 				subtitle: "Closed-won deals remain non-accounting proposals until identity, economics, dates, SSPs and controller approval are complete",
 				children: [/* @__PURE__ */ (0, b.jsx)("div", {
 					className: "workflow-toolbar",
 					children: /* @__PURE__ */ (0, b.jsxs)("span", { children: [
-						Ne.metrics?.prepared || 0,
+						Ie.metrics?.prepared || 0,
 						" prepared · ",
-						Ne.metrics?.approved || 0,
+						Ie.metrics?.approved || 0,
 						" approved ·",
 						" ",
-						Ne.metrics?.applied || 0,
+						Ie.metrics?.applied || 0,
 						" contracts created"
 					] })
 				}), /* @__PURE__ */ (0, b.jsx)(L, {
@@ -9000,7 +9054,7 @@ function ae({ can: e, notify: t }) {
 						"Status",
 						"Action"
 					],
-					rows: Ne.proposals.map((t) => [
+					rows: Ie.proposals.map((t) => [
 						t.deal_external_id,
 						t.customer_name,
 						t.contract_number,
@@ -9012,7 +9066,7 @@ function ae({ can: e, notify: t }) {
 							children: "Approve proposal"
 						}) : e("operate") && t.status === "approved" ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => De(t),
+							onClick: () => Ae(t),
 							children: "Create contract"
 						}) : t.status === "applied" ? `Contract ${t.contract_id}` : "—"
 					])
@@ -9030,27 +9084,27 @@ function ae({ can: e, notify: t }) {
 						"Status",
 						"Action"
 					],
-					rows: j.dead_letters.map((t) => [
+					rows: M.dead_letters.map((t) => [
 						(/* @__PURE__ */ new Date(`${t.created_at}Z`)).toLocaleString(),
-						j.connections.find((e) => e.id === t.connection_id)?.display_name,
+						M.connections.find((e) => e.id === t.connection_id)?.display_name,
 						t.error_code,
 						t.error_message,
 						/* @__PURE__ */ (0, b.jsx)(R, { value: t.status }),
 						t.status === "open" && e("operate") ? /* @__PURE__ */ (0, b.jsx)("button", {
 							className: "small-button",
-							onClick: () => oe(t),
+							onClick: () => le(t),
 							children: "Resolve"
 						}) : "—"
 					])
 				})
 			}),
-			r && /* @__PURE__ */ (0, b.jsx)(we, {
+			i && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Configure connector",
 				subtitle: "Enter secret-manager reference names only. Tokens and client secrets never belong in this form.",
-				close: () => i(!1),
+				close: () => a(!1),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: M,
+					onSubmit: ae,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "form-grid",
@@ -9058,7 +9112,7 @@ function ae({ can: e, notify: t }) {
 								label: "Provider",
 								name: "provider",
 								as: "select",
-								options: j.catalog.map((e) => [e.provider, e.name])
+								options: M.catalog.map((e) => [e.provider, e.name])
 							}), /* @__PURE__ */ (0, b.jsx)(B, {
 								label: "Environment",
 								name: "environment",
@@ -9074,7 +9128,14 @@ function ae({ can: e, notify: t }) {
 							label: "External account ID",
 							name: "external_account_id",
 							required: !1,
-							hint: "Required for production; use the provider's tenant, account or company identifier."
+							hint: "Optional for hosted OAuth; Folio binds the provider account returned by authorization."
+						}),
+						/* @__PURE__ */ (0, b.jsx)(B, {
+							label: "OAuth scopes",
+							name: "scopes",
+							required: !1,
+							placeholder: "crm.objects.companies.read, crm.objects.deals.read",
+							hint: "Comma-separated. HubSpot requires explicit read scopes; Stripe accepts read_only or read_write."
 						}),
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "form-grid",
@@ -9092,19 +9153,19 @@ function ae({ can: e, notify: t }) {
 							})]
 						}),
 						/* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => i(!1),
+							close: () => a(!1),
 							label: "Save configuration"
 						})
 					]
 				})
 			}),
-			s && Fe && /* @__PURE__ */ (0, b.jsx)(we, {
+			c && Re && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Add versioned accounting mapping",
-				subtitle: `Map one ${Fe.display_name} source field into the controlled journal draft shape.`,
-				close: () => c(!1),
+				subtitle: `Map one ${Re.display_name} source field into the controlled journal draft shape.`,
+				close: () => l(!1),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: ce,
+					onSubmit: ue,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "form-grid",
@@ -9158,16 +9219,16 @@ function ae({ can: e, notify: t }) {
 							}), "Fail validation when the source field and fallback are both empty"]
 						}),
 						/* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => c(!1),
+							close: () => l(!1),
 							label: "Activate mapping"
 						})
 					]
 				})
 			}),
-			l && /* @__PURE__ */ (0, b.jsx)(we, {
+			u && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Review accounting application",
-				subtitle: `${w(l.record.object_type)} · ${l.record.external_id}`,
-				close: () => u(null),
+				subtitle: `${w(u.record.object_type)} · ${u.record.external_id}`,
+				close: () => d(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "application-review",
 					children: [
@@ -9176,29 +9237,29 @@ function ae({ can: e, notify: t }) {
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Date",
-									value: l.mapped.date || "Not mapped"
+									value: u.mapped.date || "Not mapped"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Amount",
-									value: l.mapped.amount_cents ? S(l.mapped.amount_cents) : "Not mapped"
+									value: u.mapped.amount_cents ? S(u.mapped.amount_cents) : "Not mapped"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Debit",
-									value: l.mapped.debit_account_code || "Not mapped"
+									value: u.mapped.debit_account_code || "Not mapped"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Credit",
-									value: l.mapped.credit_account_code || "Not mapped"
+									value: u.mapped.credit_account_code || "Not mapped"
 								})
 							]
 						}),
 						/* @__PURE__ */ (0, b.jsxs)("div", {
-							className: l.ready ? "control-note" : "control-note warning-note",
-							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: l.ready ? "Ready for approval" : "Mapping needs attention" }), /* @__PURE__ */ (0, b.jsx)("span", { children: l.ready ? l.mapped.memo : l.issues.join(" · ") })]
+							className: u.ready ? "control-note" : "control-note warning-note",
+							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: u.ready ? "Ready for approval" : "Mapping needs attention" }), /* @__PURE__ */ (0, b.jsx)("span", { children: u.ready ? u.mapped.memo : u.issues.join(" · ") })]
 						}),
-						l.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
+						u.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: N,
+							onSubmit: fe,
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(B, {
 									label: "Approval note",
@@ -9212,15 +9273,15 @@ function ae({ can: e, notify: t }) {
 									children: "Approval creates a draft only. A user with posting permission must independently review and post it from Journals."
 								}),
 								/* @__PURE__ */ (0, b.jsx)(z, {
-									close: () => u(null),
-									label: O ? "Applying…" : "Approve and create draft"
+									close: () => d(null),
+									label: k ? "Applying…" : "Approve and create draft"
 								})
 							]
 						}) : /* @__PURE__ */ (0, b.jsx)("div", {
 							className: "dialog-actions",
 							children: /* @__PURE__ */ (0, b.jsx)("button", {
 								className: "secondary",
-								onClick: () => u(null),
+								onClick: () => d(null),
 								children: "Return to mappings"
 							})
 						})
@@ -9233,7 +9294,7 @@ function ae({ can: e, notify: t }) {
 				close: () => ie(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: Ee,
+					onSubmit: ke,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "source-summary",
@@ -9274,19 +9335,19 @@ function ae({ can: e, notify: t }) {
 					]
 				})
 			}),
-			ne && /* @__PURE__ */ (0, b.jsx)(we, {
-				title: `Link HubSpot ${ne.object_type === "hubspot_company" ? "company" : "product"}`,
-				subtitle: `${ne.external_id} · immutable identity decision`,
-				close: () => T(null),
+			E && /* @__PURE__ */ (0, b.jsx)(we, {
+				title: `Link HubSpot ${E.object_type === "hubspot_company" ? "company" : "product"}`,
+				subtitle: `${E.external_id} · immutable identity decision`,
+				close: () => ne(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: Ce,
+					onSubmit: De,
 					children: [
 						/* @__PURE__ */ (0, b.jsx)(B, {
-							label: ne.object_type === "hubspot_company" ? "Folio customer" : "Folio product",
+							label: E.object_type === "hubspot_company" ? "Folio customer" : "Folio product",
 							name: "local_id",
 							as: "select",
-							options: (ne.object_type === "hubspot_company" ? Pe.customers : Pe.products).map((e) => [e.id, ne.object_type === "hubspot_company" ? e.name : `${e.sku} · ${e.name}`])
+							options: (E.object_type === "hubspot_company" ? Le.customers : Le.products).map((e) => [e.id, E.object_type === "hubspot_company" ? e.name : `${e.sku} · ${e.name}`])
 						}),
 						/* @__PURE__ */ (0, b.jsx)(B, {
 							label: "Identity approval rationale",
@@ -9300,16 +9361,16 @@ function ae({ can: e, notify: t }) {
 							children: "An external identity cannot later be silently relinked to a different Folio record."
 						}),
 						/* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => T(null),
-							label: O ? "Linking…" : "Approve identity link",
-							disabled: O
+							close: () => ne(null),
+							label: k ? "Linking…" : "Approve identity link",
+							disabled: k
 						})
 					]
 				})
 			}),
-			C && /* @__PURE__ */ (0, b.jsx)(we, {
+			T && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Prepare HubSpot contract proposal",
-				subtitle: `${C.record.external_id} · no journal posting`,
+				subtitle: `${T.record.external_id} · no journal posting`,
 				close: () => te(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "application-review",
@@ -9319,29 +9380,29 @@ function ae({ can: e, notify: t }) {
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Customer",
-									value: C.customer?.name || "Not linked"
+									value: T.customer?.name || "Not linked"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Deal",
-									value: C.deal.name || C.record.external_id
+									value: T.deal.name || T.record.external_id
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Amount",
-									value: S(C.deal.amount_cents)
+									value: S(T.deal.amount_cents)
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Currency",
-									value: C.deal.currency
+									value: T.deal.currency
 								})
 							]
 						}),
 						/* @__PURE__ */ (0, b.jsxs)("div", {
-							className: C.ready ? "control-note" : "control-note warning-note",
-							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: C.ready ? "Association and amount crossfoot passed" : "Contract handoff blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: C.ready ? `${C.line_items.length} linked performance-obligation candidate${C.line_items.length === 1 ? "" : "s"}` : C.issues.join(" · ") })]
+							className: T.ready ? "control-note" : "control-note warning-note",
+							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: T.ready ? "Association and amount crossfoot passed" : "Contract handoff blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: T.ready ? `${T.line_items.length} linked performance-obligation candidate${T.line_items.length === 1 ? "" : "s"}` : T.issues.join(" · ") })]
 						}),
-						C.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
+						T.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: Te,
+							onSubmit: Oe,
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(L, {
 									caption: "Synchronized deal economics",
@@ -9352,7 +9413,7 @@ function ae({ can: e, notify: t }) {
 										"Amount",
 										"SSP"
 									],
-									rows: C.line_items.map((e) => [
+									rows: T.line_items.map((e) => [
 										e.description,
 										e.product_name,
 										e.quantity,
@@ -9366,11 +9427,11 @@ function ae({ can: e, notify: t }) {
 										label: "Folio entity",
 										name: "entity_id",
 										as: "select",
-										options: Pe.entities.map((e) => [e.id, e.name])
+										options: Le.entities.map((e) => [e.id, e.name])
 									}), /* @__PURE__ */ (0, b.jsx)(B, {
 										label: "Contract number",
 										name: "contract_number",
-										placeholder: `HS-${C.record.external_id}`
+										placeholder: `HS-${T.record.external_id}`
 									})]
 								}),
 								/* @__PURE__ */ (0, b.jsxs)("div", {
@@ -9380,7 +9441,7 @@ function ae({ can: e, notify: t }) {
 											label: "Signed date",
 											name: "signed_date",
 											type: "date",
-											defaultValue: C.deal.close_date
+											defaultValue: T.deal.close_date
 										}),
 										/* @__PURE__ */ (0, b.jsx)(B, {
 											label: "Service start",
@@ -9418,8 +9479,8 @@ function ae({ can: e, notify: t }) {
 								}),
 								/* @__PURE__ */ (0, b.jsx)(z, {
 									close: () => te(null),
-									label: O ? "Preparing…" : "Prepare controlled proposal",
-									disabled: O
+									label: k ? "Preparing…" : "Prepare controlled proposal",
+									disabled: k
 								})
 							]
 						}) : /* @__PURE__ */ (0, b.jsx)(z, {
@@ -9429,10 +9490,10 @@ function ae({ can: e, notify: t }) {
 					]
 				})
 			}),
-			d && /* @__PURE__ */ (0, b.jsx)(we, {
+			f && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Review native bank-feed application",
-				subtitle: `Plaid transaction · ${d.record.external_id}`,
-				close: () => f(null),
+				subtitle: `Plaid transaction · ${f.record.external_id}`,
+				close: () => p(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "application-review",
 					children: [
@@ -9441,50 +9502,50 @@ function ae({ can: e, notify: t }) {
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Cash account",
-									value: d.feed_account ? `${d.feed_account.cash_account_code} · ${d.feed_account.display_name}` : "Not bound"
+									value: f.feed_account ? `${f.feed_account.cash_account_code} · ${f.feed_account.display_name}` : "Not bound"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Date",
-									value: d.normalized.occurred_on || d.previous?.transaction_date || "—"
+									value: f.normalized.occurred_on || f.previous?.transaction_date || "—"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Cash amount",
-									value: Number.isSafeInteger(d.normalized.cash_amount_cents) ? S(d.normalized.cash_amount_cents) : "Source removal"
+									value: Number.isSafeInteger(f.normalized.cash_amount_cents) ? S(f.normalized.cash_amount_cents) : "Source removal"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Operation",
-									value: w(d.record.operation)
+									value: w(f.record.operation)
 								})
 							]
 						}),
 						/* @__PURE__ */ (0, b.jsxs)("div", {
-							className: d.ready ? "control-note" : "control-note warning-note",
-							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: d.ready ? "Ready for bank review" : "Binding or source issue" }), /* @__PURE__ */ (0, b.jsx)("span", { children: d.ready ? "Folio will match one unique posted cash line. It will not create, post, reverse, or modify a journal." : d.issues.join(" · ") })]
+							className: f.ready ? "control-note" : "control-note warning-note",
+							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: f.ready ? "Ready for bank review" : "Binding or source issue" }), /* @__PURE__ */ (0, b.jsx)("span", { children: f.ready ? "Folio will match one unique posted cash line. It will not create, post, reverse, or modify a journal." : f.issues.join(" · ") })]
 						}),
-						d.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
+						f.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: de,
+							onSubmit: me,
 							children: [/* @__PURE__ */ (0, b.jsx)(B, {
 								label: "Reviewer rationale",
 								name: "approval_note",
 								as: "textarea",
 								hint: "Confirm the source version, account binding and effect of a modification or removal."
 							}), /* @__PURE__ */ (0, b.jsx)(z, {
-								close: () => f(null),
-								label: O ? "Applying…" : "Apply to bank feed",
-								disabled: O
+								close: () => p(null),
+								label: k ? "Applying…" : "Apply to bank feed",
+								disabled: k
 							})]
 						}) : /* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => f(null),
+							close: () => p(null),
 							label: "Close and correct"
 						})
 					]
 				})
 			}),
-			p && /* @__PURE__ */ (0, b.jsx)(we, {
+			m && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Reconcile native Stripe activity",
-				subtitle: `${w(p.record.object_type)} · ${p.record.external_id}`,
-				close: () => m(null),
+				subtitle: `${w(m.record.object_type)} · ${m.record.external_id}`,
+				close: () => h(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "application-review",
 					children: [
@@ -9493,35 +9554,35 @@ function ae({ can: e, notify: t }) {
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Operation",
-									value: w(p.record.operation)
+									value: w(m.record.operation)
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Amount",
-									value: Number.isSafeInteger(p.normalized.amount_cents) ? S(p.normalized.amount_cents) : "—"
+									value: Number.isSafeInteger(m.normalized.amount_cents) ? S(m.normalized.amount_cents) : "—"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Currency",
-									value: p.normalized.currency?.toUpperCase() || "—"
+									value: m.normalized.currency?.toUpperCase() || "—"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Target",
-									value: w(p.target_type)
+									value: w(m.target_type)
 								})
 							]
 						}),
 						/* @__PURE__ */ (0, b.jsxs)("div", {
-							className: p.ready ? "control-note" : "control-note warning-note",
-							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: p.ready ? "Ready for controller reconciliation" : "Reconciliation blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: p.ready ? "This records a source-to-subledger decision only. Folio will not create or post a duplicate journal." : p.issues.join(" · ") })]
+							className: m.ready ? "control-note" : "control-note warning-note",
+							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: m.ready ? "Ready for controller reconciliation" : "Reconciliation blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: m.ready ? "This records a source-to-subledger decision only. Folio will not create or post a duplicate journal." : m.issues.join(" · ") })]
 						}),
-						p.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
+						m.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: pe,
+							onSubmit: _e,
 							children: [
-								!["component", "removed"].includes(p.target_type) && /* @__PURE__ */ (0, b.jsx)(B, {
-									label: `Eligible ${w(p.target_type)}`,
+								!["component", "removed"].includes(m.target_type) && /* @__PURE__ */ (0, b.jsx)(B, {
+									label: `Eligible ${w(m.target_type)}`,
 									name: "target_entity_id",
 									as: "select",
-									options: p.candidates.map((e) => [e.id, `${e.label || e.name || e.id}${Number.isSafeInteger(e.amount_cents) ? ` · ${S(e.amount_cents)}` : ""}`])
+									options: m.candidates.map((e) => [e.id, `${e.label || e.name || e.id}${Number.isSafeInteger(e.amount_cents) ? ` · ${S(e.amount_cents)}` : ""}`])
 								}),
 								/* @__PURE__ */ (0, b.jsx)(B, {
 									label: "Controller rationale",
@@ -9531,22 +9592,22 @@ function ae({ can: e, notify: t }) {
 									placeholder: "Document the customer identity, amount, currency and supporting evidence reviewed."
 								}),
 								/* @__PURE__ */ (0, b.jsx)(z, {
-									close: () => m(null),
-									label: O ? "Reconciling…" : "Approve reconciliation",
-									disabled: O
+									close: () => h(null),
+									label: k ? "Reconciling…" : "Approve reconciliation",
+									disabled: k
 								})
 							]
 						}) : /* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => m(null),
+							close: () => h(null),
 							label: "Close and resolve"
 						})
 					]
 				})
 			}),
-			h && /* @__PURE__ */ (0, b.jsx)(we, {
+			g && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Review native payroll accrual",
-				subtitle: `Gusto payroll · ${h.record.external_id}`,
-				close: () => g(null),
+				subtitle: `Gusto payroll · ${g.record.external_id}`,
+				close: () => v(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("div", {
 					className: "application-review",
 					children: [
@@ -9555,31 +9616,31 @@ function ae({ can: e, notify: t }) {
 							children: [
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Check date",
-									value: h.normalized.check_date || "—"
+									value: g.normalized.check_date || "—"
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Gross pay",
-									value: S(h.normalized.gross_pay_cents)
+									value: S(g.normalized.gross_pay_cents)
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Employer taxes",
-									value: S(h.normalized.employer_taxes_cents)
+									value: S(g.normalized.employer_taxes_cents)
 								}),
 								/* @__PURE__ */ (0, b.jsx)(I, {
 									label: "Company debit",
-									value: S(h.normalized.company_debit_cents)
+									value: S(g.normalized.company_debit_cents)
 								})
 							]
 						}),
 						/* @__PURE__ */ (0, b.jsxs)("div", {
-							className: h.ready ? "control-note" : "control-note warning-note",
-							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: h.ready ? "Crossfoot passed" : "Payroll blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: h.ready ? `${h.journal_lines.length || "Reversal"} controlled journal lines · ${h.settlement_components.length} disclosed bank-debit components` : h.issues.join(" · ") })]
+							className: g.ready ? "control-note" : "control-note warning-note",
+							children: [/* @__PURE__ */ (0, b.jsx)("strong", { children: g.ready ? "Crossfoot passed" : "Payroll blocked" }), /* @__PURE__ */ (0, b.jsx)("span", { children: g.ready ? `${g.journal_lines.length || "Reversal"} controlled journal lines · ${g.settlement_components.length} disclosed bank-debit components` : g.issues.join(" · ") })]
 						}),
-						h.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
+						g.ready ? /* @__PURE__ */ (0, b.jsxs)("form", {
 							className: "form-stack",
-							onSubmit: he,
+							onSubmit: Se,
 							children: [
-								h.journal_lines.length > 0 && /* @__PURE__ */ (0, b.jsx)(L, {
+								g.journal_lines.length > 0 && /* @__PURE__ */ (0, b.jsx)(L, {
 									caption: "Payroll journal blueprint",
 									columns: [
 										"Account",
@@ -9587,7 +9648,7 @@ function ae({ can: e, notify: t }) {
 										"Debit",
 										"Credit"
 									],
-									rows: h.journal_lines.map((e) => [
+									rows: g.journal_lines.map((e) => [
 										e.account_code,
 										e.description,
 										e.side === "debit" ? S(e.amount_cents) : "—",
@@ -9606,25 +9667,25 @@ function ae({ can: e, notify: t }) {
 									children: "Approval creates an accrual or reversal draft only. Another authorized user must post it before settlement can begin."
 								}),
 								/* @__PURE__ */ (0, b.jsx)(z, {
-									close: () => g(null),
-									label: O ? "Applying…" : "Approve payroll draft",
-									disabled: O
+									close: () => v(null),
+									label: k ? "Applying…" : "Approve payroll draft",
+									disabled: k
 								})
 							]
 						}) : /* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => g(null),
+							close: () => v(null),
 							label: "Close and resolve"
 						})
 					]
 				})
 			}),
-			v && /* @__PURE__ */ (0, b.jsx)(we, {
+			y && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Prepare payroll settlement",
-				subtitle: `${v.payroll_external_id} · ${w(v.component_type)} · ${S(v.expected_cents)}`,
-				close: () => y(null),
+				subtitle: `${y.payroll_external_id} · ${w(y.component_type)} · ${S(y.expected_cents)}`,
+				close: () => ee(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: _e,
+					onSubmit: Ce,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "form-grid",
@@ -9632,12 +9693,12 @@ function ae({ can: e, notify: t }) {
 								label: "Cash account",
 								name: "cash_account_id",
 								as: "select",
-								options: Me.filter((e) => e.active && e.type === "asset").map((e) => [e.id, `${e.code} · ${e.name}`])
+								options: Fe.filter((e) => e.active && e.type === "asset").map((e) => [e.id, `${e.code} · ${e.name}`])
 							}), /* @__PURE__ */ (0, b.jsx)(B, {
 								label: "Settlement date",
 								name: "settlement_date",
 								type: "date",
-								defaultValue: v.check_date
+								defaultValue: y.check_date
 							})]
 						}),
 						/* @__PURE__ */ (0, b.jsx)(B, {
@@ -9652,20 +9713,20 @@ function ae({ can: e, notify: t }) {
 							children: "This creates a draft liability-clearing entry. A different user posts it; Plaid then matches the posted cash line."
 						}),
 						/* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => y(null),
-							label: O ? "Preparing…" : "Create settlement draft",
-							disabled: O
+							close: () => ee(null),
+							label: k ? "Preparing…" : "Create settlement draft",
+							disabled: k
 						})
 					]
 				})
 			}),
-			ee && /* @__PURE__ */ (0, b.jsx)(we, {
+			x && /* @__PURE__ */ (0, b.jsx)(we, {
 				title: "Reconcile payroll settlement",
-				subtitle: `${ee.payroll_external_id} · ${w(ee.component_type)} · ${S(ee.expected_cents)}`,
-				close: () => x(null),
+				subtitle: `${x.payroll_external_id} · ${w(x.component_type)} · ${S(x.expected_cents)}`,
+				close: () => C(null),
 				children: /* @__PURE__ */ (0, b.jsxs)("form", {
 					className: "form-stack",
-					onSubmit: be,
+					onSubmit: Te,
 					children: [
 						/* @__PURE__ */ (0, b.jsxs)("div", {
 							className: "control-note",
@@ -9679,9 +9740,9 @@ function ae({ can: e, notify: t }) {
 							placeholder: "Confirm the Gusto component, posted liability clearing and Plaid bank evidence."
 						}),
 						/* @__PURE__ */ (0, b.jsx)(z, {
-							close: () => x(null),
-							label: O ? "Reconciling…" : "Approve three-way match",
-							disabled: O
+							close: () => C(null),
+							label: k ? "Reconciling…" : "Approve three-way match",
+							disabled: k
 						})
 					]
 				})
@@ -9690,13 +9751,13 @@ function ae({ can: e, notify: t }) {
 	});
 }
 function oe({ can: e, notify: t }) {
-	let [n, r] = (0, _.useState)("open"), [i, a] = (0, _.useState)(1), o = D(() => Promise.all([
-		E("/api/imports/templates"),
-		E("/api/imports/batches"),
-		E("/api/accounts"),
-		E("/api/imports/mapping-profiles"),
-		E("/api/imports/duplicate-policies")
-	]), []), s = D(() => E(`/api/imports/exceptions?status=${encodeURIComponent(n)}&page=${i}&page_size=20`), [n, i]), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(1), [f, p] = (0, _.useState)(te()), [m, h] = (0, _.useState)(null), [g, v] = (0, _.useState)(!1), [y, ee] = (0, _.useState)(""), [x, S] = (0, _.useState)(!1), [C, O] = (0, _.useState)({
+	let [n, r] = (0, _.useState)("open"), [i, a] = (0, _.useState)(1), o = O(() => Promise.all([
+		D("/api/imports/templates"),
+		D("/api/imports/batches"),
+		D("/api/accounts"),
+		D("/api/imports/mapping-profiles"),
+		D("/api/imports/duplicate-policies")
+	]), []), s = O(() => D(`/api/imports/exceptions?status=${encodeURIComponent(n)}&page=${i}&page_size=20`), [n, i]), [c, l] = (0, _.useState)(!1), [u, d] = (0, _.useState)(1), [f, p] = (0, _.useState)(T()), [m, h] = (0, _.useState)(null), [g, v] = (0, _.useState)(!1), [y, ee] = (0, _.useState)(""), [x, S] = (0, _.useState)(!1), [C, ie] = (0, _.useState)({
 		template_key: "customers",
 		field_key: "name",
 		threshold_percent: "88",
@@ -9707,9 +9768,9 @@ function oe({ can: e, notify: t }) {
 		error: o.error || s.error,
 		retry: () => Promise.all([o.refresh(), s.refresh()])
 	});
-	let [se, ce, le, N, ue] = o.data, { items: de, page: fe, open_total: pe } = s.data, me = se.find((e) => e.key === f.template_key) || se[0], he = N.find((e) => e.id === f.mapping_profile_id), I = ne(f.csv), ve = me.fields.filter((e) => e.required).every((e) => f.mapping[e.key]), be = ce.filter((e) => `${e.filename} ${e.template_key} ${e.status}`.toLowerCase().includes(y.trim().toLowerCase())), Ce = m?.mapping_profile_id ? N.find((e) => e.id === m.mapping_profile_id) : null, Te = (se.find((e) => e.key === C.template_key) || se[0]).fields.filter((e) => e.type === "string");
+	let [se, ce, le, N, ue] = o.data, { items: de, page: fe, open_total: pe } = s.data, me = se.find((e) => e.key === f.template_key) || se[0], he = N.find((e) => e.id === f.mapping_profile_id), I = te(f.csv), ve = me.fields.filter((e) => e.required).every((e) => f.mapping[e.key]), be = ce.filter((e) => `${e.filename} ${e.template_key} ${e.status}`.toLowerCase().includes(y.trim().toLowerCase())), Ce = m?.mapping_profile_id ? N.find((e) => e.id === m.mapping_profile_id) : null, Te = (se.find((e) => e.key === C.template_key) || se[0]).fields.filter((e) => e.type === "string");
 	function Ee() {
-		p(te()), d(1), l(!0);
+		p(T()), d(1), l(!0);
 	}
 	function De(e) {
 		p((t) => ({
@@ -9718,11 +9779,11 @@ function oe({ can: e, notify: t }) {
 		}));
 	}
 	function Oe(e) {
-		p(te(e));
+		p(T(e));
 	}
 	function ke(e = "customers") {
 		let t = se.find((t) => t.key === e) || se[0], n = ue.find((e) => e.template_key === t.key), r = t.fields.filter((e) => e.type === "string");
-		O({
+		ie({
 			template_key: t.key,
 			field_key: n?.field_key || r[0]?.key || "",
 			threshold_percent: String(n?.threshold_percent || 88),
@@ -9732,7 +9793,7 @@ function oe({ can: e, notify: t }) {
 	async function Ae(e) {
 		e.preventDefault(), v(!0);
 		try {
-			let e = await E("/api/imports/duplicate-policies", {
+			let e = await D("/api/imports/duplicate-policies", {
 				method: "POST",
 				body: {
 					...C,
@@ -9766,7 +9827,7 @@ function oe({ can: e, notify: t }) {
 		De({
 			filename: n.name,
 			csv: r,
-			mapping: re(I, ne(r)) ? f.mapping : {}
+			mapping: ne(I, te(r)) ? f.mapping : {}
 		});
 	}
 	function Me() {
@@ -9801,13 +9862,13 @@ function oe({ can: e, notify: t }) {
 			});
 			return;
 		}
-		De({ mapping: T(me, I, f.mapping) }), d(2);
+		De({ mapping: E(me, I, f.mapping) }), d(2);
 	}
 	function Pe(e) {
 		let t = N.find((t) => t.id === e);
 		De({
 			mapping_profile_id: t?.id || "",
-			mapping: t ? T(me, I, t.mapping) : T(me, I, f.mapping)
+			mapping: t ? E(me, I, t.mapping) : E(me, I, f.mapping)
 		});
 	}
 	async function Fe(e) {
@@ -9820,7 +9881,7 @@ function oe({ can: e, notify: t }) {
 					end_date: f.end_date,
 					opening_cents: Math.round(Number(f.opening) * 100),
 					closing_cents: Math.round(Number(f.closing) * 100)
-				} : {}, n = await E("/api/jobs/imports/stage", {
+				} : {}, n = await D("/api/jobs/imports/stage", {
 					method: "POST",
 					body: {
 						template_key: f.template_key,
@@ -9836,9 +9897,9 @@ function oe({ can: e, notify: t }) {
 					kind: "success",
 					message: "Import source secured and queued for validation. No accounting records were created."
 				});
-				let r = await E(`/api/imports/batches/${(await ie(n.id, oe)).result.batch_id}?page=1&page_size=100`), i = !1, a = "";
+				let r = await D(`/api/imports/batches/${(await re(n.id, oe)).result.batch_id}?page=1&page_size=100`), i = !1, a = "";
 				if (f.mapping_profile_name.trim()) try {
-					await E("/api/imports/mapping-profiles", {
+					await D("/api/imports/mapping-profiles", {
 						method: "POST",
 						body: {
 							name: f.mapping_profile_name,
@@ -9865,7 +9926,7 @@ function oe({ can: e, notify: t }) {
 	}
 	async function Ie(e, n = 1) {
 		try {
-			h(await E(`/api/imports/batches/${e}?page=${n}&page_size=100`));
+			h(await D(`/api/imports/batches/${e}?page=${n}&page_size=100`));
 		} catch (e) {
 			t({
 				kind: "error",
@@ -9876,9 +9937,9 @@ function oe({ can: e, notify: t }) {
 	async function Le() {
 		v(!0);
 		try {
-			let e = await E(`/api/imports/batches/${m.id}/correction-source`);
+			let e = await D(`/api/imports/batches/${m.id}/correction-source`);
 			p({
-				...te(e.template_key),
+				...T(e.template_key),
 				filename: e.filename,
 				csv: e.csv,
 				mapping: e.mapping,
@@ -9908,11 +9969,11 @@ function oe({ can: e, notify: t }) {
 		v(!0);
 		try {
 			let e = m.error_count > 0 || m.duplicate_count > 0;
-			await E(`/api/imports/batches/${m.id}/approve`, {
+			await D(`/api/imports/batches/${m.id}/approve`, {
 				method: "POST",
 				body: { apply_valid_rows: e }
 			});
-			let n = await E("/api/jobs/imports/apply", {
+			let n = await D("/api/jobs/imports/apply", {
 				method: "POST",
 				body: { batch_id: m.id }
 			});
@@ -9920,14 +9981,14 @@ function oe({ can: e, notify: t }) {
 				kind: "success",
 				message: "Approved import queued for controlled application."
 			});
-			let r = await E(`/api/imports/batches/${(await ie(n.id, oe)).result.batch_id}?page=1&page_size=100`);
+			let r = await D(`/api/imports/batches/${(await re(n.id, oe)).result.batch_id}?page=1&page_size=100`);
 			h(r), await Promise.all([o.refresh(), s.refresh()]), t({
 				kind: "success",
 				message: `${r.applied_count} validated rows applied with retained lineage.`
 			});
 		} catch (e) {
 			try {
-				let e = await E(`/api/imports/batches/${m.id}?page=1&page_size=100`);
+				let e = await D(`/api/imports/batches/${m.id}?page=1&page_size=100`);
 				h(e), await Promise.all([o.refresh(), s.refresh()]);
 			} catch {}
 			t({
@@ -9940,7 +10001,7 @@ function oe({ can: e, notify: t }) {
 	}
 	async function ze(e) {
 		try {
-			await E("/api/imports/exceptions/status", {
+			await D("/api/imports/exceptions/status", {
 				method: "POST",
 				body: {
 					id: e.id,
@@ -9961,7 +10022,7 @@ function oe({ can: e, notify: t }) {
 	async function Be(e) {
 		e.preventDefault(), v(!0);
 		try {
-			let e = await E(`/api/imports/exceptions/${k.id}/accept-distinct`, {
+			let e = await D(`/api/imports/exceptions/${k.id}/accept-distinct`, {
 				method: "POST",
 				body: { resolution: j }
 			});
@@ -10292,7 +10353,7 @@ function oe({ can: e, notify: t }) {
 							value: C.template_key,
 							onChange: (e) => {
 								let t = se.find((t) => t.key === e.target.value), n = ue.find((t) => t.template_key === e.target.value), r = t.fields.filter((e) => e.type === "string");
-								O({
+								ie({
 									template_key: t.key,
 									field_key: n?.field_key || r[0]?.key || "",
 									threshold_percent: String(n?.threshold_percent || 88),
@@ -10305,7 +10366,7 @@ function oe({ can: e, notify: t }) {
 							label: "Text field to compare",
 							as: "select",
 							value: C.field_key,
-							onChange: (e) => O((t) => ({
+							onChange: (e) => ie((t) => ({
 								...t,
 								field_key: e.target.value
 							})),
@@ -10317,7 +10378,7 @@ function oe({ can: e, notify: t }) {
 							min: "70",
 							max: "99",
 							value: C.threshold_percent,
-							onChange: (e) => O((t) => ({
+							onChange: (e) => ie((t) => ({
 								...t,
 								threshold_percent: e.target.value
 							})),
@@ -10327,7 +10388,7 @@ function oe({ can: e, notify: t }) {
 							label: "Policy status",
 							as: "select",
 							value: C.active ? "active" : "disabled",
-							onChange: (e) => O((t) => ({
+							onChange: (e) => ie((t) => ({
 								...t,
 								active: e.target.value === "active"
 							})),
@@ -10458,7 +10519,7 @@ function oe({ can: e, notify: t }) {
 									let t = e.target.value;
 									De({
 										csv: t,
-										mapping: re(I, ne(t)) ? f.mapping : {}
+										mapping: ne(I, te(t)) ? f.mapping : {}
 									});
 								},
 								placeholder: `${me.sample_header}\n`,
@@ -10654,7 +10715,7 @@ function oe({ can: e, notify: t }) {
 	});
 }
 function se() {
-	let e = D(() => Promise.all([E("/api/dashboard"), E("/api/reconciliation-exceptions")]), []);
+	let e = O(() => Promise.all([D("/api/dashboard"), D("/api/reconciliation-exceptions")]), []);
 	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (e.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: e.error,
@@ -10732,7 +10793,7 @@ function se() {
 	});
 }
 function ce({ can: e, notify: t }) {
-	let n = D(() => Promise.all([E("/api/journals"), E("/api/accounts")]), []), [r, i] = (0, _.useState)(!1);
+	let n = O(() => Promise.all([D("/api/journals"), D("/api/accounts")]), []), [r, i] = (0, _.useState)(!1);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: n.error,
@@ -10743,7 +10804,7 @@ function ce({ can: e, notify: t }) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget), a = Math.round(Number(r.get("amount")) * 100);
 		try {
-			await E("/api/journals", {
+			await D("/api/journals", {
 				method: "POST",
 				body: {
 					date: r.get("date"),
@@ -10772,7 +10833,7 @@ function ce({ can: e, notify: t }) {
 	}
 	async function c(e) {
 		if (window.confirm("Post this journal? Posted entries are immutable.")) try {
-			await E(`/api/journals/${e}/post`, { method: "POST" }), await n.refresh(), t({
+			await D(`/api/journals/${e}/post`, { method: "POST" }), await n.refresh(), t({
 				kind: "success",
 				message: "Journal posted and integrity-sealed."
 			});
@@ -10876,7 +10937,7 @@ function ce({ can: e, notify: t }) {
 	});
 }
 function le({ can: e, notify: t }) {
-	let n = D(() => E("/api/saas/overview"), []);
+	let n = O(() => D("/api/saas/overview"), []);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: n.error,
@@ -10885,7 +10946,7 @@ function le({ can: e, notify: t }) {
 	let r = n.data;
 	async function i() {
 		try {
-			let e = await E("/api/revenue/recognize", {
+			let e = await D("/api/revenue/recognize", {
 				method: "POST",
 				body: { as_of: x }
 			});
@@ -10961,7 +11022,7 @@ function le({ can: e, notify: t }) {
 	});
 }
 function N({ can: e, notify: t }) {
-	let n = D(() => Promise.all([E("/api/receivables"), E("/api/saas/overview")]), []), [r, i] = (0, _.useState)(null);
+	let n = O(() => Promise.all([D("/api/receivables"), D("/api/saas/overview")]), []), [r, i] = (0, _.useState)(null);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: n.error,
@@ -10995,7 +11056,7 @@ function N({ can: e, notify: t }) {
 			};
 		}
 		try {
-			await E(s, {
+			await D(s, {
 				method: "POST",
 				body: c
 			}), i(null), await n.refresh(), t({
@@ -11180,12 +11241,12 @@ function N({ can: e, notify: t }) {
 	});
 }
 function ue({ can: e, notify: t }) {
-	let n = D(() => Promise.all([
-		E("/api/bank-statements"),
-		E("/api/bank-feed"),
-		E("/api/reconciliation-exceptions"),
-		E("/api/accounts"),
-		E("/api/integrations/connections")
+	let n = O(() => Promise.all([
+		D("/api/bank-statements"),
+		D("/api/bank-feed"),
+		D("/api/reconciliation-exceptions"),
+		D("/api/accounts"),
+		D("/api/integrations/connections")
 	]), []), [r, i] = (0, _.useState)(!1), [a, o] = (0, _.useState)(!1), [s, c] = (0, _.useState)(null);
 	if (n.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (n.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
@@ -11195,7 +11256,7 @@ function ue({ can: e, notify: t }) {
 	let [l, u, d, f, p] = n.data;
 	async function m(e, r) {
 		try {
-			await E(`/api/reconciliation-exceptions/${e.id}`, {
+			await D(`/api/reconciliation-exceptions/${e.id}`, {
 				method: "PATCH",
 				body: {
 					status: r,
@@ -11216,7 +11277,7 @@ function ue({ can: e, notify: t }) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
 		try {
-			await E("/api/bank-statements/import", {
+			await D("/api/bank-statements/import", {
 				method: "POST",
 				body: {
 					cash_account_id: Number(r.get("cash_account_id")),
@@ -11241,7 +11302,7 @@ function ue({ can: e, notify: t }) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
 		try {
-			await E("/api/bank-feed/accounts", {
+			await D("/api/bank-feed/accounts", {
 				method: "POST",
 				body: {
 					connection_id: r.get("connection_id"),
@@ -11263,7 +11324,7 @@ function ue({ can: e, notify: t }) {
 	}
 	async function v(e) {
 		try {
-			c(await E(`/api/bank-feed/transactions/${e.id}/candidates`));
+			c(await D(`/api/bank-feed/transactions/${e.id}/candidates`));
 		} catch (e) {
 			t({
 				kind: "error",
@@ -11275,7 +11336,7 @@ function ue({ can: e, notify: t }) {
 		e.preventDefault();
 		let r = new FormData(e.currentTarget);
 		try {
-			await E(`/api/bank-feed/transactions/${s.transaction.id}/match`, {
+			await D(`/api/bank-feed/transactions/${s.transaction.id}/match`, {
 				method: "POST",
 				body: {
 					journal_line_id: Number(r.get("journal_line_id")),
@@ -11570,7 +11631,7 @@ function ue({ can: e, notify: t }) {
 	});
 }
 function de() {
-	let e = D(() => E("/api/investments/overview"), []);
+	let e = O(() => D("/api/investments/overview"), []);
 	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (e.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: e.error,
@@ -11634,7 +11695,7 @@ function de() {
 	});
 }
 function fe() {
-	let e = D(() => E("/api/fixed-assets/overview"), []);
+	let e = O(() => D("/api/fixed-assets/overview"), []);
 	if (e.loading) return /* @__PURE__ */ (0, b.jsx)(ye, {});
 	if (e.error) return /* @__PURE__ */ (0, b.jsx)(xe, {
 		error: e.error,
@@ -11706,14 +11767,14 @@ function pe({ can: e, notify: t }) {
 		"cash_flow",
 		"comprehensive_income",
 		"changes_in_equity"
-	], r = D(() => E("/api/jobs?limit=100"), []), [i, a] = (0, _.useState)(x);
+	], r = O(() => D("/api/jobs?limit=100"), []), [i, a] = (0, _.useState)(x);
 	(0, _.useEffect)(() => {
 		let e = setInterval(() => void r.refresh(), 3e3);
 		return () => clearInterval(e);
 	}, []);
 	async function o(e, n) {
 		try {
-			await E("/api/jobs/reports", {
+			await D("/api/jobs/reports", {
 				method: "POST",
 				body: {
 					type: e,
@@ -11733,7 +11794,7 @@ function pe({ can: e, notify: t }) {
 	}
 	async function s(e, n) {
 		try {
-			await E(`/api/jobs/${e.id}/${n}`, {
+			await D(`/api/jobs/${e.id}/${n}`, {
 				method: "POST",
 				idempotent: !1
 			}), await r.refresh(), t({
@@ -11844,7 +11905,7 @@ function pe({ can: e, notify: t }) {
 function me({ auth: e, setAuth: t, notify: n }) {
 	async function r(e) {
 		try {
-			let r = await E("/api/auth/switch-org", {
+			let r = await D("/api/auth/switch-org", {
 				method: "POST",
 				body: { org_id: e },
 				idempotent: !1

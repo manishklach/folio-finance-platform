@@ -200,12 +200,14 @@ test("production preflight requires immutable images, mounted secrets, encryptio
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const paths = {
     backup: join(root, "backup-key"),
+    providerToken: join(root, "provider-token-key"),
     alert: join(root, "alert-url"),
     sentry: join(root, "sentry-dsn"),
     openai: join(root, "openai-key"),
     bootstrap: join(root, "bootstrap-token"),
   };
   writeFileSync(paths.backup, randomBytes(32).toString("base64"));
+  writeFileSync(paths.providerToken, randomBytes(32).toString("base64"));
   writeFileSync(paths.alert, "https://alerts.example.test/folio");
   writeFileSync(paths.sentry, "https://public@example.test/1");
   writeFileSync(paths.openai, "");
@@ -220,6 +222,8 @@ test("production preflight requires immutable images, mounted secrets, encryptio
     FOLIO_IMAGE: `registry.example.test/folio@sha256:${"a".repeat(64)}`,
     BACKUP_KEY_ID: "backup-key-2026-08",
     BACKUP_ENCRYPTION_KEY_FILE: paths.backup,
+    PROVIDER_TOKEN_ENCRYPTION_KEY_FILE: paths.providerToken,
+    PROVIDER_TOKEN_KEY_ID: "provider-token-2026-08",
     ALERT_WEBHOOK_URL_FILE: paths.alert,
     SENTRY_DSN_FILE: paths.sentry,
     OPENAI_API_KEY_FILE: paths.openai,

@@ -43,13 +43,14 @@ data only.
 
 Required production secret files:
 
-| Secret file variable         | Purpose                                           | Rotation evidence                                                           |
-| ---------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------- |
-| `BACKUP_ENCRYPTION_KEY_FILE` | 32 random bytes encoded as base64                 | Non-secret `BACKUP_KEY_ID`, successful backup and restore using the new key |
-| `ALERT_WEBHOOK_URL_FILE`     | On-call webhook consumed directly by Alertmanager | Successful test alert and resolved notification                             |
-| `SENTRY_DSN_FILE`            | Production error project                          | Synthetic captured error without PII                                        |
-| `OPENAI_API_KEY_FILE`        | Optional journal drafting; file may be empty      | Provider rotation record and draft evaluation when enabled                  |
-| `BOOTSTRAP_TOKEN_FILE`       | One-time first-administrator authorization        | Setup event, token rotation/removal decision and named operator record      |
+| Secret file variable                 | Purpose                                           | Rotation evidence                                                           |
+| ------------------------------------ | ------------------------------------------------- | --------------------------------------------------------------------------- |
+| `BACKUP_ENCRYPTION_KEY_FILE`         | 32 random bytes encoded as base64                 | Non-secret `BACKUP_KEY_ID`, successful backup and restore using the new key |
+| `PROVIDER_TOKEN_ENCRYPTION_KEY_FILE` | 32 random bytes encoded as base64                 | Non-secret `PROVIDER_TOKEN_KEY_ID`, reauthorization and worker refresh test |
+| `ALERT_WEBHOOK_URL_FILE`             | On-call webhook consumed directly by Alertmanager | Successful test alert and resolved notification                             |
+| `SENTRY_DSN_FILE`                    | Production error project                          | Synthetic captured error without PII                                        |
+| `OPENAI_API_KEY_FILE`                | Optional journal drafting; file may be empty      | Provider rotation record and draft evaluation when enabled                  |
+| `BOOTSTRAP_TOKEN_FILE`               | One-time first-administrator authorization        | Setup event, token rotation/removal decision and named operator record      |
 
 Provider connector references point to the deployment secrets manager and are not Docker secrets in
 this initial adapter-neutral stack. Live adapters must add their secret files and least-privilege
@@ -76,6 +77,8 @@ export FOLIO_DOMAIN=folio.example.com PUBLIC_ORIGIN=https://folio.example.com
 export FOLIO_IMAGE=registry.example.com/folio@sha256:<64-hex-digest>
 export BACKUP_KEY_ID=backup-key-2026-08
 export BACKUP_ENCRYPTION_KEY_FILE=/secure/folio/backup-key
+export PROVIDER_TOKEN_ENCRYPTION_KEY_FILE=/secure/folio/provider-token-key
+export PROVIDER_TOKEN_KEY_ID=provider-token-2026-08
 export ALERT_WEBHOOK_URL_FILE=/secure/folio/alert-webhook
 export SENTRY_DSN_FILE=/secure/folio/sentry-dsn
 export OPENAI_API_KEY_FILE=/secure/folio/openai-key

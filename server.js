@@ -21,6 +21,7 @@ import { apiRoutePolicy } from "./lib/api-route-policies.js";
 import { applyWebhookEvent } from "./lib/webhook-application.js";
 import { admissionClass, createAdmissionController } from "./lib/admission-control.js";
 import { z } from "zod";
+import { createProviderOAuthService } from "./lib/provider-oauth.js";
 export { validateProductionConfig } from "./lib/runtime-config.js";
 
 const sentryDsn = secret("SENTRY_DSN");
@@ -89,6 +90,15 @@ export function createFolioServer(options = {}) {
     );
   const ledgers = new Map();
   const admission = options.admission || createAdmissionController(environment);
+  const providerOAuth =
+    options.providerOAuth ||
+    createProviderOAuthService(platform, {
+      environment,
+      encryptionKey: options.providerTokenEncryptionKey,
+      credentialResolver: options.credentialResolver,
+      fetchImpl: options.fetchImpl,
+      clock: options.clock,
+    });
   const runtime = { accepting: true };
   const metrics = {
     started_at: new Date().toISOString(),
@@ -134,6 +144,7 @@ export function createFolioServer(options = {}) {
           requestId,
           environment,
           admission,
+          providerOAuth,
         );
       return await staticFile(res, url.pathname);
     } catch (error) {
@@ -206,7 +217,17 @@ export function createFolioServer(options = {}) {
   return { server, platform, ledgers, runtime, admission, close };
 }
 
-async function apiRequest(req, res, url, platform, ledgers, requestId, environment, admission) {
+async function apiRequest(
+  req,
+  res,
+  url,
+  platform,
+  ledgers,
+  requestId,
+  environment,
+  admission,
+  providerOAuth,
+) {
   const routePolicy = apiRoutePolicy(req.method, url.pathname);
   if (stateMethods.has(req.method)) validateBrowserOrigin(req.headers);
   const meta = { requestId, ip: clientIp(req), userAgent: req.headers["user-agent"] || "unknown" };
@@ -320,14 +341,14 @@ async function apiRequest(req, res, url, platform, ledgers, requestId, environme
         const replayed = await prepareIdempotency(req, res, platform, session, url.pathname);
         if (replayed) return;
       }
-      return await api(req, res, url, ledger, platform, session, environment);
+      return await api(req, res, url, ledger, platform, session, environment, providerOAuth);
     } finally {
       admissionLease.release();
     }
   });
 }
 
-async function api(req, res, url, ledger, platform, session, environment) {
+async function api(req, res, url, ledger, platform, session, environment, providerOAuth) {
   if (req.method === "GET" && url.pathname === "/api/jobs")
     return json(
       res,
@@ -620,6 +641,64 @@ async function api(req, res, url, ledger, platform, session, environment) {
     return json(res, 200, publicIntegrationOverview(ledger.integrationsOverview()));
   if (req.method === "GET" && url.pathname === "/api/integrations/connections")
     return json(res, 200, ledger.integrationConnections().map(publicIntegrationConnection));
+  if (req.method === "GET" && url.pathname === "/api/integrations/oauth")
+    return json(res, 200, providerOAuth.credentialMetadata(null, session.org_id));
+  const oauthStartMatch = url.pathname.match(/^\/api\/integrations\/oauth\/([^/]+)\/start$/);
+  if (req.method === "POST" && oauthStartMatch) {
+    const connection = ledger.integrationConnection(oauthStartMatch[1]);
+    const body = await readJson(req);
+    const redirectUri =
+      body.redirect_uri ||
+      `${String(environment.PUBLIC_ORIGIN || url.origin).replace(/\/$/, "")}/api/integrations/oauth/callback/${connection.provider}`;
+    return json(
+      res,
+      200,
+      providerOAuth.authorizationStart({
+        session,
+        connection: { ...connection, org_id: session.org_id },
+        redirect_uri: redirectUri,
+      }),
+    );
+  }
+  const oauthCallbackMatch = url.pathname.match(
+    /^\/api\/integrations\/oauth\/callback\/(stripe|gusto|hubspot)$/,
+  );
+  if (req.method === "GET" && oauthCallbackMatch) {
+    if (url.searchParams.get("error"))
+      throw problem(`Provider authorization was declined: ${url.searchParams.get("error")}`, 409);
+    const provider = oauthCallbackMatch[1];
+    const state = url.searchParams.get("state");
+    const pending = providerOAuth.pendingAuthorization({ session, provider, state });
+    const connection = ledger.integrationConnection(pending.connection_id);
+    const credential = await providerOAuth.authorizationCallback({
+      session,
+      provider,
+      state,
+      code: url.searchParams.get("code"),
+      connection: { ...connection, org_id: session.org_id },
+    });
+    if (credential.external_account_id)
+      ledger.bindIntegrationAccount({
+        connection_id: connection.id,
+        external_account_id: credential.external_account_id,
+      });
+    else if (connection.status !== "active")
+      ledger.setIntegrationStatus({ connection_id: connection.id, status: "active" });
+    res.statusCode = 303;
+    res.setHeader("Location", `/?oauth=${encodeURIComponent(provider)}_connected`);
+    return res.end();
+  }
+  const oauthRevokeMatch = url.pathname.match(/^\/api\/integrations\/oauth\/([^/]+)\/revoke$/);
+  if (req.method === "POST" && oauthRevokeMatch) {
+    const connection = ledger.integrationConnection(oauthRevokeMatch[1]);
+    const result = await providerOAuth.revoke({
+      session,
+      connection: { ...connection, org_id: session.org_id },
+    });
+    if (["active", "error"].includes(connection.status))
+      ledger.setIntegrationStatus({ connection_id: connection.id, status: "paused" });
+    return json(res, 200, result);
+  }
   if (req.method === "GET" && url.pathname === "/api/integrations/sync-runs")
     return json(
       res,

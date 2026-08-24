@@ -40,9 +40,9 @@ test("connection configuration stores references and rejects embedded secrets", 
   assert.throws(
     () =>
       ledger.configureIntegration({
-        provider: "gusto",
+        provider: "plaid",
         environment: "production",
-        credential_secret_ref: "GUSTO_CREDENTIAL_REF",
+        credential_secret_ref: "PLAID_CREDENTIAL_REF",
       }),
     /provider account identifier/,
   );

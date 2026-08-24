@@ -2,19 +2,19 @@
 
 This document describes the engineering foundation introduced after v0.2.0. Provider HTTP adapters
 and a tenant-scoped synchronization worker are implemented and contract-tested against versioned
-fixtures. This does not claim that live Plaid, Stripe, Gusto, or HubSpot OAuth connections are
-production-ready: hosted authorization handoffs, verified provider-specific webhooks, scheduling,
-provider sandbox certification and credentialed staging evidence remain required before a connector
-can carry live financial data.
+fixtures. Hosted OAuth authorization, encrypted token storage, rotation-safe refresh and revocation
+are implemented for Stripe, Gusto and HubSpot. Plaid Link/token exchange, verified provider-specific
+webhooks, provider sandbox certification and credentialed staging evidence remain required before a
+connector can carry live financial data.
 
 ## Initial matrix
 
-| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                                     | Still required for live use                                                                                                                |
-| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned adapter, pagination restart, staged outcomes, retries, account binding, native versioned bank feed, unique posted-cash matching and close-blocking exceptions                    | Link handoff/token exchange, JWT webhook verification, operator-assisted matching, sandbox certification and credentialed staging evidence |
-| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Signed, connection-bound events; native source-to-contract/AR reconciliation; fee-bearing payout expansion; payout-to-bank-to-journal proof; version lineage, exception and close controls | OAuth/restricted-key exchange, provider sandbox certification, credentialed staging evidence and deployed soak                             |
-| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and bank-debit components                        | Processed-date watermark plus page     | Versioned adapter; validated wages/tax/benefit/deduction accrual; maker-checker drafts; component liability clearing; Plaid cash proof; reversal and close controls                        | OAuth lifecycle, verified events, employee/department detail, detailed payroll receipts, sandbox certification and credentialed staging    |
-| HubSpot  | CRM                  | Companies, deals, products, line items and their associations                             | Per-object updated watermark + `after` | Composite cursor-safe search; batched associations; immutable identity links; exact economic crossfoot; maker-checker contract proposals and close controls                                | OAuth lifecycle, signed webhooks, sandbox certification, custom-property policy mapping and credentialed staging evidence                  |
+| Provider | Domain               | Folio-owned normalized scope                                                              | Cursor model                           | Current implementation                                                                                                                                                  | Still required for live use                                                                                                                |
+| -------- | -------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Plaid    | Bank                 | Accounts, transaction additions, modifications and removals                               | `transactions_sync` cursor             | Versioned adapter, pagination restart, staged outcomes, retries, account binding, native versioned bank feed, unique posted-cash matching and close-blocking exceptions | Link handoff/token exchange, JWT webhook verification, operator-assisted matching, sandbox certification and credentialed staging evidence |
+| Stripe   | Billing and payments | Customers, subscriptions, invoices, credits, charges, refunds, disputes, fees and payouts | Created-time/ID pagination plus events | Hosted OAuth/account binding; signed events; native source-to-contract/AR reconciliation; fee-bearing payouts and bank-to-journal proof                                 | Provider sandbox certification, credentialed staging evidence and deployed soak                                                            |
+| Gusto    | Payroll              | Companies, payroll runs, taxes, benefits and bank-debit components                        | Processed-date watermark plus page     | Hosted OAuth/refresh lease; validated wage/tax/benefit/deduction accrual; maker-checker drafts; component liability clearing and Plaid cash proof                       | Verified events, employee/department detail, detailed payroll receipts, sandbox certification and credentialed staging                     |
+| HubSpot  | CRM                  | Companies, deals, products, line items and their associations                             | Per-object updated watermark + `after` | Hosted OAuth/explicit scopes; composite cursor-safe search; immutable identity links; exact economic crossfoot and maker-checker contract proposals                     | Signed webhooks, sandbox certification, custom-property policy mapping and credentialed staging evidence                                   |
 
 The provider behavior assumptions above follow the vendors' current official documentation:
 [Plaid transaction sync](https://plaid.com/docs/transactions/sync-migration/),
@@ -31,9 +31,19 @@ They must be revalidated when a provider adapter is certified.
 
 Connections move through `configured → active → paused/error → active`, with terminal
 `disconnected`. Configuration stores only secret-manager reference names; secret-looking keys are
-rejected from general settings. Production configuration also requires the provider's external
-account/company identifier. Tokens and provider secrets must never be sent to the browser or written
-to Folio tables or logs.
+rejected from general settings. OAuth connections bind the external account/company identifier
+returned by the provider; other production connections require it during configuration. Access and
+refresh tokens are AES-256-GCM encrypted with tenant/connection/provider authenticated context. They
+are never returned to the browser or logs. Refresh uses a database lease so rotating refresh tokens
+cannot be raced by workers.
+
+Administrators start authorization with `POST /api/integrations/oauth/:connectionId/start`; the
+provider returns to the exact registered callback. Folio stores only a SHA-256 state digest, binds it
+to the tenant, user, provider and connection, expires it after ten minutes and consumes it once before
+token exchange. `POST /api/integrations/oauth/:connectionId/revoke` revokes remotely where the
+provider documents an endpoint and always replaces local ciphertext with an encrypted tombstone.
+These providers do not currently document PKCE for this server-side flow, so Folio does not send an
+unsupported challenge.
 
 Configuration, mapping and connection-state changes require the administrator role. Reads require an
 authenticated tenant member. Synchronization and exception operations require accounting-operator
@@ -98,9 +108,9 @@ deduplicated. The CLI worker can be run for one tenant connection with:
 npm run integrations:sync -- --database=data/tenants/<tenant>.db --connection=<connection-id>
 ```
 
-The scheduler must supply one JSON credential secret file/environment reference for the selected
-connection. Hosted authorization and provider-specific native subledger application remain separate
-controlled workflows.
+The API and background worker must share `PROVIDER_TOKEN_ENCRYPTION_KEY_FILE`; each connection's
+secret reference supplies only its OAuth client ID and client secret. Provider-specific native
+subledger application remains a separate controlled workflow.
 
 Connection-bound signed webhooks are verified and durably inserted into the platform delivery queue
 before HTTP 202 is returned. A separate worker claims one delivery with a time-limited lease, applies

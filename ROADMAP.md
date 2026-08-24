@@ -5,30 +5,30 @@ that engine without weakening its deterministic ledger controls.
 
 ## Delivery order
 
-| Phase                                | Status   | Outcome                                                                                                                                                         |
-| ------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Repository hygiene                | Complete | Portable setup, pinned tooling, lint/format gate, architecture guide                                                                                            |
-| 1. Authentication and authorization  | Complete | Real users, sessions, CSRF, lockout, and server-enforced roles                                                                                                  |
-| 2. Multi-tenancy                     | Complete | Organizations, memberships, isolated tenant databases, onboarding                                                                                               |
-| 3. Migrations, backups, immutability | Complete | Versioned migrations, restore drills, DB guards, hash verification                                                                                              |
-| 4. Core ledger completeness          | Complete | Fiscal calendars, bank reconciliation, files, tax, exports, close checklist                                                                                     |
-| 5. Receivables hardening             | Complete | Idempotency, signed webhooks, concurrency controls, exception queue                                                                                             |
-| 6. AI hardening                      | Complete | Quotas, decision history, evaluation data, calibrated uncertainty                                                                                               |
-| 7. Frontend foundation               | Complete | React shell and role-aware read surfaces                                                                                                                        |
-| 8. Testing and CI/CD                 | Complete | HTTP tests, auth isolation tests, CI gates, migration and load checks                                                                                           |
-| 9. Observability foundation          | Complete | Structured logs, request IDs, health, metrics, errors, incident process                                                                                         |
-| 10. Compliance engineering           | Complete | Secret mounts, SOC 2 evidence map, privacy tools and external gate templates                                                                                    |
-| 11. SaaS GAAP compliance engine      | Complete | Applicable Topic engines, judgments, disclosures, statements, APIs and tests                                                                                    |
-| 12. Investments subledger            | Complete | ASC 305/320/321/323/325/326/820 positions, accounting, APIs, UI and tests                                                                                       |
-| 13. Fixed assets subledger           | Complete | PP&E, depreciation, CIP, ASC 360/410/835-20, controls, APIs, UI and tests                                                                                       |
-| 14. Transactional product UX         | Active   | Guided daily workflows, accessibility, responsive tables/forms, design system                                                                                   |
-| 15. External integrations            | Active   | Native Plaid, Stripe, Gusto and HubSpot controlled handoffs shipped; OAuth lifecycle, native webhook coverage and credentialed provider sandbox evidence remain |
-| 16. Import and exception operations  | Active   | Durable worker, mapping, correction, fuzzy review, exception queues, segregation and 10k gate shipped; deployed soak remains                                    |
-| 17. Production operations            | Active   | Hardened single-node stack and encrypted DR shipped; live exercises remain                                                                                      |
-| 18. Security hardening               | Active   | Repository audit, threat model, abuse regressions and image scan shipped; independent pen test/retest remains                                                   |
-| 19. Edge and migration assurance     | Active   | Property/migration suites and 10k import capacity gate shipped; deployed provider/soak evidence remains                                                         |
-| 20. Accounting validation            | Active   | Complete pack generator and findings gate shipped; named reviewer execution and signed evidence remain                                                          |
-| Independent launch approvals         | Pending  | Pen test, accounting, legal/privacy, deployment and support sign-off                                                                                            |
+| Phase                                | Status   | Outcome                                                                                                                                                          |
+| ------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Repository hygiene                | Complete | Portable setup, pinned tooling, lint/format gate, architecture guide                                                                                             |
+| 1. Authentication and authorization  | Complete | Real users, sessions, CSRF, lockout, and server-enforced roles                                                                                                   |
+| 2. Multi-tenancy                     | Complete | Organizations, memberships, isolated tenant databases, onboarding                                                                                                |
+| 3. Migrations, backups, immutability | Complete | Versioned migrations, restore drills, DB guards, hash verification                                                                                               |
+| 4. Core ledger completeness          | Complete | Fiscal calendars, bank reconciliation, files, tax, exports, close checklist                                                                                      |
+| 5. Receivables hardening             | Complete | Idempotency, signed webhooks, concurrency controls, exception queue                                                                                              |
+| 6. AI hardening                      | Complete | Quotas, decision history, evaluation data, calibrated uncertainty                                                                                                |
+| 7. Frontend foundation               | Complete | React shell and role-aware read surfaces                                                                                                                         |
+| 8. Testing and CI/CD                 | Complete | HTTP tests, auth isolation tests, CI gates, migration and load checks                                                                                            |
+| 9. Observability foundation          | Complete | Structured logs, request IDs, health, metrics, errors, incident process                                                                                          |
+| 10. Compliance engineering           | Complete | Secret mounts, SOC 2 evidence map, privacy tools and external gate templates                                                                                     |
+| 11. SaaS GAAP compliance engine      | Complete | Applicable Topic engines, judgments, disclosures, statements, APIs and tests                                                                                     |
+| 12. Investments subledger            | Complete | ASC 305/320/321/323/325/326/820 positions, accounting, APIs, UI and tests                                                                                        |
+| 13. Fixed assets subledger           | Complete | PP&E, depreciation, CIP, ASC 360/410/835-20, controls, APIs, UI and tests                                                                                        |
+| 14. Transactional product UX         | Active   | Guided daily workflows, accessibility, responsive tables/forms, design system                                                                                    |
+| 15. External integrations            | Active   | Native Plaid, Stripe, Gusto and HubSpot handoffs plus hosted Stripe/Gusto/HubSpot OAuth shipped; Plaid Link, native webhook coverage and sandbox evidence remain |
+| 16. Import and exception operations  | Active   | Durable worker, mapping, correction, fuzzy review, exception queues, segregation and 10k gate shipped; deployed soak remains                                     |
+| 17. Production operations            | Active   | Hardened single-node stack and encrypted DR shipped; live exercises remain                                                                                       |
+| 18. Security hardening               | Active   | Repository audit, threat model, abuse regressions and image scan shipped; independent pen test/retest remains                                                    |
+| 19. Edge and migration assurance     | Active   | Property/migration suites and 10k import capacity gate shipped; deployed provider/soak evidence remains                                                          |
+| 20. Accounting validation            | Active   | Complete pack generator and findings gate shipped; named reviewer execution and signed evidence remain                                                           |
+| Independent launch approvals         | Pending  | Pen test, accounting, legal/privacy, deployment and support sign-off                                                                                             |
 
 ## Dependency rules
 

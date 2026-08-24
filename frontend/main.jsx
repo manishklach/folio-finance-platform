@@ -319,6 +319,7 @@ function Module({ active, ...props }) {
 
 function Integrations({ can, notify }) {
   const resource = useLoad(() => api("/api/integrations/overview"), []);
+  const oauthResource = useLoad(() => api("/api/integrations/oauth"), []);
   const [showForm, setShowForm] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState("");
   const [showMapping, setShowMapping] = useState(false);
@@ -375,7 +376,10 @@ function Integrations({ can, notify }) {
           external_account_id: form.get("external_account_id") || null,
           credential_secret_ref: form.get("credential_secret_ref"),
           webhook_secret_ref: form.get("webhook_secret_ref") || null,
-          scopes: [],
+          scopes: String(form.get("scopes") || "")
+            .split(",")
+            .map((scope) => scope.trim())
+            .filter(Boolean),
           settings: {},
         },
       });
@@ -385,6 +389,31 @@ function Integrations({ can, notify }) {
         kind: "success",
         message: "Connector configured without exposing its credentials.",
       });
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function authorize(connection) {
+    try {
+      const result = await api(`/api/integrations/oauth/${connection.id}/start`, {
+        method: "POST",
+        body: {},
+      });
+      window.location.assign(result.authorization_url);
+    } catch (error) {
+      notify({ kind: "error", message: error.message });
+    }
+  }
+  async function revokeAuthorization(connection) {
+    if (!window.confirm(`Revoke ${connection.display_name} and stop future provider access?`))
+      return;
+    try {
+      await api(`/api/integrations/oauth/${connection.id}/revoke`, {
+        method: "POST",
+        body: {},
+      });
+      await Promise.all([resource.refresh(), oauthResource.refresh()]);
+      notify({ kind: "success", message: `${connection.display_name} authorization revoked.` });
     } catch (error) {
       notify({ kind: "error", message: error.message });
     }
@@ -806,6 +835,8 @@ function Integrations({ can, notify }) {
       { customers: [], products: [], entities: [] },
     ];
   const selectedConnection = value.connections.find((item) => item.id === selectedConnectionId);
+  const oauthCredentials = oauthResource.data || [];
+  const oauthProviders = new Set(["stripe", "gusto", "hubspot"]);
 
   return (
     <div className="module-flow">
@@ -852,14 +883,43 @@ function Integrations({ can, notify }) {
               item.display_name,
               label(item.environment),
               item.last_synced_at ? new Date(item.last_synced_at).toLocaleString() : "Never",
-              <Status value={item.status} />,
+              <div className="status-stack">
+                <Status value={item.status} />
+                {oauthProviders.has(item.provider) && (
+                  <small>
+                    OAuth:{" "}
+                    {oauthCredentials.find((credential) => credential.connection_id === item.id)
+                      ?.status || "not authorized"}
+                  </small>
+                )}
+              </div>,
               <div className="button-row">
+                {can("admin") && oauthProviders.has(item.provider) && (
+                  <button className="small-button" onClick={() => authorize(item)}>
+                    {oauthCredentials.some(
+                      (credential) =>
+                        credential.connection_id === item.id && credential.status === "active",
+                    )
+                      ? "Reauthorize"
+                      : "Authorize"}
+                  </button>
+                )}
+                {can("admin") &&
+                  oauthCredentials.some(
+                    (credential) =>
+                      credential.connection_id === item.id && credential.status === "active",
+                  ) && (
+                    <button className="small-button" onClick={() => revokeAuthorization(item)}>
+                      Revoke
+                    </button>
+                  )}
                 {item.status === "active" && can("operate") && (
                   <button className="small-button" onClick={() => queueSync(item)}>
                     Sync now
                   </button>
                 )}
                 {can("admin") &&
+                  !oauthProviders.has(item.provider) &&
                   (item.status === "configured" ||
                   item.status === "paused" ||
                   item.status === "error" ? (
@@ -1261,7 +1321,14 @@ function Integrations({ can, notify }) {
               label="External account ID"
               name="external_account_id"
               required={false}
-              hint="Required for production; use the provider's tenant, account or company identifier."
+              hint="Optional for hosted OAuth; Folio binds the provider account returned by authorization."
+            />
+            <Field
+              label="OAuth scopes"
+              name="scopes"
+              required={false}
+              placeholder="crm.objects.companies.read, crm.objects.deals.read"
+              hint="Comma-separated. HubSpot requires explicit read scopes; Stripe accepts read_only or read_write."
             />
             <div className="form-grid">
               <Field

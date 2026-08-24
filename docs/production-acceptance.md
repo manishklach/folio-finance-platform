@@ -89,8 +89,8 @@ Folio subledger records; identity, amount, currency and lifecycle validation; co
 idempotent replay; and non-duplication of journals. Payout synchronization expands fee-bearing balance
 transactions, proves gross less fee equals net and total components equal the payout, then links a paid
 payout to matched bank-feed cash within seven days. An unresolved payout blocks bank-close sign-off.
-OAuth/restricted-key lifecycle, provider sandbox certification, credentialed staging and deployed soak
-remain production acceptance gates.
+Provider sandbox certification, credentialed staging and deployed soak remain production acceptance
+gates; hosted OAuth account binding and revocation are repository-tested.
 
 Repository acceptance for Gusto now includes immutable processed-payroll source versions; required
 whole-cent wage, tax, benefit, reimbursement and bank-debit totals; employee-deduction and company-
@@ -98,7 +98,7 @@ debit crossfoots; a balanced accrual or removal-reversal draft; maker-checker po
 liability-clearing drafts for every provider-disclosed net-pay, tax, reimbursement and child-support
 debit; exact reconciliation to a Plaid transaction and the settlement journal's posted cash line;
 idempotency; source-change/removal controls; and accrual/bank close blockers. Employee-level receipts,
-department allocations, hosted OAuth, verified native events, settled-payroll recovery workflows,
+department allocations, verified native events, settled-payroll recovery workflows,
 provider sandbox certification, credentialed staging and deployed soak remain production acceptance
 gates. Gusto remains the payroll calculator and payment/tax-filing system; Folio records and
 reconciles the accounting result and never calculates employee payroll or files taxes.
@@ -108,7 +108,7 @@ deal/company/line-item/product association lineage; immutable approved links to 
 catalog products; closed-won gating; exact line and deal economic crossfoots; currency/date/SSP
 validation; a non-accounting contract proposal; preparer/controller separation; idempotent atomic
 contract and revenue-schedule creation; source-change fail-closed behavior; and revenue-review close
-blocking. Hosted OAuth, verified native events, portal-specific custom-property policies, provider
+blocking. Verified native events, portal-specific custom-property policies, provider
 sandbox certification, credentialed staging and deployed soak remain production acceptance gates.
 HubSpot never creates or posts a journal.
 

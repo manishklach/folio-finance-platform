@@ -6,12 +6,13 @@ import {
   purgeOrphanedImportSources,
 } from "../lib/background-worker.js";
 import { createPlatform } from "../lib/platform.js";
-import { secret } from "../lib/secrets.js";
+import { createProviderOAuthService } from "../lib/provider-oauth.js";
 
 const once = process.argv.includes("--once");
 const pollMilliseconds = boundedNumber(process.env.BACKGROUND_WORKER_POLL_MS, 100, 60_000, 1_000);
 const leaseSeconds = boundedNumber(process.env.BACKGROUND_WORKER_LEASE_SECONDS, 10, 3_600, 120);
 const platform = createPlatform(process.env.PLATFORM_DB_PATH, process.env.TENANT_DB_DIR);
+const providerOAuth = createProviderOAuthService(platform);
 const artifactDir = resolve(process.env.JOB_ARTIFACT_DIR || "data/job-artifacts");
 const artifactRetentionDays = boundedNumber(process.env.JOB_ARTIFACT_RETENTION_DAYS, 1, 3_650, 30);
 const artifactSweepMilliseconds =
@@ -45,7 +46,8 @@ try {
       leaseSeconds,
       artifactDir,
       artifactRetentionDays,
-      credentialResolver: (reference) => secret(reference, { required: true }),
+      credentialResolver: (reference, connection) =>
+        providerOAuth.resolveCredential(reference, connection),
     });
     if (result) writeJob(result.job);
     if (once) break;

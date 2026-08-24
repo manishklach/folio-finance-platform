@@ -34,8 +34,17 @@ test("oldest supported platform schema upgrades, rolls back, and re-upgrades wit
   );
   db.prepare("INSERT INTO memberships(user_id,org_id,role) VALUES(?,?,'admin')").run(userId, orgId);
 
-  assert.deepEqual(migratePlatform(db), [2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(migratePlatform(db), [2, 3, 4, 5, 6, 7, 8]);
   assert.equal(db.prepare("SELECT name FROM users WHERE id=?").get(userId).name, "controller");
+  assert.deepEqual(migratePlatform(db, "down"), [8]);
+  assert.equal(
+    db
+      .prepare(
+        "SELECT 1 present FROM sqlite_master WHERE type='table' AND name='provider_credentials'",
+      )
+      .get(),
+    undefined,
+  );
   assert.deepEqual(migratePlatform(db, "down"), [7]);
   assert.equal(
     db
@@ -76,7 +85,7 @@ test("oldest supported platform schema upgrades, rolls back, and re-upgrades wit
       .some(({ name }) => name === "name"),
     false,
   );
-  assert.deepEqual(migratePlatform(db), [3, 4, 5, 6, 7]);
+  assert.deepEqual(migratePlatform(db), [3, 4, 5, 6, 7, 8]);
   assert.equal(
     db.prepare("SELECT email FROM users WHERE id=?").get(userId).email,
     "controller@example.test",
@@ -105,7 +114,7 @@ test("failed platform migration is atomic and can be resumed", () => {
     "CREATE TRIGGER simulate_migration_interruption BEFORE UPDATE ON users BEGIN SELECT RAISE(ABORT,'simulated interruption'); END",
   );
   assert.throws(() => migratePlatform(db), /simulated interruption/);
-  assert.deepEqual(platformMigrationStatus(db).pending, [3, 4, 5, 6, 7]);
+  assert.deepEqual(platformMigrationStatus(db).pending, [3, 4, 5, 6, 7, 8]);
   assert.equal(
     db
       .prepare("PRAGMA table_info(users)")
@@ -114,7 +123,7 @@ test("failed platform migration is atomic and can be resumed", () => {
     false,
   );
   db.exec("DROP TRIGGER simulate_migration_interruption");
-  assert.deepEqual(migratePlatform(db), [3, 4, 5, 6, 7]);
+  assert.deepEqual(migratePlatform(db), [3, 4, 5, 6, 7, 8]);
   assert.equal(db.prepare("SELECT name FROM users WHERE id=?").get(userId).name, "interrupted");
   db.close();
 });
@@ -142,6 +151,7 @@ test("platform rollback refuses to discard durable import jobs", () => {
       id,org_id,requested_by,kind,request_json,request_hash,idempotency_key
     ) VALUES(?,?,?,?,?,?,?)`,
   ).run(randomUUID(), orgId, userId, "import_apply", "{}", "hash", "rollback-guard");
+  assert.deepEqual(migratePlatform(db, "down"), [8]);
   assert.throws(() => migratePlatform(db, "down"), /CHECK constraint failed/);
   const status = platformMigrationStatus(db);
   assert.equal(status.valid, true);
