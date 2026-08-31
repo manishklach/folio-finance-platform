@@ -1,6 +1,6 @@
 {
   "name": "folio-finance-platform",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Enterprise cloud finance platform with GAAP accounting, controlled integrations, reconciliation, financial reporting, and SaaS metrics",
   "type": "module",
