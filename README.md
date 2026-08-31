@@ -165,6 +165,11 @@ and `npm run privacy -- export|delete ...`.
 The single-node TLS/container topology, production preflight, Prometheus/Alertmanager rules, encrypted
 backup and restore drills, release/rollback steps, SLOs and remaining external operations gates are in
 [`docs/production-operations.md`](docs/production-operations.md).
+For a start-to-finish host deployment, including DNS, immutable image publishing, secret files,
+bootstrap, validation, recurring backups, upgrades, rollback, disaster recovery, and handoff, use the
+[`docs/deployment-guide.md`](docs/deployment-guide.md). A paste-ready operations-agent prompt is
+available as [`docs/deployment-agent-prompt.md`](docs/deployment-agent-prompt.md) and as the formatted
+[Word deployment prompt](docs/Folio-Deployment-Agent-Prompt.docx).
 Authenticated workloads have configurable per-user rate limits plus process, tenant, and expensive-job
 concurrency bulkheads. These are single-process safeguards; edge/WAF controls and shared scale-out
 limiting remain deployment and architecture gates documented in the operations guide.
